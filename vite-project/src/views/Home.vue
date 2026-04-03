@@ -1,0 +1,22 @@
+<template>
+  <div class="pt-28 px-8">
+
+    <Header />
+
+
+
+    <div class="pt-16 px-6">
+      <DailyGamesList />
+    </div>
+    <div class="pt-16 px-6">
+      <RecentGames />
+    </div>
+
+  </div>
+</template>
+
+<script setup lang="ts">
+import Header from '../components/Header.vue'
+import DailyGamesList from '../components/NBA/main_slider/DailyGamesList.vue'
+import RecentGames from '../components/NBA/recent_games/RecentGames.vue'
+</script>
