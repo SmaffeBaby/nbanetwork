@@ -10,15 +10,26 @@ export function useRecentGames() {
     const isLoading = ref(false)
 
     const gamesCache = new Map<string, Game[]>()
-    const rawCache = new Map<string, Game[]>()
-
     let timeout: ReturnType<typeof setTimeout> | null = null
+
+    const CACHE_VERSION = 'v2'
 
     const currentDate = ref<Date>(new Date())
     currentDate.value.setHours(0, 0, 0, 0)
 
-    const getGamesByDate = async (dateStr: string, retries = 2): Promise<Game[]> => {
-        if (rawCache.has(dateStr)) return rawCache.get(dateStr)!
+    const getGamesByDate = async (dateStr: string): Promise<Game[]> => {
+        const cacheKey = `recent_games_${dateStr}_${CACHE_VERSION}`
+
+        if (gamesCache.has(dateStr)) {
+            return gamesCache.get(dateStr)!
+        }
+
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) {
+            const parsed = JSON.parse(cached)
+            gamesCache.set(dateStr, parsed)
+            return parsed
+        }
 
         try {
             const res = await fetch(`/api/daily-games?date=${dateStr}`)
@@ -27,14 +38,19 @@ export function useRecentGames() {
             const data = await res.json()
             const games: Game[] = Array.isArray(data) ? data : []
 
-            rawCache.set(dateStr, games)
+            // сохраняем
+            gamesCache.set(dateStr, games)
+            localStorage.setItem(cacheKey, JSON.stringify(games))
+
             return games
         } catch (err: any) {
-            if (err?.response?.status === 429 && retries > 0) {
-                await delay(1000)
-                return getGamesByDate(dateStr, retries - 1)
+            console.error(`Ошибка загрузки ${dateStr}:`, err)
+
+            if (cached) {
+                return JSON.parse(cached)
             }
-            throw err
+
+            return []
         }
     }
 
@@ -43,20 +59,18 @@ export function useRecentGames() {
 
         try {
             isLoading.value = true
-            const key = getDateKey(date)
 
-            if (gamesCache.has(key)) {
-                gamesList.value = gamesCache.get(key)!
-                return
-            }
+            const key = getDateKey(date)
 
             const startMSK = new Date(date)
             startMSK.setHours(0, 0, 0, 0)
+
             const endMSK = new Date(date)
             endMSK.setHours(23, 59, 59, 999)
 
             const prevDate = new Date(date.getTime() - 86400000)
             const nextDate = new Date(date.getTime() + 86400000)
+
             const datesToFetch = [prevDate, date, nextDate]
 
             let allGames: Game[] = []
@@ -64,7 +78,7 @@ export function useRecentGames() {
             for (const d of datesToFetch) {
                 const games = await getGamesByDate(getDateKey(d))
                 allGames.push(...games)
-                await delay(150)
+                await delay(200)
             }
 
             const filtered = allGames.filter(game => {
@@ -72,12 +86,11 @@ export function useRecentGames() {
                 return gameMSK >= startMSK && gameMSK <= endMSK
             })
 
-            gamesCache.set(key, filtered)
             gamesList.value = filtered
             error.value = null
-        } catch (err: any) {
+        } catch (err) {
             console.error('Ошибка при загрузке игр:', err)
-            error.value = err?.response?.status === 429 ? 'Лимит API' : 'Не удалось загрузить игры'
+            error.value = 'Не удалось загрузить игры'
             gamesList.value = []
         } finally {
             isLoading.value = false
@@ -103,10 +116,10 @@ export function useRecentGames() {
         currentDate.value = d
     }
 
-    watch(currentDate, (newDate) => {
+    watch(currentDate, newDate => {
         if (!newDate) return
         if (timeout) clearTimeout(timeout)
-        timeout = setTimeout(() => loadGames(newDate), 800)
+        timeout = setTimeout(() => loadGames(newDate), 500)
     })
 
     onMounted(() => loadGames(currentDate.value))
