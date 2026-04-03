@@ -1,8 +1,8 @@
 import { ref, onMounted, watch } from 'vue'
 import type { Game } from '../../../api/api'
+import { formatGameTime, toMSK, getDateKey, getWeekday, delay } from '../utils'
 
 export function useRecentGames() {
-
     const gamesList = ref<Game[]>([])
     const error = ref<string | null>(null)
     const hideScores = ref(true)
@@ -17,31 +17,8 @@ export function useRecentGames() {
     const currentDate = ref<Date>(new Date())
     currentDate.value.setHours(0, 0, 0, 0)
 
-    const formatGameTime = (iso: string) => {
-        return new Intl.DateTimeFormat('ru-RU', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'Europe/Moscow',
-        }).format(new Date(iso))
-    }
-
-    const getWeekday = (date: Date) => {
-        const weekdays = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота']
-        return weekdays[date.getDay()]
-    }
-
-    const getDateKey = (date: Date) => date.toISOString().split('T')[0]
-
-    const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
-
-    const toMSK = (date: Date) => {
-        return new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }))
-    }
-
     const getGamesByDate = async (dateStr: string, retries = 2): Promise<Game[]> => {
-        if (rawCache.has(dateStr)) {
-            return rawCache.get(dateStr)!
-        }
+        if (rawCache.has(dateStr)) return rawCache.get(dateStr)!
 
         try {
             const res = await fetch(`/api/daily-games?date=${dateStr}`)
@@ -66,7 +43,6 @@ export function useRecentGames() {
 
         try {
             isLoading.value = true
-
             const key = getDateKey(date)
 
             if (gamesCache.has(key)) {
@@ -76,7 +52,6 @@ export function useRecentGames() {
 
             const startMSK = new Date(date)
             startMSK.setHours(0, 0, 0, 0)
-
             const endMSK = new Date(date)
             endMSK.setHours(23, 59, 59, 999)
 
@@ -89,7 +64,6 @@ export function useRecentGames() {
             for (const d of datesToFetch) {
                 const games = await getGamesByDate(getDateKey(d))
                 allGames.push(...games)
-
                 await delay(150)
             }
 
@@ -101,14 +75,9 @@ export function useRecentGames() {
             gamesCache.set(key, filtered)
             gamesList.value = filtered
             error.value = null
-
         } catch (err: any) {
             console.error('Ошибка при загрузке игр:', err)
-            if (err?.response?.status === 429) {
-                error.value = 'Лимит API'
-            } else {
-                error.value = 'Не удалось загрузить игры'
-            }
+            error.value = err?.response?.status === 429 ? 'Лимит API' : 'Не удалось загрузить игры'
             gamesList.value = []
         } finally {
             isLoading.value = false
@@ -137,14 +106,10 @@ export function useRecentGames() {
     watch(currentDate, (newDate) => {
         if (!newDate) return
         if (timeout) clearTimeout(timeout)
-        timeout = setTimeout(() => {
-            loadGames(newDate)
-        }, 800)
+        timeout = setTimeout(() => loadGames(newDate), 800)
     })
 
-    onMounted(() => {
-        loadGames(currentDate.value)
-    })
+    onMounted(() => loadGames(currentDate.value))
 
     return {
         gamesList,
