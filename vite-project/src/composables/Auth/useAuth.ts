@@ -6,6 +6,7 @@ export type AppUser = {
     email: string
     firstName: string
     lastName: string
+    hideScores: boolean
 }
 
 type CachedUser = AppUser & {
@@ -31,13 +32,21 @@ export function useAuth() {
     const getFromCache = (): AppUser | null => {
         const raw = localStorage.getItem(CACHE_KEY)
         if (!raw) return null
+
         try {
             const cached: CachedUser = JSON.parse(raw)
+
+            if (Date.now() - cached.cachedAt > CACHE_TTL) {
+                localStorage.removeItem(CACHE_KEY)
+                return null
+            }
+
             return {
                 id: cached.id,
                 email: cached.email,
                 firstName: cached.firstName,
-                lastName: cached.lastName
+                lastName: cached.lastName,
+                hideScores: cached.hideScores ?? true
             }
         } catch {
             localStorage.removeItem(CACHE_KEY)
@@ -52,7 +61,7 @@ export function useAuth() {
     const fetchUserProfile = async (userId: string, email: string): Promise<AppUser> => {
         const { data, error } = await supabase
             .from('profiles')
-            .select('first_name, last_name')
+            .select('first_name, last_name, hide_scores')
             .eq('id', userId)
             .single()
 
@@ -61,7 +70,8 @@ export function useAuth() {
                 id: userId,
                 email,
                 firstName: '',
-                lastName: ''
+                lastName: '',
+                hideScores: true
             }
         }
 
@@ -69,13 +79,14 @@ export function useAuth() {
             id: userId,
             email,
             firstName: data.first_name,
-            lastName: data.last_name
+            lastName: data.last_name,
+            hideScores: data.hide_scores ?? true
         }
     }
 
-    const subscribeToProfile = (userId: string) => {
+    const subscribeToProfile = async (userId: string) => {
         if (profileChannel) {
-            supabase.removeChannel(profileChannel)
+            await supabase.removeChannel(profileChannel)
         }
 
         profileChannel = supabase
@@ -94,7 +105,8 @@ export function useAuth() {
                         id: userId,
                         email: updated.email,
                         firstName: updated.first_name,
-                        lastName: updated.last_name
+                        lastName: updated.last_name,
+                        hideScores: updated.hide_scores ?? true
                     }
                     user.value = freshUser
                     saveToCache(freshUser)
@@ -104,9 +116,9 @@ export function useAuth() {
             .subscribe()
     }
 
-    const unsubscribeProfile = () => {
+    const unsubscribeProfile = async () => {
         if (profileChannel) {
-            supabase.removeChannel(profileChannel)
+            await supabase.removeChannel(profileChannel)
             profileChannel = null
         }
     }
@@ -130,14 +142,38 @@ export function useAuth() {
         const userId = session.user.id
         const email = session.user.email ?? ''
 
-        subscribeToProfile(userId)
+        await subscribeToProfile(userId)
 
-        fetchUserProfile(userId, email).then(fresh => {
-            user.value = fresh
-            saveToCache(fresh)
-        })
+        const fresh = await fetchUserProfile(userId, email)
+        user.value = fresh
+        saveToCache(fresh)
 
         loading.value = false
+    }
+
+    const updateHideScores = async (value: boolean) => {
+        if (!user.value) return
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ hide_scores: value })
+            .eq('id', user.value.id)
+            .select()
+
+        if (error) {
+            console.error(' update hide_scores error:', error)
+            return
+        }
+
+        if (!data || data.length === 0) {
+            console.warn('️update не применился (возможно RLS)')
+            return
+        }
+
+        console.log('hide_scores updated:', data)
+
+        user.value.hideScores = value
+        saveToCache(user.value)
     }
 
     const signIn = async (email: string, password: string) => {
@@ -151,7 +187,7 @@ export function useAuth() {
 
         user.value = fresh
         saveToCache(fresh)
-        subscribeToProfile(data.user.id)
+        await subscribeToProfile(data.user.id)
     }
 
     const signUp = async (data: {
@@ -171,24 +207,26 @@ export function useAuth() {
             id: authData.user.id,
             email: data.email,
             first_name: data.firstName,
-            last_name: data.lastName
+            last_name: data.lastName,
+            hide_scores: true
         })
 
         const newUser: AppUser = {
             id: authData.user.id,
             email: data.email,
             firstName: data.firstName,
-            lastName: data.lastName
+            lastName: data.lastName,
+            hideScores: true
         }
 
         user.value = newUser
         saveToCache(newUser)
-        subscribeToProfile(authData.user.id)
+        await subscribeToProfile(authData.user.id)
     }
 
     const logout = async () => {
         await supabase.auth.signOut()
-        unsubscribeProfile()
+        await unsubscribeProfile()
         clearCache()
         user.value = null
     }
@@ -197,7 +235,7 @@ export function useAuth() {
         if (authSubscription) return
         authSubscription = supabase.auth.onAuthStateChange(async (_, session) => {
             if (!session?.user) {
-                unsubscribeProfile()
+                await unsubscribeProfile()
                 clearCache()
                 user.value = null
                 return
@@ -208,7 +246,7 @@ export function useAuth() {
             )
             user.value = fresh
             saveToCache(fresh)
-            subscribeToProfile(session.user.id)
+            await subscribeToProfile(session.user.id)
         })
     }
 
@@ -219,6 +257,7 @@ export function useAuth() {
         signIn,
         signUp,
         logout,
-        subscribeAuthState
+        subscribeAuthState,
+        updateHideScores
     }
 }

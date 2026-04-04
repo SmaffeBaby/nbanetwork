@@ -1,8 +1,11 @@
 import { ref, onMounted, watch } from 'vue'
+import { useAuth } from '../../Auth/useAuth'
 import type { Game } from '../../../api/api'
 import { formatGameTime, toMSK, getDateKey, getWeekday, delay } from '../utils'
 
 export function useRecentGames() {
+    const { user, updateHideScores } = useAuth()
+
     const gamesList = ref<Game[]>([])
     const error = ref<string | null>(null)
     const hideScores = ref(true)
@@ -12,6 +15,23 @@ export function useRecentGames() {
 
     const currentDate = ref<Date>(new Date())
     currentDate.value.setHours(0, 0, 0, 0)
+
+    let initialized = false
+
+    watch(user, (u) => {
+        if (u && !initialized) {
+            hideScores.value = u.hideScores
+            initialized = true
+        }
+    }, { immediate: true })
+
+    watch(hideScores, (val, oldVal) => {
+        if (!initialized) return
+        if (val === oldVal) return
+        if (!user.value) return
+
+        updateHideScores(val)
+    })
 
     const getGamesByDate = async (dateStr: string): Promise<Game[]> => {
         try {
@@ -35,7 +55,6 @@ export function useRecentGames() {
             const endMSK = new Date(date)
             endMSK.setHours(23, 59, 59, 999)
 
-            // Подгружаем соседние дни UTC для игр позднего вечера
             const prevDate = new Date(date.getTime() - 86400000)
             const nextDate = new Date(date.getTime() + 86400000)
             const datesToFetch = [prevDate, date, nextDate]
