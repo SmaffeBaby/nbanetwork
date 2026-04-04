@@ -1,37 +1,27 @@
-import { ref, onMounted, watch } from 'vue'
-import { useAuth } from '../../Auth/useAuth'
+import { ref, computed, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '../../../stores/auth'
 import type { Game } from '../../../api/api'
 import { formatGameTime, toMSK, getDateKey, getWeekday, delay } from '../utils'
 
 export function useRecentGames() {
-    const { user, updateHideScores } = useAuth()
+    const authStore = useAuthStore()
+    const { user } = storeToRefs(authStore)
 
     const gamesList = ref<Game[]>([])
     const error = ref<string | null>(null)
-    const hideScores = ref(true)
+    const hideScores = computed({
+        get: () => user.value?.hideScores ?? true,
+        set: (val: boolean) => {
+            if (user.value) void authStore.updateHideScores(val)
+        }
+    })
     const collapsed = ref(false)
     const isLoading = ref(false)
     let timeout: ReturnType<typeof setTimeout> | null = null
 
     const currentDate = ref<Date>(new Date())
     currentDate.value.setHours(0, 0, 0, 0)
-
-    let initialized = false
-
-    watch(user, (u) => {
-        if (u && !initialized) {
-            hideScores.value = u.hideScores
-            initialized = true
-        }
-    }, { immediate: true })
-
-    watch(hideScores, (val, oldVal) => {
-        if (!initialized) return
-        if (val === oldVal) return
-        if (!user.value) return
-
-        updateHideScores(val)
-    })
 
     const getGamesByDate = async (dateStr: string): Promise<Game[]> => {
         try {
