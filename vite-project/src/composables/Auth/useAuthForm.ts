@@ -2,9 +2,8 @@ import { ref } from 'vue'
 import { useAuth } from './useAuth.ts'
 import { useToast } from 'vue-toastification'
 
-const toast = useToast()
-
 export function useAuthForm() {
+    const toast = useToast()
     const { signIn, signUp, logout } = useAuth()
 
     const email = ref('')

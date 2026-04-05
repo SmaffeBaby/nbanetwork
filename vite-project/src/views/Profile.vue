@@ -7,8 +7,8 @@
     <p>Фамилия: {{ user?.lastName }}</p>
 
     <button
-        @click="logoutAndRedirect"
-        class="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 active:scale-95 transition"
+        @click.stop="handleLogout"
+        class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 active:scale-95 transition"
     >
       Выйти
     </button>
@@ -26,7 +26,6 @@ const router = useRouter()
 
 const logoutAndRedirect = async () => {
   await handleLogout()
-  router.push('/')
 }
 
 onMounted(() => {

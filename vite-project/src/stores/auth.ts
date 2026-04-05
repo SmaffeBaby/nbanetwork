@@ -17,6 +17,15 @@ type CachedUser = AppUser & {
 const CACHE_KEY = 'auth_user_cache'
 const CACHE_TTL = 1000 * 60 * 10
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | void> {
+    return Promise.race([
+        promise,
+        new Promise<void>((resolve) => {
+            setTimeout(resolve, ms)
+        }),
+    ])
+}
+
 export const useAuthStore = defineStore('auth', () => {
     const user = ref<AppUser | null>(null)
     const loading = ref(true)
@@ -223,25 +232,34 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const logout = async () => {
-        await supabase.auth.signOut()
-        await unsubscribeProfile()
+        try {
+            await withTimeout(supabase.auth.signOut(), 2500)
+        } catch (e) {
+            console.error('signOut:', e)
+        }
+        try {
+            await withTimeout(unsubscribeProfile(), 1500)
+        } catch {
+        }
         clearCache()
         user.value = null
+        loading.value = false
     }
 
     const subscribeAuthState = () => {
         if (authSubscription) return
+
         authSubscription = supabase.auth.onAuthStateChange(async (_, session) => {
-            if (!session?.user) {
+            if (session?.user) {
+                const fresh = await fetchProfile(session.user.id, session.user.email ?? '')
+                user.value = fresh
+                saveToCache(fresh)
+                await subscribeToProfile(session.user.id)
+            } else {
                 await unsubscribeProfile()
                 clearCache()
                 user.value = null
-                return
             }
-            const fresh = await fetchProfile(session.user.id, session.user.email ?? '')
-            user.value = fresh
-            saveToCache(fresh)
-            await subscribeToProfile(session.user.id)
         })
     }
 

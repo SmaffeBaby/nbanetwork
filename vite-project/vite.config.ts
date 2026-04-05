@@ -4,6 +4,9 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [vue(),tailwindcss()],
+  resolve: {
+    dedupe: ['vue', 'vue-toastification', 'pinia'],
+  },
   server: {
     proxy: {
       '/api': {

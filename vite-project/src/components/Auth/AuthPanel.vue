@@ -1,8 +1,32 @@
 <template>
-  <div v-if="!loadingUser" class="flex items-center justify-center">
+  <div class="flex items-center justify-center min-h-[52px]">
+
+    <div
+        v-if="user"
+        class="flex flex-col gap-1 w-44 rounded-xl p-3 text-center bg-white shadow-md border cursor-pointer hover:shadow-lg transition"
+        @click="goToProfile"
+    >
+      <p class="text-sm font-bold text-black">
+        {{ user.firstName }} {{ user.lastName }}
+      </p>
+      <p class="text-xs text-gray-500">{{ user.email }}</p>
+
+      <button
+          @click.stop="handleLogout"
+          class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 active:scale-95 transition"
+          style="display: none"
+      >
+        Выйти
+      </button>
+    </div>
+
+    <template v-else-if="loadingUser">
+    </template>
+
+    <template v-else>
 
     <button
-        v-if="!user && showForm === ''"
+        v-if="showForm === ''"
         @click="showForm = 'login'"
         class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 active:scale-95 transition"
     >
@@ -11,7 +35,7 @@
 
     <Teleport to="body">
       <div
-          v-if="!user && showForm === 'login'"
+          v-if="showForm === 'login'"
           @click.self="showForm = ''"
           class="fixed inset-0 flex items-center justify-center bg-black/50 z-[9999]"
       >
@@ -69,7 +93,7 @@
 
     <Teleport to="body">
       <div
-          v-if="!user && showForm === 'register'"
+          v-if="showForm === 'register'"
           @click.self="showForm = ''"
           class="fixed inset-0 flex items-center justify-center bg-black/50 z-[9999]"
       >
@@ -102,24 +126,7 @@
       </div>
     </Teleport>
 
-    <div
-        v-if="user"
-        class="flex flex-col gap-1 w-44 rounded-xl p-3 text-center bg-white shadow-md border cursor-pointer hover:shadow-lg transition"
-        @click="goToProfile"
-    >
-      <p class="text-sm font-bold text-black">
-        {{ user.firstName }} {{ user.lastName }}
-      </p>
-      <p class="text-xs text-gray-500">{{ user.email }}</p>
-
-      <button
-          @click.stop="handleLogout"
-          class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 active:scale-95 transition"
-          style="display: none"
-      >
-        Выйти
-      </button>
-    </div>
+    </template>
 
   </div>
 </template>
