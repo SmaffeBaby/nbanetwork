@@ -16,6 +16,6 @@
 </template>
 
 <script setup lang="ts">
-import AuthPanel from './Auth/AuthPanel.vue'
+import AuthPanel from '../Auth/AuthPanel.vue'
 import HeaderBurger from './HeaderBurger.vue'
 </script>

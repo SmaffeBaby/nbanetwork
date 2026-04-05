@@ -27,7 +27,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import AuthPanel from './Auth/AuthPanel.vue'
+import AuthPanel from '../Auth/AuthPanel.vue'
 import { RouterLink } from 'vue-router'
 
 const isOpen = ref(false)
