@@ -118,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { useStandings } from '../../composables/Standings/useStandings'
+import { useStandings } from '../../../composables/NBA/Standings/useStandings.ts'
 
 const {
   teams,

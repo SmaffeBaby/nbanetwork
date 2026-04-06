@@ -1,5 +1,5 @@
 import { ref, onMounted } from 'vue'
-import { teamsFullNames } from '../../constants/TeamFullName'
+import { teamsFullNames } from '../../../constants/TeamFullName.ts'
 
 export function useStandings() {
     const teams = ref<any[]>([])

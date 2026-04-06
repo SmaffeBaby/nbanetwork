@@ -9,7 +9,7 @@
             type="search"
             id="search"
             placeholder="Найти команду..."
-            class="block w-full p-3 ps-10 bg-white-800 border border-gray-600 text-white text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+            class="block w-full p-3 ps-10 bg-white-800 border border-gray-600 text-black text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
         />
       </div>
     </form>

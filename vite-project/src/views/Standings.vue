@@ -8,6 +8,6 @@
 </template>
 
 <script setup>
-import Standings from '../components/Standings/Standings.vue'
+import Standings from '../components/NBA/Standings/Standings.vue'
 import Header from "../components/Headers/Header.vue";
 </script>
