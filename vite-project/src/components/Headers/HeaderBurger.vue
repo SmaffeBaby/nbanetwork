@@ -33,6 +33,20 @@
           />
         </RouterLink>
 
+        <RouterLink
+            to="/teams"
+            @click="isOpen = false"
+            class="flex items-center gap-3"
+        >
+          <img
+              :src="route.path.startsWith('/teams')
+        ? '/logos/TEAMS2.svg'
+        : '/logos/TEAMS.svg'"
+              class="w-44 h-44"
+              alt="Teams"
+          />
+        </RouterLink>
+
 
         <AuthPanel />
       </div>

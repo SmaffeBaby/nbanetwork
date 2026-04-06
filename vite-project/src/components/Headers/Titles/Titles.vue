@@ -1,6 +1,6 @@
 <template>
   <nav class="flex items-center gap-4">
-    <RouterLink to="/standings" class="group">
+    <RouterLink to="/standings" class="group relative">
       <img
           :src="route.path === '/standings'
           ? '/logos/RS2.svg'
@@ -9,6 +9,19 @@
       />
       <img
           src="/logos/RS2.svg"
+          class="w-24 h-24 transition opacity-0 group-hover:opacity-100"
+      />
+    </RouterLink>
+
+    <RouterLink to="/teams" class="group relative">
+      <img
+          :src="route.path === '/teams'
+          ? '/logos/TEAMS2.svg'
+          : '/logos/TEAMS.svg'"
+          class="w-24 h-24 transition group-hover:opacity-0 absolute"
+      />
+      <img
+          src="/logos/TEAMS2.svg"
           class="w-24 h-24 transition opacity-0 group-hover:opacity-100"
       />
     </RouterLink>

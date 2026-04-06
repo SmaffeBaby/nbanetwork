@@ -1,8 +1,13 @@
 <template>
   <div class="p-4 md:p-6 text-white">
-    <h1 class="text-2xl md:text-3xl font-bold mb-4">
-      NBA Regular Standings
-    </h1>
+
+    <div class="flex justify-center mb-4">
+      <img
+          src="/logos/REGULAR_SEASON.svg"
+          alt="NBA Regular Season"
+          class="w-40 md:w-60 object-contain"
+      />
+    </div>
 
     <select
         v-model="selectedSeason"
