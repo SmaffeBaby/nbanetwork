@@ -6,6 +6,8 @@
         <img src="/logos/logo-nba-mom.svg" alt="NBA Logo" class="w-10 h-10 md:w-56 object-contain"/>
       </RouterLink>
 
+      <Titles class="ml-8" />
+
       <div class="ml-auto w-auto">
         <AuthPanel />
       </div>
@@ -18,4 +20,5 @@
 <script setup lang="ts">
 import AuthPanel from '../Auth/AuthPanel.vue'
 import HeaderBurger from './HeaderBurger.vue'
+import Titles from './Titles/Titles.vue'
 </script>

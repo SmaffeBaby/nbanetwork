@@ -19,6 +19,21 @@
           <img src="/logos/logo-nba-mom.svg" alt="NBA Logo" class="w-36 object-contain"/>
         </RouterLink>
 
+        <RouterLink
+            to="/standings"
+            @click="isOpen = false"
+            class="flex items-center gap-3"
+        >
+          <img
+              :src="route.path === '/standings'
+      ? '/logos/RS2.svg'
+      : '/logos/RS1.svg'"
+              class="w-44 h-44"
+              alt="Standings"
+          />
+        </RouterLink>
+
+
         <AuthPanel />
       </div>
     </div>
@@ -29,8 +44,10 @@
 import { ref } from 'vue'
 import AuthPanel from '../Auth/AuthPanel.vue'
 import { RouterLink } from 'vue-router'
+import { useRoute } from 'vue-router'
 
 const isOpen = ref(false)
+const route = useRoute()
 </script>
 
 <style scoped>

@@ -18,3 +18,10 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+
+  python-backend:
+    build:
+      context: ./python-backend        # папка с Python backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"

@@ -1,0 +1,23 @@
+<template>
+  <nav class="flex items-center gap-4">
+    <RouterLink to="/standings" class="group">
+      <img
+          :src="route.path === '/standings'
+          ? '/logos/RS2.svg'
+          : '/logos/RS1.svg'"
+          class="w-24 h-24 transition group-hover:opacity-0 absolute"
+      />
+      <img
+          src="/logos/RS2.svg"
+          class="w-24 h-24 transition opacity-0 group-hover:opacity-100"
+      />
+    </RouterLink>
+  </nav>
+</template>
+
+<script setup lang="ts">
+import { RouterLink } from 'vue-router'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+</script>
