@@ -1,9 +1,13 @@
 <template>
   <div class="p-4 space-y-8">
 
-    <h1 class="text-2xl font-bold text-center">
-      NBA Player Stats 2025–26
-    </h1>
+    <div class="flex justify-center mb-4">
+      <img
+          src="/logos/PLAYERS_STATS.svg"
+          alt="NBA Regular Season"
+          class="w-40 md:w-60 object-contain"
+      />
+    </div>
 
     <div class="grid md:grid-cols-2 gap-6">
       <StatLeaders title="Points Per Game" stat="PTS" :players="players" />
@@ -14,12 +18,48 @@
     </div>
 
     <div class="flex flex-col gap-3 md:flex-row">
-      <input v-model="search" placeholder="Search player..." class="p-2 border rounded w-full" />
+      <input
+          v-model="search"
+          placeholder="Search player..."
+          class="p-2 border rounded w-full"
+      />
+    </div>
 
-      <select v-model="team" class="p-2 border rounded">
-        <option value="">All Teams</option>
-        <option v-for="t in teams" :key="t">{{ t }}</option>
-      </select>
+    <div class="mt-3">
+      <button
+          @click="showTeams = !showTeams"
+          class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+      >
+        Выбрать команду
+      </button>
+
+      <transition name="slide-fade">
+        <div
+            v-if="showTeams"
+            class="flex flex-wrap bg-gray-100  items-center gap-3 mt-3 overflow-x-auto p-2 bg-transparent rounded-md"
+        >
+
+          <img
+              :src="getTeamLogo('ALL_TEAMS')"
+              alt="All Teams"
+              class="cursor-pointer transition-opacity duration-200 w-20 h-20"
+              :class="team !== '' ? 'opacity-70' : 'opacity-100'"
+              @click="team = ''"
+          />
+
+          <div class="flex flex-wrap items-center gap-2 ml-2">
+            <img
+                v-for="t in teams"
+                :key="t"
+                :src="getTeamLogo(t)"
+                :alt="t"
+                class="w-10 h-10 cursor-pointer rounded transition-opacity duration-200"
+                :class="team === '' ? 'opacity-100' : (team === t ? 'opacity-100' : 'opacity-40')"
+                @click="team = t"
+            />
+          </div>
+        </div>
+      </transition>
     </div>
 
     <div v-if="loading" class="text-center">Loading...</div>
@@ -31,23 +71,18 @@
         <tr>
           <th class="p-2 text-left">Player</th>
           <th>Team</th>
-
           <th @click="toggleSort('PTS')" class="cursor-pointer">
             PTS {{ sortArrow('PTS') }}
           </th>
-
           <th @click="toggleSort('REB')" class="cursor-pointer">
             REB {{ sortArrow('REB') }}
           </th>
-
           <th @click="toggleSort('AST')" class="cursor-pointer">
             AST {{ sortArrow('AST') }}
           </th>
-
           <th @click="toggleSort('STL')" class="cursor-pointer">
             STL {{ sortArrow('STL') }}
           </th>
-
           <th @click="toggleSort('BLK')" class="cursor-pointer">
             BLK {{ sortArrow('BLK') }}
           </th>
@@ -57,7 +92,7 @@
         <tbody>
         <tr
             v-for="p in sortedPlayers.slice(0, 100)"
-            :key="p.PLAYER_NAME"
+            :key="p.PLAYER_ID"
             class="border-b cursor-pointer hover:bg-gray-100"
             @click="handleClick(p)"
         >
@@ -89,13 +124,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStats } from '../../../composables/NBA/player_stats/usePlayerStats'
 import { getPlayerImage, handleImageError } from '../../../utils/playerImage'
 import { useSorting } from '../../../utils/useSorting'
 import { goToPlayer as navigateToPlayer } from '../../../utils/playerRoutes'
 import StatLeaders from './StatLeaders.vue'
+import { getTeamLogo } from '../../../utils/getTeamLogo'
 
 type Player = {
   PLAYER_ID: number
@@ -119,6 +155,8 @@ const {
   filteredPlayers
 } = usePlayerStats()
 
+const showTeams = ref(false)
+
 onMounted(fetchPlayerStats)
 
 const players = computed<Player[]>(() => filteredPlayers.value)
@@ -131,3 +169,27 @@ const handleClick = (p: Player) => navigateToPlayer(router, p.PLAYER_NAME)
 const getImage = getPlayerImage
 const handleImageErr = handleImageError
 </script>
+
+<style scoped>
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.3s ease;
+}
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+.slide-fade-enter-to,
+.slide-fade-leave-from {
+  max-height: 500px;
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .team-logos img {
+    width: 32px;
+    height: 32px;
+  }
+}
+</style>

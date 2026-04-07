@@ -1,6 +1,18 @@
 <template>
   <div class="flex flex-col md:flex-row justify-center items-center gap-6">
     <button
+        @click="props.setConference('West')"
+        :class="[
+        'transition transform hover:scale-110',
+        props.activeConference === 'West'
+          ? 'opacity-100'
+          : 'opacity-50 hover:opacity-80'
+      ]"
+    >
+      <img src="/logos/WESTERN_V2.svg" alt="Western Conference" class="w-28 md:w-32" />
+    </button>
+
+    <button
         @click="props.setConference('All')"
         :class="[
         'transition transform hover:scale-110',
@@ -24,17 +36,6 @@
       <img src="/logos/EASTERN_V2.svg" alt="Eastern Conference" class="w-28 md:w-32" />
     </button>
 
-    <button
-        @click="props.setConference('West')"
-        :class="[
-        'transition transform hover:scale-110',
-        props.activeConference === 'West'
-          ? 'opacity-100'
-          : 'opacity-50 hover:opacity-80'
-      ]"
-    >
-      <img src="/logos/WESTERN_V2.svg" alt="Western Conference" class="w-28 md:w-32" />
-    </button>
   </div>
 </template>
 
