@@ -6,9 +6,20 @@
 
     <div v-if="player" class="space-y-4">
 
-      <div class="bg-gray-900 text-white p-6 rounded-2xl">
-        <h1 class="text-2xl font-bold">{{ player.PLAYER_NAME }}</h1>
-        <p class="text-gray-400">{{ player.TEAM_ABBREVIATION }}</p>
+      <div class="bg-gray-900 text-white p-6 rounded-2xl flex items-center gap-6">
+
+        <img
+            :src="getPlayerImage(player)"
+            :data-player-id="player.PLAYER_ID"
+            class="w-24 h-24 rounded-xl object-cover bg-gray-800 border border-gray-700"
+            @error="handleImageError"
+        />
+
+        <div>
+          <h1 class="text-2xl font-bold">{{ player.PLAYER_NAME }}</h1>
+          <p class="text-gray-400">{{ player.TEAM_ABBREVIATION }}</p>
+        </div>
+
       </div>
 
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -37,6 +48,7 @@ import { computed, onMounted } from 'vue'
 import { usePlayerStats } from '../../../composables/NBA/player_stats/usePlayerStats'
 import StatBox from './StatBox.vue'
 import PlayerChart from './PlayerChart.vue'
+import { getPlayerImage, handleImageError } from '../../../utils/playerImage'
 
 const route = useRoute()
 const { players, fetchPlayerStats } = usePlayerStats()
