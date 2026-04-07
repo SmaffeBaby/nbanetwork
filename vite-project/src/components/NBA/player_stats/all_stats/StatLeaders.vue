@@ -34,7 +34,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { getPlayerImage, handleImageError } from '../../../utils/playerImage'
+import { getPlayerImage, handleImageError } from '../../../../utils/playerImage.ts'
 
 type StatKey = 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV'
 

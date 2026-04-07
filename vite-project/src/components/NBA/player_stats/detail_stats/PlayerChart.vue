@@ -8,7 +8,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import Chart from 'chart.js/auto'
-import { usePlayerGameLog } from '../../../composables/NBA/player_stats/usePlayerGameLog'
+import { usePlayerGameLog } from '../../../../composables/NBA/player_stats/usePlayerGameLog.ts'
 
 const props = defineProps<{ playerId: number; season: string }>()
 

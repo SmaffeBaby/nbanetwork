@@ -8,6 +8,6 @@
 </template>
 
 <script setup lang="ts">
-import PlayerStats from '../components/NBA/player_stats/PlayerStats.vue'
+import PlayerStats from '../components/NBA/player_stats/all_stats/PlayerStats.vue'
 import Header from "../components/Headers/Header.vue";
 </script>

@@ -126,12 +126,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePlayerStats } from '../../../composables/NBA/player_stats/usePlayerStats'
-import { getPlayerImage, handleImageError } from '../../../utils/playerImage'
-import { useSorting } from '../../../utils/useSorting'
-import { goToPlayer as navigateToPlayer } from '../../../utils/playerRoutes'
+import { usePlayerStats } from '../../../../composables/NBA/player_stats/usePlayerStats.ts'
+import { getPlayerImage, handleImageError } from '../../../../utils/playerImage.ts'
+import { useSorting } from '../../../../utils/useSorting.ts'
+import { goToPlayer as navigateToPlayer } from '../../../../utils/playerRoutes.ts'
 import StatLeaders from './StatLeaders.vue'
-import { getTeamLogo } from '../../../utils/getTeamLogo'
+import { getTeamLogo } from '../../../../utils/getTeamLogo.ts'
 
 type Player = {
   PLAYER_ID: number

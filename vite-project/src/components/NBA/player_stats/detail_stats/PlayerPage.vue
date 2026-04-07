@@ -74,13 +74,13 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
 import { computed, onMounted } from 'vue'
-import { usePlayerStats } from '../../../composables/NBA/player_stats/usePlayerStats'
-import { usePlayerPage } from '../../../utils/playerPageUtils'
+import { usePlayerStats } from '../../../../composables/NBA/player_stats/usePlayerStats.ts'
+import { usePlayerPage } from '../../../../utils/playerPageUtils.ts'
 
 import StatBox from './StatBox.vue'
 import PlayerChart from './PlayerChart.vue'
-import { getPlayerImage, handleImageError } from '../../../utils/playerImage'
-import { getTeamLogo } from '../../../utils/getTeamLogo'
+import { getPlayerImage, handleImageError } from '../../../../utils/playerImage.ts'
+import { getTeamLogo } from '../../../../utils/getTeamLogo.ts'
 
 
 type Player = {
