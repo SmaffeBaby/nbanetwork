@@ -3,6 +3,8 @@ const cors = require('cors')
 
 const gamesRoutes = require('./routes/games')
 const standingsRoutes = require('./routes/standings')
+const playerStatsRoutes = require('./routes/playerStats')
+const playerGameStatsRoutes = require('./routes/PlayerGameStats')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -17,6 +19,8 @@ app.get('/', (req, res) => {
 // routes
 app.use('/api', gamesRoutes)
 app.use('/api', standingsRoutes)
+app.use('/api', playerStatsRoutes)
+app.use('/api', playerGameStatsRoutes)
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`)

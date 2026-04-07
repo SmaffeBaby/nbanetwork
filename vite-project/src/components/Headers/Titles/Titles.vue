@@ -25,6 +25,19 @@
           class="w-24 h-24 transition opacity-0 group-hover:opacity-100"
       />
     </RouterLink>
+
+    <RouterLink to="/player-stats" class="group relative">
+      <img
+          :src="route.path === '/player-stats'
+          ? '/logos/PLAYER_STATS_2.svg'
+          : '/logos/PLAYER_STATS_1.svg'"
+          class="w-24 h-24 transition group-hover:opacity-0 absolute"
+      />
+      <img
+          src="/logos/PLAYER_STATS_2.svg"
+          class="w-24 h-24 transition opacity-0 group-hover:opacity-100"
+      />
+    </RouterLink>
   </nav>
 </template>
 

@@ -47,6 +47,20 @@
           />
         </RouterLink>
 
+        <RouterLink
+            to="/player-stats"
+            @click="isOpen = false"
+            class="flex items-center gap-3"
+        >
+          <img
+              :src="route.path.startsWith('/teams')
+        ? '/logos/PLAYER_STATS_2.svg'
+        : '/logos/PLAYER_STATS_1.svg'"
+              class="w-44 h-44"
+              alt="Teams"
+          />
+        </RouterLink>
+
 
         <AuthPanel />
       </div>
