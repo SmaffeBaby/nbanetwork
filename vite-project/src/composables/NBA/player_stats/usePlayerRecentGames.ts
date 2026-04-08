@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../../../stores/auth'
 
-export type SortKey = 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV' | 'GAME_DATE'
+export type SortKey = 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV' | 'MIN' |'GAME_DATE'
 
 export type GameRaw = {
     GAME_DATE: string
@@ -47,6 +47,7 @@ export function usePlayerRecentGames(gamesProp: GameRaw[]) {
         { key: 'STL', label: 'STL' },
         { key: 'BLK', label: 'BLK' },
         { key: 'TOV', label: 'TOV' },
+        { key: 'MIN', label: 'MIN' },
         { key: 'GAME_DATE', label: 'Date' }
     ]
 
