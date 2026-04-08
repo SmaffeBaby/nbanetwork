@@ -6,12 +6,8 @@ export type SortKey = 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV' | 'MIN' |'GA
 
 export type GameRaw = {
     GAME_DATE: string
-    MATCHUP: string
     WL?: string
     MIN?: number
-    FGM?: number
-    FGA?: number
-    FG_PCT?: number
     PTS?: number
     REB?: number
     AST?: number
@@ -25,31 +21,16 @@ export type GameRaw = {
 }
 
 export function usePlayerRecentGames(gamesProp: GameRaw[]) {
-    // Auth
     const authStore = useAuthStore()
     const { user } = storeToRefs(authStore)
 
     const hideScores = computed({
         get: () => !(user.value?.hideScores === false),
-        set: (val: boolean) => {
-            if (user.value) void authStore.updateHideScores(!val)
-        }
+        set: (val: boolean) => { if (user.value) void authStore.updateHideScores(!val) }
     })
 
-    // Сортировка
     const sortField = ref<SortKey>('GAME_DATE')
     const sortAsc = ref(false)
-
-    const sortableFields: { key: SortKey; label: string }[] = [
-        { key: 'PTS', label: 'PTS' },
-        { key: 'AST', label: 'AST' },
-        { key: 'REB', label: 'REB' },
-        { key: 'STL', label: 'STL' },
-        { key: 'BLK', label: 'BLK' },
-        { key: 'TOV', label: 'TOV' },
-        { key: 'MIN', label: 'MIN' },
-        { key: 'GAME_DATE', label: 'Date' }
-    ]
 
     const sortBy = (key: SortKey) => {
         if (sortField.value === key) sortAsc.value = !sortAsc.value
@@ -59,12 +40,9 @@ export function usePlayerRecentGames(gamesProp: GameRaw[]) {
         }
     }
 
-    const getHomeTeamAbbr = (g: GameRaw) => g.HOME_TEAM_ABBR || undefined
-    const getAwayTeamAbbr = (g: GameRaw) => g.AWAY_TEAM_ABBR || undefined
-
     const getWinLoss = (g: GameRaw) => {
         if (g.WL) return g.WL
-        if (g.HOME_SCORE === undefined || g.AWAY_SCORE === undefined) return ''
+        if (g.HOME_SCORE == null || g.AWAY_SCORE == null) return ''
         return g.HOME_SCORE > g.AWAY_SCORE ? 'W' : 'L'
     }
 
@@ -87,15 +65,5 @@ export function usePlayerRecentGames(gamesProp: GameRaw[]) {
             })
     })
 
-    return {
-        hideScores,
-        sortField,
-        sortAsc,
-        sortableFields,
-        sortBy,
-        getHomeTeamAbbr,
-        getAwayTeamAbbr,
-        getWinLoss,
-        sortedGames
-    }
+    return { hideScores, sortField, sortAsc, sortBy, getWinLoss, sortedGames }
 }

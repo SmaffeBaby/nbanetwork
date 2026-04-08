@@ -1,20 +1,6 @@
 <template>
   <div class="p-4 space-y-6">
 
-    <button
-        @click="$router.back()"
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl
-             bg-white/10 backdrop-blur-md text-black text-sm font-medium
-             border border-white/20 shadow-sm
-             hover:bg-white/20 hover:shadow-md hover:-translate-y-0.5
-             active:scale-95 transition-all duration-200"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-      </svg>
-      Back
-    </button>
-
     <div v-if="player" class="space-y-4">
 
       <div
@@ -48,23 +34,72 @@
         </div>
       </div>
 
+      <button
+          @click="$router.back()"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl
+               bg-white/10 backdrop-blur-md text-black text-sm font-medium
+               border border-white/20 shadow-sm
+               hover:bg-white/20 hover:shadow-md hover:-translate-y-0.5
+               active:scale-95 transition-all duration-200"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back
+      </button>
+
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatBox
-            v-for="stat in stats"
-            :key="stat.key"
-            :label="stat.label"
-            :value="player[stat.key]"
+            v-for="statKey in ['PTS','REB','AST','STL','BLK','TOV']"
+            :key="statKey"
+            :label="statKey"
+            :games="filteredGames.map(g => ({
+    [statKey]: (g[statKey as keyof Pick<GameRaw, 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV'>] ?? 0)
+  }))"
             :color="teamStyle?.bgColorHex"
         />
       </div>
 
       <div class="bg-white p-4 rounded-2xl shadow">
         <h2 class="font-semibold mb-2">Performance Trend</h2>
-        <PlayerChart :player-id="player.PLAYER_ID" season="2025-26" />
+        <PlayerChart :player-id="player.PLAYER_ID" season="2025-26" :team="team" />
       </div>
 
-      <div v-if="games.length" class="bg-white p-4 rounded-2xl shadow">
-        <PlayerRecentGames :games="games" />
+      <div class="mt-2">
+        <button
+            @click="showTeams = !showTeams"
+            class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+        >
+          Выбрать команду
+        </button>
+
+        <transition name="slide-fade">
+          <div
+              v-if="showTeams"
+              class="flex flex-wrap items-center gap-3 mt-3 p-2 rounded-md"
+          >
+
+            <img
+                :src="getTeamLogo('ALL_TEAMS')"
+                class="cursor-pointer w-16 h-16"
+                :class="team !== '' ? 'opacity-50' : 'opacity-100'"
+                @click="team = ''"
+            />
+
+            <img
+                v-for="t in teams"
+                :key="t"
+                :src="getTeamLogo(t)"
+                class="w-8 h-8 cursor-pointer rounded"
+                :class="team === '' ? 'opacity-100' : (team === t ? 'opacity-100' : 'opacity-40')"
+                @click="team = t"
+            />
+          </div>
+        </transition>
+      </div>
+
+      <div v-if="filteredGames.length" class="bg-white p-4 rounded-2xl shadow">
+        <PlayerRecentGames :games="filteredGames" :team="team" />
       </div>
 
     </div>
@@ -75,8 +110,9 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+
 import { usePlayerStats } from '../../../../composables/NBA/player_stats/usePlayerStats.ts'
 import { usePlayerPage } from '../../../../composables/NBA/player_stats/usePlayerPage.ts'
 import { usePlayerGameLog } from '../../../../composables/NBA/player_stats/usePlayerGameLog.ts'
@@ -100,16 +136,17 @@ type Player = {
   TOV: number
 }
 
-type StatKey = keyof Pick<Player, 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV'>
+type Stat = {
+  key: keyof Pick<Player, 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV'>
+  label: string
+  value: number
+}
 
 type GameRaw = {
   GAME_DATE: string
   MATCHUP: string
   WL?: string
   MIN?: number
-  FGM?: number
-  FGA?: number
-  FG_PCT?: number
   PTS?: number
   REB?: number
   AST?: number
@@ -123,59 +160,69 @@ type GameRaw = {
 }
 
 const route = useRoute()
-const { players, fetchPlayerStats } = usePlayerStats()
-
-onMounted(() => {
-  if (!players.value.length) fetchPlayerStats()
-})
+const { players, fetchPlayerStats, team, teams } = usePlayerStats()
+const showTeams = ref(false)
+const rawGames = ref<GameRaw[]>([])
 
 const player = computed<Player | undefined>(() => {
   const name = decodeURIComponent(route.params.name as string)
   return players.value.find(p => p.PLAYER_NAME === name)
 })
 
-const season = '2025-26'
+onMounted(() => {
+  if (!players.value.length) fetchPlayerStats()
+})
 
+const season = '2025-26'
 const gamesComposable = ref<ReturnType<typeof usePlayerGameLog> | null>(null)
-const games = ref<GameRaw[]>([])
-const loading = ref(true)
 
 function parseMatchup(matchup: string) {
   if (!matchup) return { home: null, away: null }
-
-  let home: string | null = null
-  let away: string | null = null
-
   if (matchup.includes(' @ ')) {
-    [away, home] = matchup.split(' @ ')
-  } else if (matchup.includes(' vs. ')) {
-    [home, away] = matchup.split(' vs. ')
-  } else {
-    const match = matchup.match(/\b[A-Z]{2,3}\b/g)
-    if (match && match.length >= 2) {
-      home = match[0]
-      away = match[1]
-    }
+    const [away, home] = matchup.split(' @ ')
+    return { home, away }
   }
-
-  return { home, away }
+  if (matchup.includes(' vs. ')) {
+    const [home, away] = matchup.split(' vs. ')
+    return { home, away }
+  }
+  const match = matchup.match(/\b[A-Z]{2,3}\b/g)
+  return { home: match?.[0] ?? null, away: match?.[1] ?? null }
 }
 
 watch(player, async (p) => {
   if (!p) return
-
   const composable = usePlayerGameLog(p.PLAYER_ID, season)
   gamesComposable.value = composable
-
   await composable.fetchGames()
 
-  games.value = (composable.games?.value ?? []).map(g => {
+  rawGames.value = (composable.games?.value ?? []).map(g => {
     const { home, away } = parseMatchup(g.MATCHUP)
-    return { ...g, HOME_TEAM_ABBR: home, AWAY_TEAM_ABBR: away } as GameRaw
+    return { ...g, HOME_TEAM_ABBR: home, AWAY_TEAM_ABBR: away }
   })
-
-  loading.value = composable.loading?.value ?? false
 }, { immediate: true })
 
-const { teamFullName, teamStyle, cardStyle, hasTeam, stats } = usePlayerPage(player)
+const filteredGames = computed(() => {
+  if (!player.value) return []
+  const playerTeam = player.value.TEAM_ABBREVIATION
+  const selectedTeam = team.value
+
+  if (!selectedTeam) return rawGames.value.filter(
+      g => g.HOME_TEAM_ABBR === playerTeam || g.AWAY_TEAM_ABBR === playerTeam
+  )
+
+  return rawGames.value.filter(
+      g =>
+          (g.HOME_TEAM_ABBR === playerTeam && g.AWAY_TEAM_ABBR === selectedTeam) ||
+          (g.AWAY_TEAM_ABBR === playerTeam && g.HOME_TEAM_ABBR === selectedTeam)
+  )
+})
+
+const stats = computed<Stat[]>(() => {
+  if (!player.value) return []
+  const keys: Array<Stat['key']> = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV']
+  return keys.map(k => ({ key: k, label: k, value: player.value![k] }))
+})
+
+const { teamFullName, teamStyle, cardStyle, hasTeam } = usePlayerPage(player)
 </script>

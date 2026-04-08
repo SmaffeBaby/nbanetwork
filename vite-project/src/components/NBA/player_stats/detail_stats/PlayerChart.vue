@@ -6,40 +6,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, onMounted, watch, toRef } from 'vue'
 import Chart from 'chart.js/auto'
-import { usePlayerGameLog } from '../../../../composables/NBA/player_stats/usePlayerGameLog.ts'
+import { usePlayerChart } from '../../../../composables/NBA/player_stats/usePlayerChart'
 
-const props = defineProps<{ playerId: number; season: string }>()
+const props = defineProps<{ playerId: number; season: string; team?: string }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
 
-const { chartData, fetchGames, loading, games } = usePlayerGameLog(
+const { fetchGames, loading, chartData } = usePlayerChart(
     props.playerId,
-    props.season
+    props.season,
+    toRef(props, 'team')
 )
 
-onMounted(async () => {
-  await fetchGames()
-
-  if (games.value.length && canvas.value) {
-    chart = new Chart(canvas.value, {
-      type: 'line',
-      data: chartData.value,
-      options: {
-        responsive: true,
-        plugins: { legend: { display: true } },
-        scales: { x: { display: true }, y: { beginAtZero: true } }
-      }
-    })
-  }
-})
-
-watch(games, (newGames) => {
-  if (!canvas.value || !newGames.length) return
+function renderChart() {
+  if (!canvas.value) return
   if (chart) chart.destroy()
-
   chart = new Chart(canvas.value, {
     type: 'line',
     data: chartData.value,
@@ -49,5 +33,14 @@ watch(games, (newGames) => {
       scales: { x: { display: true }, y: { beginAtZero: true } }
     }
   })
+}
+
+onMounted(async () => {
+  await fetchGames()
+  renderChart()
+})
+
+watch(chartData, () => {
+  renderChart()
 })
 </script>
