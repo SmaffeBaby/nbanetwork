@@ -21,7 +21,6 @@
           class="p-6 rounded-2xl flex items-center gap-6 text-white shadow-md relative overflow-hidden"
           :style="cardStyle"
       >
-
         <img
             :src="getPlayerImage(player)"
             :data-player-id="player.PLAYER_ID"
@@ -64,6 +63,10 @@
         <PlayerChart :player-id="player.PLAYER_ID" season="2025-26" />
       </div>
 
+      <div v-if="games.length" class="bg-white p-4 rounded-2xl shadow">
+        <PlayerRecentGames :games="games" />
+      </div>
+
     </div>
 
     <div v-else class="text-center">Loading player...</div>
@@ -73,15 +76,17 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { usePlayerStats } from '../../../../composables/NBA/player_stats/usePlayerStats.ts'
-import { usePlayerPage } from '../../../../utils/playerPageUtils.ts'
+import { usePlayerPage } from '../../../../composables/NBA/player_stats/usePlayerPage.ts'
+import { usePlayerGameLog } from '../../../../composables/NBA/player_stats/usePlayerGameLog.ts'
 
+import PlayerRecentGames from './PlayerRecentGames.vue'
 import StatBox from './StatBox.vue'
 import PlayerChart from './PlayerChart.vue'
+
 import { getPlayerImage, handleImageError } from '../../../../utils/playerImage.ts'
 import { getTeamLogo } from '../../../../utils/getTeamLogo.ts'
-
 
 type Player = {
   PLAYER_ID: number
@@ -95,11 +100,27 @@ type Player = {
   TOV: number
 }
 
-type StatKey = keyof Pick<
-    Player,
-    'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV'
->
+type StatKey = keyof Pick<Player, 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV'>
 
+type GameRaw = {
+  GAME_DATE: string
+  MATCHUP: string
+  WL?: string
+  MIN?: number
+  FGM?: number
+  FGA?: number
+  FG_PCT?: number
+  PTS?: number
+  REB?: number
+  AST?: number
+  STL?: number
+  BLK?: number
+  TOV?: number
+  HOME_SCORE?: number
+  AWAY_SCORE?: number
+  HOME_TEAM_ABBR?: string | null
+  AWAY_TEAM_ABBR?: string | null
+}
 
 const route = useRoute()
 const { players, fetchPlayerStats } = usePlayerStats()
@@ -108,29 +129,53 @@ onMounted(() => {
   if (!players.value.length) fetchPlayerStats()
 })
 
-
 const player = computed<Player | undefined>(() => {
   const name = decodeURIComponent(route.params.name as string)
   return players.value.find(p => p.PLAYER_NAME === name)
 })
 
+const season = '2025-26'
 
-const {
-  teamFullName,
-  teamStyle,
-  cardStyle
-} = usePlayerPage(player)
+const gamesComposable = ref<ReturnType<typeof usePlayerGameLog> | null>(null)
+const games = ref<GameRaw[]>([])
+const loading = ref(true)
 
+function parseMatchup(matchup: string) {
+  if (!matchup) return { home: null, away: null }
 
-const hasTeam = computed(() => !!teamFullName.value && !!teamStyle.value)
+  let home: string | null = null
+  let away: string | null = null
 
+  if (matchup.includes(' @ ')) {
+    [away, home] = matchup.split(' @ ')
+  } else if (matchup.includes(' vs. ')) {
+    [home, away] = matchup.split(' vs. ')
+  } else {
+    const match = matchup.match(/\b[A-Z]{2,3}\b/g)
+    if (match && match.length >= 2) {
+      home = match[0]
+      away = match[1]
+    }
+  }
 
-const stats: { label: string; key: StatKey }[] = [
-  { label: 'PPG', key: 'PTS' },
-  { label: 'RPG', key: 'REB' },
-  { label: 'APG', key: 'AST' },
-  { label: 'SPG', key: 'STL' },
-  { label: 'BPG', key: 'BLK' },
-  { label: 'TOV', key: 'TOV' },
-]
+  return { home, away }
+}
+
+watch(player, async (p) => {
+  if (!p) return
+
+  const composable = usePlayerGameLog(p.PLAYER_ID, season)
+  gamesComposable.value = composable
+
+  await composable.fetchGames()
+
+  games.value = (composable.games?.value ?? []).map(g => {
+    const { home, away } = parseMatchup(g.MATCHUP)
+    return { ...g, HOME_TEAM_ABBR: home, AWAY_TEAM_ABBR: away } as GameRaw
+  })
+
+  loading.value = composable.loading?.value ?? false
+}, { immediate: true })
+
+const { teamFullName, teamStyle, cardStyle, hasTeam, stats } = usePlayerPage(player)
 </script>
