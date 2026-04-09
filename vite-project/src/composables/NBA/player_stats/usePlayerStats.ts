@@ -11,9 +11,10 @@ export interface PlayerStats {
     STL: number
     BLK: number
     TOV: number
+    MIN: number
 }
 
-export type StatKey = 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV'
+export type StatKey = 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV' | 'MIN'
 
 export function usePlayerStats() {
     const players = ref<PlayerStats[]>([])
