@@ -11,7 +11,8 @@ const routes = [
     { path: '/standings', component: Standings },
     { path: '/teams', component: Teams },
     { path: '/player-stats', component: PlayerStats},
-    { path: '/player/:name',name: 'PlayerPage', component: () => import('../views/PlayerPage.vue')}
+    { path: '/player/:name',name: 'PlayerPage', component: () => import('../views/PlayerPage.vue')},
+    {path: '/team/:abbr', name: 'TeamDetail', component: () => import('../views/TeamDetail.vue')}
 ]
 
 export const router = createRouter({
