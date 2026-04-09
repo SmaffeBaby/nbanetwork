@@ -2,7 +2,7 @@
   <div class="p-6 space-y-6">
 
     <div class="flex justify-center mb-4">
-      <img :src="getTeamLogo(teamAbbr)" class="w-32 h-32" />
+      <img :src="getTeamLogo(teamAbbr)" class="w-72 h-72" />
     </div>
 
     <button
