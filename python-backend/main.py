@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from nba_api.stats.endpoints import leaguestandings
 from nba_api.stats.endpoints import leaguedashplayerstats, playergamelog
+from nba_api.stats.endpoints import teamgamelog
 
 app = FastAPI()
 
@@ -24,6 +25,18 @@ def get_player_stats(season: str):
 def get_player_gamelog(player_id: int, season: str):
     try:
         data = playergamelog.PlayerGameLog(player_id=player_id, season=season)
+        return data.get_dict()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/team-games/{team_id}/{season}")
+def get_team_games(team_id: int, season: str):
+    try:
+        data = teamgamelog.TeamGameLog(
+            team_id=team_id,
+            season=season,
+            season_type_all_star="Regular Season"
+        )
         return data.get_dict()
     except Exception as e:
         return {"error": str(e)}

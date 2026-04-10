@@ -37,23 +37,31 @@
 
     <div class="mt-4">
       <TeamStats v-if="activeTab === 'Команда'" :teamAbbr="teamAbbr" />
-      <div v-if="activeTab === 'Игры'" class="text-gray-600 text-center py-10">
-        123а...
-      </div>
+      <TeamGamesTable
+          v-if="activeTab === 'История игр'"
+          :teamId="teamId"
+          season="2025-26"
+      />
     </div>
 
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+
 import TeamStats from './TeamStats.vue'
-import {getTeamLogo} from "../../../../utils/getTeamLogo.ts";
+import TeamGamesTable from './TeamGamesTable.vue'
+
+import { getTeamLogo } from '../../../../utils/getTeamLogo'
+import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
 
 const route = useRoute()
 const teamAbbr = route.params.abbr as string
 
-const tabs = ['Команда', 'История']
+const tabs = ['Команда', 'История игр']
 const activeTab = ref('Команда')
+
+const teamId = computed(() => TEAM_ID_MAP[teamAbbr])
 </script>
