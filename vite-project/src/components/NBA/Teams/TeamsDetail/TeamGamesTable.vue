@@ -2,25 +2,18 @@
   <div class="space-y-4">
     <div class="flex gap-4 items-center">
 
-      <select
-          v-model="filter"
-          class="px-3 py-2 rounded-lg border text-sm"
-      >
+      <select v-model="filter" class="px-3 py-2 rounded-lg border text-sm">
         <option value="ALL">Все игры</option>
         <option value="W">Победы</option>
         <option value="L">Поражения</option>
       </select>
 
       <div class="text-sm text-gray-500">
-        Всего: {{ filteredGames.length }}
+        Всего: {{ sortedGames.length }}
       </div>
 
       <label class="flex items-center cursor-pointer ml-auto">
-        <input
-            type="checkbox"
-            class="sr-only"
-            v-model="hideScoresModel"
-        />
+        <input type="checkbox" class="sr-only" v-model="hideScoresModel" />
 
         <div
             class="w-12 h-6 flex items-center rounded-full p-1 transition"
@@ -36,7 +29,6 @@
           {{ hideScoresModel ? 'Статы скрыты' : 'Статы видны' }}
         </span>
       </label>
-
     </div>
 
     <div class="overflow-x-auto border rounded-xl">
@@ -44,39 +36,82 @@
 
         <thead class="bg-gray-100 text-gray-600 text-xs uppercase">
         <tr>
-          <th class="p-2">Дата</th>
+          <th class="p-2 cursor-pointer" @click="setSort('GAME_DATE')">
+            Дата {{ getSortIcon('GAME_DATE') }}
+          </th>
           <th>Матч</th>
 
-          <th v-if="!hideScoresModel">W/L</th>
-          <th v-if="!hideScoresModel">PTS</th>
-          <th v-if="!hideScoresModel">REB</th>
-          <th v-if="!hideScoresModel">AST</th>
-          <th v-if="!hideScoresModel">STL</th>
-          <th v-if="!hideScoresModel">BLK</th>
-          <th v-if="!hideScoresModel">TOV</th>
+          <th v-if="!hideScoresModel" @click="setSort('WL')" class="cursor-pointer">
+            W/L {{ getSortIcon('WL') }}
+          </th>
 
-          <th>FG%</th>
-          <th>3P%</th>
-          <th>FT%</th>
+          <th v-if="!hideScoresModel" @click="setSort('PTS')" class="cursor-pointer">
+            PTS {{ getSortIcon('PTS') }}
+          </th>
+
+          <th v-if="!hideScoresModel" @click="setSort('REB')" class="cursor-pointer">
+            REB {{ getSortIcon('REB') }}
+          </th>
+
+          <th v-if="!hideScoresModel" @click="setSort('AST')" class="cursor-pointer">
+            AST {{ getSortIcon('AST') }}
+          </th>
+
+          <th v-if="!hideScoresModel" @click="setSort('STL')" class="cursor-pointer">
+            STL {{ getSortIcon('STL') }}
+          </th>
+
+          <th v-if="!hideScoresModel" @click="setSort('BLK')" class="cursor-pointer">
+            BLK {{ getSortIcon('BLK') }}
+          </th>
+
+          <th v-if="!hideScoresModel" @click="setSort('TOV')" class="cursor-pointer">
+            TOV {{ getSortIcon('TOV') }}
+          </th>
+
+          <th @click="setSort('FG_PCT')" class="cursor-pointer">
+            FG% {{ getSortIcon('FG_PCT') }}
+          </th>
+
+          <th @click="setSort('FG3_PCT')" class="cursor-pointer">
+            3P% {{ getSortIcon('FG3_PCT') }}
+          </th>
+
+          <th @click="setSort('FT_PCT')" class="cursor-pointer">
+            FT% {{ getSortIcon('FT_PCT') }}
+          </th>
         </tr>
         </thead>
 
         <tbody>
         <tr
-            v-for="game in filteredGames"
+            v-for="game in sortedGames"
             :key="game.Game_ID"
-            class="border-t hover:bg-gray-50"
+            class="border-t hover:bg-gray-50 transition"
         >
-          <td class="p-2">{{ game.GAME_DATE }}</td>
-          <td>{{ game.MATCHUP }}</td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {{ game.GAME_DATE }}
+          </td>
+
+          <td class="px-3 py-2">
+            <div class="flex items-center gap-2">
+              <img :src="getTeamLogo(parseMatchup(game.MATCHUP).away)" class="w-6 h-6" />
+              <span>{{ parseMatchup(game.MATCHUP).away }}</span>
+
+              <span class="text-gray-400 text-xs">
+                  {{ parseMatchup(game.MATCHUP).isAway ? '@' : 'vs' }}
+                </span>
+
+              <img :src="getTeamLogo(parseMatchup(game.MATCHUP).home)" class="w-6 h-6" />
+              <span>{{ parseMatchup(game.MATCHUP).home }}</span>
+            </div>
+          </td>
 
           <template v-if="!hideScoresModel">
             <td>
-                <span
-                    :class="game.WL === 'W'
-                    ? 'text-green-600 font-bold'
-                    : 'text-red-500 font-bold'"
-                >
+                <span :class="game.WL === 'W'
+                  ? 'text-green-600 font-bold'
+                  : 'text-red-500 font-bold'">
                   {{ game.WL }}
                 </span>
             </td>
@@ -92,18 +127,17 @@
           <td>{{ game.FG_PCT }}</td>
           <td>{{ game.FG3_PCT }}</td>
           <td>{{ game.FT_PCT }}</td>
-
         </tr>
         </tbody>
 
       </table>
     </div>
-
   </div>
 </template>
 
 <script setup lang="ts">
 import { useTeamGameTable } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamGameTable'
+import { getTeamLogo } from '../../../../utils/getTeamLogo'
 
 const props = defineProps<{
   teamId: number
@@ -112,7 +146,10 @@ const props = defineProps<{
 
 const {
   filter,
-  filteredGames,
-  hideScoresModel
+  sortedGames,
+  hideScoresModel,
+  parseMatchup,
+  setSort,
+  getSortIcon
 } = useTeamGameTable(props.teamId, props.season)
 </script>
