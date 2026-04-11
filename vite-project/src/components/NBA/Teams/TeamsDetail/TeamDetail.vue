@@ -36,12 +36,16 @@
     </div>
 
     <div class="mt-4">
-      <TeamStats v-if="activeTab === 'Команда'" :teamAbbr="teamAbbr" />
+      <TeamUpcomingGames
+          v-if="activeTab === 'Будущие игры'"
+          :teamId="teamId"
+      />
       <TeamGamesTable
           v-if="activeTab === 'История игр'"
           :teamId="teamId"
           season="2025-26"
       />
+      <TeamStats v-if="activeTab === 'Команда'" :teamAbbr="teamAbbr" />
     </div>
 
   </div>
@@ -53,6 +57,7 @@ import { useRoute } from 'vue-router'
 
 import TeamStats from './TeamStats.vue'
 import TeamGamesTable from './TeamGamesTable.vue'
+import TeamUpcomingGames from './TeamUpcomingGames.vue'
 
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
@@ -60,7 +65,7 @@ import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
 const route = useRoute()
 const teamAbbr = route.params.abbr as string
 
-const tabs = ['Команда', 'История игр']
+const tabs = ['Будущие игры','Команда', 'История игр']
 const activeTab = ref('Команда')
 
 const teamId = computed(() => TEAM_ID_MAP[teamAbbr])
