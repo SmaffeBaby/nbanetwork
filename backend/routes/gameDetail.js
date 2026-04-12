@@ -34,9 +34,25 @@ function normalizeGame(data) {
     const homeMeta = TEAM_MAP[homeTeamId] || {}
     const awayMeta = TEAM_MAP[awayTeamId] || {}
 
+    const gameDateUTC = gameRow[0]
+
+    const date = new Date(gameDateUTC)
+
+    const gameDateMSK = date.toLocaleString('ru-RU', {
+        timeZone: 'Europe/Moscow',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+
     return {
         gameId: gameRow[2],
         status: gameRow[4] || 'Game',
+
+        dateUTC: gameDateUTC,
+        dateMSK: gameDateMSK,
 
         home: {
             teamId: homeTeamId,
