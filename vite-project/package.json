@@ -10,6 +10,7 @@
     "tw:init": "tailwindcss init -p"
   },
   "dependencies": {
+    "@heroicons/vue": "^2.2.0",
     "@supabase/supabase-js": "^2.101.1",
     "@vuepic/vue-datepicker": "^12.1.0",
     "axios": "^1.14.0",

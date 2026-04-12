@@ -1,48 +1,91 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-4">
 
-    <div v-if="loading">Loading game...</div>
+    <div v-if="loading" class="text-center text-gray-400 animate-pulse text-sm">
+      Loading game...
+    </div>
 
-    <div v-else-if="error" class="text-red-500">
+    <div v-else-if="error" class="text-center text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-sm">
       {{ error }}
     </div>
 
-    <div v-else class="p-6 border rounded-xl flex items-center justify-between">
+    <div
+        v-else
+        class="relative p-4 rounded-2xl bg-white shadow-md flex flex-col gap-3 active:scale-[0.98] transition"
+    >
 
-      <div class="flex flex-col items-center w-1/3">
-        <img
-            :src="getTeamLogo(game?.home?.abbr)"
-            class="w-14 h-14 cursor-pointer"
-            @click="goTeam(game?.home?.abbr)"
-        />
-        <div class="font-bold mt-2">
-          {{ game?.home?.name }}
+      <div class="flex justify-between items-center text-xs text-gray-500">
+
+        <div class="flex items-center gap-2 uppercase tracking-wide">
+
+          <span>{{ game?.status }}</span>
+
+          <span
+              v-if="isLive"
+              class="flex items-center gap-1 text-red-500 font-semibold"
+          >
+            <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+            LIVE
+          </span>
+
         </div>
+
+        <button
+            @click="toggleScore"
+            class="p-2 rounded-full active:scale-90 transition"
+        >
+          <EyeIcon v-if="isVisible" class="w-5 h-5 text-gray-600" />
+          <EyeSlashIcon v-else class="w-5 h-5 text-gray-400" />
+        </button>
+
       </div>
 
-      <div class="text-center">
-        <div class="text-3xl font-bold">
-          {{ game?.home?.score }} - {{ game?.away?.score }}
+      <div class="flex items-center justify-between">
+
+        <div class="flex flex-col items-center w-1/3">
+          <img
+              :src="getTeamLogo(game?.home?.abbr)"
+              class="w-12 h-12 cursor-pointer transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110"
+              @click="goTeam(game?.home?.abbr)"
+          />
+          <div class="text-xs mt-1 text-center font-medium">
+            {{ game?.home?.name }}
+          </div>
         </div>
 
-        <div class="text-sm text-gray-500">
-          {{ game?.status }}
+        <div class="text-center">
+          <transition name="fade-scale" mode="out-in">
+            <div
+                :key="gameId + (isVisible ? '-visible' : '-hidden')"
+                class="text-2xl sm:text-3xl font-bold"
+            >
+              <template v-if="isVisible">
+                {{ game?.home?.score }}
+                <span class="mx-1 text-gray-400">:</span>
+                {{ game?.away?.score }}
+              </template>
+              <template v-else>
+                * : *
+              </template>
+            </div>
+          </transition>
+
+          <div class="text-[10px] text-gray-400 mt-1">
+            {{ game?.dateMSK }}
+          </div>
         </div>
 
-        <div class="text-xs text-gray-400 mt-1">
-          {{ game?.dateMSK }}
+        <div class="flex flex-col items-center w-1/3">
+          <img
+              :src="getTeamLogo(game?.away?.abbr)"
+              class="w-12 h-12 cursor-pointer transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110"
+              @click="goTeam(game?.away?.abbr)"
+          />
+          <div class="text-xs mt-1 text-center font-medium">
+            {{ game?.away?.name }}
+          </div>
         </div>
-      </div>
 
-      <div class="flex flex-col items-center w-1/3">
-        <img
-            :src="getTeamLogo(game?.away?.abbr)"
-            class="w-14 h-14 cursor-pointer"
-            @click="goTeam(game?.away?.abbr)"
-        />
-        <div class="font-bold mt-2">
-          {{ game?.away?.name }}
-        </div>
       </div>
 
     </div>
@@ -51,19 +94,41 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
+import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
+import { useGameHeader } from '../../../composables/NBA/GameFinal/useGameHeader'
+import { toRef } from 'vue'
 
-defineProps<{
+
+const props = defineProps<{
   game: any
   loading: boolean
   error: string | null
 }>()
 
-const router = useRouter()
 
-function goTeam(abbr: string) {
-  if (!abbr) return
-  router.push(`/team/${abbr}`)
-}
+const {
+  gameId,
+  isVisible,
+  isLive,
+  toggleScore,
+  goTeam
+} = useGameHeader(toRef(props, 'game'))
 </script>
+
+<style scoped>
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: all 0.25s ease;
+}
+
+.fade-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(1.1);
+}
+</style>
