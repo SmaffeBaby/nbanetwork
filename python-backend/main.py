@@ -4,6 +4,7 @@ from nba_api.stats.endpoints import leaguedashplayerstats, playergamelog
 from nba_api.stats.endpoints import teamgamelog
 from nba_api.stats.endpoints import scoreboardv2
 from datetime import datetime, timedelta
+from nba_api.stats.endpoints import boxscoresummaryv2, boxscoretraditionalv2
 
 app = FastAPI()
 
@@ -138,6 +139,24 @@ def get_team_upcoming_games(team_id: int):
                     "rowSet": all_games
                 }
             ]
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/game-detail/{game_id}")
+def get_game_detail(game_id: str):
+    try:
+        summary = boxscoresummaryv2.BoxScoreSummaryV2(game_id=game_id)
+        boxscore = boxscoretraditionalv2.BoxScoreTraditionalV2(game_id=game_id)
+
+        summary_dict = summary.get_dict()
+        boxscore_dict = boxscore.get_dict()
+
+        return {
+            "game_id": game_id,
+            "summary": summary_dict,
+            "boxscore": boxscore_dict
         }
 
     except Exception as e:
