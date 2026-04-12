@@ -47,6 +47,11 @@
       />
       <TeamStats v-if="activeTab === 'Команда'" :teamAbbr="teamAbbr" />
       <TeamStats2 v-if="activeTab === 'Статистика'" :teamId="teamId" />
+      <TeamPointsTrendTable
+          v-if="activeTab === 'Форма'"
+          :teamId="teamId"
+          season="2025-26"
+      />
     </div>
 
   </div>
@@ -60,6 +65,7 @@ import TeamStats from './TeamStats.vue'
 import TeamGamesTable from './TeamGamesTable.vue'
 import TeamUpcomingGames from './TeamUpcomingGames.vue'
 import TeamStats2 from './TeamStats2.vue'
+import TeamPointsTrendTable from './TeamPointsTrendTable.vue'
 
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
@@ -67,7 +73,7 @@ import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
 const route = useRoute()
 const teamAbbr = route.params.abbr as string
 
-const tabs = ['Будущие игры','Команда', 'История игр', 'Статистика']
+const tabs = ['Будущие игры','Команда', 'История игр', 'Статистика','Форма']
 const activeTab = ref('Команда')
 
 const teamId = computed(() => TEAM_ID_MAP[teamAbbr])
