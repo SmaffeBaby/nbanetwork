@@ -8,8 +8,8 @@
     />
 
     <GameRecapCard
-        v-if="recap?.recap"
-        :recap="recap.recap"
+        v-if="recap"
+        :recap="recap"
     />
 
     <div v-if="game" class="p-4 border rounded text-xs overflow-auto bg-gray-50">

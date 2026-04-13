@@ -11,6 +11,24 @@ export function useGameFinal() {
     const loading = ref(true)
     const error = ref<string | null>(null)
 
+    const enrichMvp = (mvp: any, players: any[] = []) => {
+        if (!mvp) return null
+
+        if (mvp.PLAYER_ID) return mvp
+
+        const name = (mvp.name || '').toLowerCase()
+
+        const player = players.find(p =>
+            (p.fullName || '').toLowerCase() === name
+        )
+
+        return {
+            ...mvp,
+            PLAYER_ID: player?.playerId || null,
+            TEAM_ID: player?.teamId || null
+        }
+    }
+
     const fetchGame = async () => {
         try {
             const res = await fetch(`/api/game-recap/${gameId}`)
@@ -21,13 +39,19 @@ export function useGameFinal() {
 
             const data = await res.json()
 
-            recap.value = data
-
-            // 🔥 достаём meta из recap (у тебя там уже есть всё)
             const meta = data?.meta || {}
 
-            // ❗ ВАЖНО: тебе нужно вернуть score из fetchGameRecap
-            // (ниже покажу правку)
+            const players =
+                data?.players ||
+                data?.roster ||
+                []
+
+            const normalizedRecap = {
+                ...data,
+                mvp: enrichMvp(data?.mvp || data?.recap?.mvp, players)
+            }
+
+            recap.value = normalizedRecap
 
             game.value = {
                 gameId,
@@ -50,7 +74,7 @@ export function useGameFinal() {
             }
 
         } catch (e: any) {
-            error.value = e.message
+            error.value = e?.message || 'Unknown error'
         } finally {
             loading.value = false
         }

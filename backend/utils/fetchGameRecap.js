@@ -22,21 +22,14 @@ async function fetchGameRecap(gameId) {
         const homeTeam = homeMeta.name || game.homeTeam?.teamName || 'Home'
         const awayTeam = awayMeta.name || game.awayTeam?.teamName || 'Away'
 
-        const homeAbbr =
-            game.homeTeam?.teamTricode ||
-            homeMeta.abbr ||
-            ''
-
-        const awayAbbr =
-            game.awayTeam?.teamTricode ||
-            awayMeta.abbr ||
-            ''
+        const homeAbbr = game.homeTeam?.teamTricode || homeMeta.abbr || ''
+        const awayAbbr = game.awayTeam?.teamTricode || awayMeta.abbr || ''
 
         const homeScore = game.homeTeam?.score ?? 0
         const awayScore = game.awayTeam?.score ?? 0
 
         const topPlayers = getTopPlayers(game)
-        const mvp = topPlayers[0]
+        const mvp = topPlayers[0] || null
 
         const runs = detectRuns(plays)
         const keyMoments = getKeyMoments(plays)
@@ -58,7 +51,15 @@ async function fetchGameRecap(gameId) {
         })
 
         return {
-            recap: aiRecap,
+            title: aiRecap?.title || '',
+            storyline: aiRecap?.storyline || [],
+            insight: aiRecap?.insight || null,
+            runs: aiRecap?.runs || null,
+            clutch: aiRecap?.clutch || null,
+            quarters: aiRecap?.quarters || [],
+
+            mvp,
+
             meta: {
                 homeTeam,
                 awayTeam,
@@ -66,9 +67,6 @@ async function fetchGameRecap(gameId) {
                 awayAbbr,
                 homeScore,
                 awayScore,
-
-                mvp,
-                topPlayers,
                 runs,
                 clutch,
                 keyMoments,
@@ -78,24 +76,40 @@ async function fetchGameRecap(gameId) {
 
     } catch (e) {
         console.error('Recap error:', e.message)
-        return { recap: null }
+        return null
     }
 }
 
 
 function getTopPlayers(game) {
-    const players = [
-        ...(game.homeTeam?.players || []),
-        ...(game.awayTeam?.players || [])
-    ]
+    const homePlayers = (game.homeTeam?.players || []).map(p => ({
+        ...p,
+        TEAM_ID: game.homeTeam?.teamId
+    }))
+
+    const awayPlayers = (game.awayTeam?.players || []).map(p => ({
+        ...p,
+        TEAM_ID: game.awayTeam?.teamId
+    }))
+
+    const players = [...homePlayers, ...awayPlayers]
 
     return players
-        .map(p => ({
-            name: p.name,
-            points: p.statistics?.points ?? p.stats?.pts ?? 0,
-            assists: p.statistics?.assists ?? p.stats?.ast ?? 0,
-            rebounds: p.statistics?.reboundsTotal ?? p.stats?.reb ?? 0
-        }))
+        .map(p => {
+            const pts = p.statistics?.points ?? p.stats?.pts ?? 0
+            const ast = p.statistics?.assists ?? p.stats?.ast ?? 0
+            const reb = p.statistics?.reboundsTotal ?? p.stats?.reb ?? 0
+
+            return {
+                name: p.name,
+                PLAYER_ID: p.personId || p.playerId || null,
+                TEAM_ID: p.TEAM_ID || null,
+                points: pts,
+                assists: ast,
+                rebounds: reb,
+                stats: `${pts} pts / ${ast} ast / ${reb} reb`
+            }
+        })
         .filter(p => p.name)
         .sort((a, b) =>
             (b.points + b.assists * 1.5 + b.rebounds * 1.2) -
