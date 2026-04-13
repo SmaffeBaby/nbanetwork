@@ -8,6 +8,7 @@ const playerGameStatsRoutes = require('./routes/PlayerGameStats')
 const teamGamesRoutes = require('./routes/teamGames')
 const teamUpcomingGamesRoutes = require('./routes/teamUpcomingGames')
 const gameDetailRoutes = require('./routes/gameDetail')
+const gameRecapRoutes = require('./routes/gameRecap')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -27,6 +28,7 @@ app.use('/api', playerGameStatsRoutes)
 app.use('/api', teamGamesRoutes)
 app.use('/api', teamUpcomingGamesRoutes)
 app.use('/api', gameDetailRoutes)
+app.use('/api', gameRecapRoutes)
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`)

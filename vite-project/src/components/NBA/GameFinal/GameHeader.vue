@@ -44,12 +44,12 @@
 
         <div class="flex flex-col items-center w-1/3">
           <img
-              :src="getTeamLogo(game?.home?.abbr)"
+              :src="getTeamLogo(game?.away?.abbr)"
               class="w-12 h-12 cursor-pointer transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110"
-              @click="goTeam(game?.home?.abbr)"
+              @click="goTeam(game?.away?.abbr)"
           />
           <div class="text-xs mt-1 text-center font-medium">
-            {{ game?.home?.name }}
+            {{ game?.away?.name }}
           </div>
         </div>
 
@@ -59,13 +59,14 @@
                 :key="gameId + (isVisible ? '-visible' : '-hidden')"
                 class="text-2xl sm:text-3xl font-bold"
             >
-              <template v-if="isVisible">
-                {{ game?.home?.score }}
+              <template v-if="isVisible && game?.home?.score != null">
+                {{ game.away.score }}
                 <span class="mx-1 text-gray-400">:</span>
-                {{ game?.away?.score }}
+                {{ game.home.score }}
               </template>
+
               <template v-else>
-                * : *
+                VS
               </template>
             </div>
           </transition>
@@ -77,12 +78,12 @@
 
         <div class="flex flex-col items-center w-1/3">
           <img
-              :src="getTeamLogo(game?.away?.abbr)"
+              :src="getTeamLogo(game?.home?.abbr)"
               class="w-12 h-12 cursor-pointer transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110"
-              @click="goTeam(game?.away?.abbr)"
+              @click="goTeam(game?.home?.abbr)"
           />
           <div class="text-xs mt-1 text-center font-medium">
-            {{ game?.away?.name }}
+            {{ game?.home?.name }}
           </div>
         </div>
 
