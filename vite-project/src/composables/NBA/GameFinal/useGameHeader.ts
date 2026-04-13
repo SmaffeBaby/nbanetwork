@@ -1,4 +1,4 @@
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useScoreVisibility } from '../../../stores/useScoreVisibility'
 
@@ -6,22 +6,26 @@ export function useGameHeader(gameRef: any) {
     const router = useRouter()
     const store = useScoreVisibility()
 
-    onMounted(() => {
-        store.load()
+    const gameId = computed(() => {
+        const g = gameRef?.value
+        if (!g?.gameId) return null
+        return String(g.gameId)
     })
 
-    const gameId = computed(() => gameRef?.value?.id || gameRef?.value?.dateMSK)
-
-    const isVisible = computed(() =>
-        store.isVisible(gameId.value)
-    )
+    const isVisible = computed(() => {
+        const id = gameId.value
+        if (!id) return false
+        return store.isVisible(id)
+    })
 
     const isLive = computed(() =>
-        gameRef?.value?.status?.toLowerCase().includes('live')
+        gameRef?.value?.status?.toLowerCase?.() === 'live'
     )
 
     function toggleScore() {
-        store.toggle(gameId.value)
+        const id = gameId.value
+        if (!id) return
+        store.toggle(id)
     }
 
     function goTeam(abbr: string) {

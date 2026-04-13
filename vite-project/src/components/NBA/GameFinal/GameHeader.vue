@@ -95,18 +95,16 @@
 </template>
 
 <script setup lang="ts">
+import { toRef } from 'vue'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 import { useGameHeader } from '../../../composables/NBA/GameFinal/useGameHeader'
-import { toRef } from 'vue'
-
 
 const props = defineProps<{
   game: any
   loading: boolean
   error: string | null
 }>()
-
 
 const {
   gameId,
