@@ -157,6 +157,7 @@ type GameRaw = {
   AWAY_SCORE?: number
   HOME_TEAM_ABBR?: string | null
   AWAY_TEAM_ABBR?: string | null
+  Game_ID: string | number
 }
 
 const route = useRoute()
@@ -198,7 +199,7 @@ watch(player, async (p) => {
 
   rawGames.value = (composable.games?.value ?? []).map(g => {
     const { home, away } = parseMatchup(g.MATCHUP)
-    return { ...g, HOME_TEAM_ABBR: home, AWAY_TEAM_ABBR: away }
+    return { ...g,Game_ID: (g as any).Game_ID || (g as any).GAME_ID, HOME_TEAM_ABBR: home, AWAY_TEAM_ABBR: away }
   })
 }, { immediate: true })
 

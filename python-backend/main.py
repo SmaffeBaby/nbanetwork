@@ -161,3 +161,64 @@ def get_game_detail(game_id: str):
 
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.get("/games/by-date/{date}")
+def get_games_by_date(date: str):
+    dt = datetime.strptime(date, "%Y-%m-%d")
+    formatted = dt.strftime("%m/%d/%Y")
+
+    data = scoreboardv2.ScoreboardV2(
+        game_date=formatted,
+        league_id="00"
+    )
+
+    result = data.get_dict()
+
+    game_header = None
+    line_score = None
+
+    for rs in result["resultSets"]:
+        if rs["name"] == "GameHeader":
+            game_header = rs
+        if rs["name"] == "LineScore":
+            line_score = rs
+
+    teams_map = {}
+
+    if line_score:
+        for row in line_score["rowSet"]:
+            team = dict(zip(line_score["headers"], row))
+            gid = team["GAME_ID"]
+            teams_map.setdefault(gid, []).append(team)
+
+    games = []
+
+    if game_header:
+        for row in game_header["rowSet"]:
+            game = dict(zip(game_header["headers"], row))
+            gid = game["GAME_ID"]
+
+            teams = teams_map.get(gid, [])
+
+            home = next((t for t in teams if t["TEAM_ID"] == game["HOME_TEAM_ID"]), None)
+            away = next((t for t in teams if t["TEAM_ID"] == game["VISITOR_TEAM_ID"]), None)
+
+            games.append({
+                "GAME_ID": game["GAME_ID"],
+
+                "GAME_DATE_EST": game["GAME_DATE_EST"],
+
+                "HOME_TEAM_ID": game["HOME_TEAM_ID"],
+                "VISITOR_TEAM_ID": game["VISITOR_TEAM_ID"],
+
+                "HOME_TEAM_ABBREVIATION": home["TEAM_ABBREVIATION"] if home else None,
+                "VISITOR_TEAM_ABBREVIATION": away["TEAM_ABBREVIATION"] if away else None,
+
+                "HOME_TEAM_SCORE": home["PTS"] if home else None,
+                "VISITOR_TEAM_SCORE": away["PTS"] if away else None,
+
+                "GAME_STATUS": game["GAME_STATUS_TEXT"]
+            })
+
+    return games

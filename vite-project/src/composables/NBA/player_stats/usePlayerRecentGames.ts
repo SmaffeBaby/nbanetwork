@@ -18,6 +18,7 @@ export type GameRaw = {
     AWAY_SCORE?: number
     HOME_TEAM_ABBR?: string | null
     AWAY_TEAM_ABBR?: string | null
+    Game_ID: string | number
 }
 
 export function usePlayerRecentGames(gamesProp: GameRaw[]) {

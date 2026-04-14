@@ -7,6 +7,20 @@
         :error="error"
     />
 
+    <button
+        @click="$router.back()"
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl
+               bg-white/10 backdrop-blur-md text-black text-sm font-medium
+               border border-white/20 shadow-sm
+               hover:bg-white/20 hover:shadow-md hover:-translate-y-0.5
+               active:scale-95 transition-all duration-200"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back
+    </button>
+
     <TabsContent>
       <template #overview>
         <GameRecapCard
