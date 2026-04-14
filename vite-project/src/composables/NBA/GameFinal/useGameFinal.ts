@@ -57,8 +57,8 @@ export function useGameFinal() {
                 gameId,
                 status: 'Final',
 
-                dateUTC: null,
-                dateMSK: null,
+                dateUTC: data?.dateUTC,
+                dateMSK: data?.dateMSK,
 
                 home: {
                     name: meta?.homeTeam || '',

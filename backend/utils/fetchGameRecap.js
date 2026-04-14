@@ -13,6 +13,23 @@ async function fetchGameRecap(gameId) {
         ])
 
         const game = boxRes.data?.game || {}
+
+        const gameDateUTC = game?.gameTimeUTC || null
+
+        let gameDateMSK = null
+
+        if (gameDateUTC) {
+            const date = new Date(gameDateUTC)
+
+            gameDateMSK = date.toLocaleString('ru-RU', {
+                timeZone: 'Europe/Moscow',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+        }
         const plays = pbpRes.data?.game?.actions || []
 
 
@@ -59,6 +76,9 @@ async function fetchGameRecap(gameId) {
             quarters: aiRecap?.quarters || [],
 
             mvp,
+
+            dateUTC: gameDateUTC,
+            dateMSK: gameDateMSK,
 
             meta: {
                 homeTeam,

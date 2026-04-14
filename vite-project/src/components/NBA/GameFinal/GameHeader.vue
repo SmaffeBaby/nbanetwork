@@ -71,8 +71,20 @@
             </div>
           </transition>
 
-          <div class="text-[10px] text-gray-400 mt-1">
-            {{ game?.dateMSK }}
+          <div class="mt-2 flex justify-center items-center gap-2">
+
+            <div class="px-3 py-1 rounded-lg bg-gray-50 border border-gray-200 text-[11px] text-gray-600 font-medium">
+              {{ game?.dateMSK }}
+            </div>
+
+            <button
+                @click="copyGameLink"
+                title="Скопировать ссылку"
+                class="p-1.5 rounded-md hover:bg-gray-100 active:scale-90 transition"
+            >
+              <LinkIcon class="w-4 h-4 text-gray-500" />
+            </button>
+
           </div>
         </div>
 
@@ -95,10 +107,15 @@
 </template>
 
 <script setup lang="ts">
-import { toRef } from 'vue'
+import { toRef, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
-import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
+import { EyeIcon, EyeSlashIcon, LinkIcon } from '@heroicons/vue/24/outline'
 import { useGameHeader } from '../../../composables/NBA/GameFinal/useGameHeader'
+import { useToast } from 'vue-toastification'
+
+const toast = useToast()
+const route = useRoute()
 
 const props = defineProps<{
   game: any
@@ -107,12 +124,29 @@ const props = defineProps<{
 }>()
 
 const {
-  gameId,
   isVisible,
   isLive,
   toggleScore,
   goTeam
 } = useGameHeader(toRef(props, 'game'))
+
+const gameId = computed(() => {
+  const raw = route.params.gameId
+  return Array.isArray(raw) ? raw[0] : String(raw)
+})
+
+const gameUrl = computed(() =>
+    `${window.location.origin}/game/${gameId.value}`
+)
+
+const copyGameLink = async () => {
+  try {
+    await navigator.clipboard.writeText(gameUrl.value)
+    toast.success('Матч скопирован')
+  } catch (e) {
+    toast.error('Ошибка копирования')
+  }
+}
 </script>
 
 <style scoped>
