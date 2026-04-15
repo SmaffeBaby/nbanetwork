@@ -11,6 +11,9 @@
     <div class="pt-16 px-6">
       <RecentGames />
     </div>
+    <div class="pt-16 px-6">
+      <Map />
+    </div>
 
   </div>
 </template>
@@ -19,4 +22,5 @@
 import Header from '../components/Headers/Header.vue'
 import DailyGamesList from '../components/NBA/main_slider/DailyGamesList.vue'
 import RecentGames from '../components/NBA/recent_games/RecentGames.vue'
+import Map from '../components/NBA/MAP/Map.vue'
 </script>
