@@ -1,4 +1,9 @@
 <template>
+  <div>
+    <h1 class="text-[10px] leading-15 font-bold break-words text-center pl-0 md:text-left md:pl-10 max-w-md">
+      Карта конференций
+    </h1>
+  </div>
   <div class="w-full max-w-5xl mx-auto">
     <div
         class="relative overflow-hidden border rounded-xl cursor-grab select-none"
