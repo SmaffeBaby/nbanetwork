@@ -29,6 +29,11 @@
         />
       </template>
 
+      <template #players>
+        <GamePlayersStats :game="game" />
+      </template>
+
+
       <template #data>
         <div v-if="game" class="p-4 border rounded text-xs overflow-auto bg-gray-50">
           <pre>{{ game }}</pre>
@@ -43,6 +48,7 @@
 import { useGameFinal } from '../../../composables/NBA/GameFinal/useGameFinal'
 import GameHeader from './GameHeader.vue'
 import GameRecapCard from './GameRecapCard.vue'
+import GamePlayersStats from './BoxScore/GamePlayersStats.vue'
 import TabsContent from './TabsContent.vue'
 
 const { game, recap, loading, error } = useGameFinal()

@@ -91,6 +91,11 @@ async function fetchGameRecap(gameId) {
                 clutch,
                 keyMoments,
                 quarters
+            },
+
+            players: {
+                home: game.homeTeam?.players || [],
+                away: game.awayTeam?.players || []
             }
         }
 
