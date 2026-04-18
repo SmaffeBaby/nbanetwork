@@ -43,64 +43,78 @@ function parseMinutes(min: string) {
 
 export function useGamePlayersStats(recap: Ref<any>) {
 
-    const players = computed<PlayerStats[]>(() => {
+    const excludedReasons = ['INACTIVE_INJURY', 'DND_INJURY']
+
+    const allRaw = computed(() => {
         const home = recap.value?.players?.home || []
         const away = recap.value?.players?.away || []
-        const excludedReasons = ['INACTIVE_INJURY', 'DND_INJURY']
+        return [...home, ...away]
+    })
 
-        const all = [...home, ...away].filter((p: any) => {
-            return !excludedReasons.includes(p.notPlayingReason)
-        })
+    const n = (v: any) => Number(v ?? 0)
 
-        const n = (v: any) => Number(v ?? 0)
+    const players = computed<PlayerStats[]>(() => {
+        return allRaw.value
+            .filter((p: any) => !excludedReasons.includes(p.notPlayingReason))
+            .map((p: any) => {
+                const s = p.statistics || p.stats || {}
 
-        return all.map((p: any) => {
-            const s = p.statistics || p.stats || {}
+                const fgM = n(s.fieldGoalsMade ?? s.fgm)
+                const fgA = n(s.fieldGoalsAttempted ?? s.fga)
 
-            const fgM = n(s.fieldGoalsMade ?? s.fgm)
-            const fgA = n(s.fieldGoalsAttempted ?? s.fga)
+                const tpM = n(s.threePointersMade ?? s.fg3m)
+                const tpA = n(s.threePointersAttempted ?? s.fg3a)
 
-            const tpM = n(s.threePointersMade ?? s.fg3m)
-            const tpA = n(s.threePointersAttempted ?? s.fg3a)
+                const ftM = n(s.freeThrowsMade ?? s.ftm)
+                const ftA = n(s.freeThrowsAttempted ?? s.fta)
 
-            const ftM = n(s.freeThrowsMade ?? s.ftm)
-            const ftA = n(s.freeThrowsAttempted ?? s.fta)
+                return {
+                    name: p.name || `${p.firstName || ''} ${p.familyName || ''}`.trim(),
+                    PLAYER_ID: String(p.personId || p.playerId || ''),
+                    TEAM_ID: String(p.teamId || ''),
 
-            return {
+                    position: s.position || p.position || '',
+                    jerseyNum: n(s.jerseyNum ?? p.jerseyNum ?? p.jersey),
+
+                    minutes: parseMinutes(s.minutesCalculated || s.minutes),
+
+                    points: n(s.points),
+                    assists: n(s.assists),
+                    rebounds: n(s.reboundsTotal),
+
+                    steals: n(s.steals),
+                    blocks: n(s.blocks),
+
+                    fgM,
+                    fgA,
+                    fgPct: fgA ? +(fgM / fgA * 100).toFixed(1) : 0,
+
+                    tpM,
+                    tpA,
+                    tpPct: tpA ? +(tpM / tpA * 100).toFixed(1) : 0,
+
+                    ftM,
+                    ftA,
+                    ftPct: ftA ? +(ftM / ftA * 100).toFixed(1) : 0,
+
+                    fouls: n(s.foulsPersonal),
+                    turnovers: n(s.turnovers),
+                    plusMinus: n(s.plusMinusPoints)
+                }
+            })
+    })
+
+    const inactivePlayers = computed(() => {
+        return allRaw.value
+            .filter((p: any) => excludedReasons.includes(p.notPlayingReason))
+            .map((p: any) => ({
                 name: p.name || `${p.firstName || ''} ${p.familyName || ''}`.trim(),
                 PLAYER_ID: String(p.personId || p.playerId || ''),
                 TEAM_ID: String(p.teamId || ''),
-
-                position: s.position || p.position || '',
-                jerseyNum: n(s.jerseyNum ?? p.jerseyNum ?? p.jersey),
-
-                minutes: parseMinutes(s.minutesCalculated || s.minutes),
-
-                points: n(s.points),
-                assists: n(s.assists),
-                rebounds: n(s.reboundsTotal),
-
-                steals: n(s.steals),
-                blocks: n(s.blocks),
-
-                fgM,
-                fgA,
-                fgPct: fgA ? +(fgM / fgA * 100).toFixed(1) : 0,
-
-                tpM,
-                tpA,
-                tpPct: tpA ? +(tpM / tpA * 100).toFixed(1) : 0,
-
-                ftM,
-                ftA,
-                ftPct: ftA ? +(ftM / ftA * 100).toFixed(1) : 0,
-
-                fouls: n(s.foulsPersonal),
-                turnovers: n(s.turnovers),
-                plusMinus: n(s.plusMinusPoints)
-            }
-        })
+                reason: p.notPlayingReason,
+                description: p.notPlayingDescription || ''
+            }))
     })
 
-    return { players }
+    return { players, inactivePlayers }
 }

@@ -24,6 +24,16 @@
 
       <button
           class="px-4 py-2 text-sm transition"
+          :class="activeTab === 'injury'
+          ? 'border-b-2 border-black font-semibold'
+          : 'text-gray-500 hover:text-black'"
+          @click="activeTab = 'injury'"
+      >
+        Травмы
+      </button>
+
+      <button
+          class="px-4 py-2 text-sm transition"
           :class="activeTab === 'data'
           ? 'border-b-2 border-black font-semibold'
           : 'text-gray-500 hover:text-black'"
@@ -37,9 +47,9 @@
 
       <div
           class="transition-all duration-500"
-          :class="!revealed
-          ? 'blur-md scale-[0.98] opacity-80 pointer-events-none select-none'
-          : 'blur-0 scale-100 opacity-100'"
+          :class="isLocked
+            ? 'blur-md scale-[0.98] opacity-80 pointer-events-none select-none'
+            : 'blur-0 scale-100 opacity-100'"
       >
 
         <div v-if="activeTab === 'overview'">
@@ -50,6 +60,10 @@
           <slot name="players" />
         </div>
 
+        <div v-else-if="activeTab === 'injury'">
+          <slot name="injury" />
+        </div>
+
         <div v-else>
           <slot name="data" />
         </div>
@@ -58,7 +72,7 @@
 
       <transition name="fade">
         <div
-            v-if="!revealed"
+            v-if="isLocked"
             class="absolute inset-0 flex items-center justify-center backdrop-blur-sm"
         >
           <button
@@ -77,10 +91,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { EyeIcon } from '@heroicons/vue/24/outline'
 
-type Tab = 'overview' | 'players' | 'data'
+type Tab = 'overview' | 'players' | 'injury' | 'data'
 
 const activeTab = ref<Tab>('overview')
 const revealed = ref(false)
@@ -88,6 +102,10 @@ const revealed = ref(false)
 const reveal = () => {
   revealed.value = true
 }
+
+const isLocked = computed(() =>
+    !revealed.value && activeTab.value !== 'injury'
+)
 </script>
 
 <style scoped>
