@@ -1,7 +1,6 @@
 export const getPlayerImage = (player: any) => {
-    return `/api/player-image/${player.TEAM_ID}/${player.PLAYER_ID}`
+    return `/api/player-image/${player.PLAYER_ID}`
 }
-
 export const handleImageError = (e: any) => {
     const playerId = e.target.dataset.playerId
 
