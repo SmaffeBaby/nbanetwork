@@ -1,5 +1,5 @@
 export const getPlayerImage = (player: any) => {
-    return `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/${player.TEAM_ID}/2025/260x190/${player.PLAYER_ID}.png`
+    return `/api/player-image/${player.TEAM_ID}/${player.PLAYER_ID}`
 }
 
 export const handleImageError = (e: any) => {
