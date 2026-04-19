@@ -79,14 +79,22 @@
           class="border-t hover:bg-gray-50"
       >
 
-        <td class="px-2 py-2 flex items-center gap-2">
-          <img
-              :src="getPlayerImage(p)"
-              :data-player-id="p.PLAYER_ID"
-              @error="handleImageError"
-              class="w-8 h-8 rounded-full bg-gray-200 object-cover"
-          />
-          <span class="font-medium">{{ p.name }}</span>
+        <td class="px-2 py-2">
+          <router-link
+              :to="{
+                name: 'PlayerPage',
+                params: { name: encodeURIComponent(p.name) }
+              }"
+              class="flex items-center gap-2 hover:underline"
+          >
+            <img
+                :src="getPlayerImage(p)"
+                :data-player-id="p.PLAYER_ID"
+                @error="handleImageError"
+                class="w-8 h-8 rounded-full bg-gray-200 object-cover"
+            />
+            <span class="font-medium text-gray-700 no-underline hover:text-gray-700">{{ p.name }}</span>
+          </router-link>
         </td>
 
         <td>{{ p.position }}</td>

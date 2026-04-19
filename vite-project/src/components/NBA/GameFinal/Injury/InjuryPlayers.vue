@@ -46,9 +46,13 @@
           />
 
           <div class="min-w-0">
-            <div class="text-sm font-semibold truncate">
+            <router-link
+                :to="{ name: 'PlayerPage', params: { name: p.name } }"
+                class="block text-sm font-semibold truncate text-gray-900 hover:underline"
+                style="color: black;"
+            >
               {{ p.name }}
-            </div>
+            </router-link>
 
             <div class="text-[10px] text-gray-400">
               {{ formatReason(p.reason) }}
@@ -77,9 +81,13 @@
         >
 
           <div class="min-w-0 text-right">
-            <div class="text-sm font-semibold truncate">
+            <router-link
+                :to="{ name: 'PlayerPage', params: { name: p.name } }"
+                class="block text-sm font-semibold truncate text-gray-900 hover:underline"
+                style="color: black;"
+            >
               {{ p.name }}
-            </div>
+            </router-link>
 
             <div class="text-[10px] text-gray-400">
               {{ formatReason(p.reason) }}

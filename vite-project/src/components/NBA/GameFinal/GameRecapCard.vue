@@ -73,8 +73,16 @@
           🏆 MVP
         </div>
 
-        <div class="text-lg font-semibold text-gray-900">
-          {{ recap.mvp?.name || '—' }}
+        <router-link
+            v-if="recap.mvp?.name"
+            :to="{ name: 'PlayerPage', params: { name: recap.mvp.name } }"
+            class="text-lg font-semibold text-gray-900 hover:underline"
+        >
+          {{ recap.mvp.name }}
+        </router-link>
+
+        <div v-else class="text-lg font-semibold text-gray-900">
+          —
         </div>
 
         <div class="text-sm text-gray-600">
@@ -134,7 +142,7 @@ const getInitials = (name?: string) => {
 
 <style>
 a {
-  color: #2563eb;
+  color: #0e0e0e;
   text-decoration: none;
 }
 
