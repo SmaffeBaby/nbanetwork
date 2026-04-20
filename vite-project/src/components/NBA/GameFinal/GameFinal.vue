@@ -30,11 +30,11 @@
       </template>
 
       <template #players>
-        <GamePlayersStats :game="game" />
+        <GamePlayersStats :filters="filters" />
       </template>
 
       <template #injury>
-        <InjuryPlayers />
+        <InjuryPlayers :filters="filters"/>
       </template>
 
 
@@ -49,6 +49,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useGameFinal } from '../../../composables/NBA/GameFinal/useGameFinal'
 import GameHeader from './GameHeader.vue'
 import GameRecapCard from './GameRecapCard.vue'
@@ -56,5 +57,10 @@ import GamePlayersStats from './BoxScore/GamePlayersStats.vue'
 import InjuryPlayers from './Injury/InjuryPlayers.vue'
 import TabsContent from './TabsContent.vue'
 
-const { game, recap, loading, error } = useGameFinal()
+const filters = ref({
+  search: '',
+  quarter: null as number | null
+})
+
+const { game, recap, loading, error } = useGameFinal(filters)
 </script>

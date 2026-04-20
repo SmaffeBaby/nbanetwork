@@ -1,7 +1,12 @@
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, type Ref } from 'vue'
 import { useRoute } from 'vue-router'
 
-export function useGameFinal() {
+type Filters = {
+    search: string
+    quarter: number | null
+}
+
+export function useGameFinal(filters: Ref<Filters>) {
     const route = useRoute()
     const gameId = route.params.gameId as string
 
@@ -31,7 +36,13 @@ export function useGameFinal() {
 
     const fetchGame = async () => {
         try {
-            const res = await fetch(`/api/game-recap/${gameId}`)
+            const quarter = filters.value?.quarter
+
+            const url = quarter
+                ? `/api/game-recap/${gameId}?quarter=${quarter}`
+                : `/api/game-recap/${gameId}`
+
+            const res = await fetch(url)
 
             if (!res.ok) {
                 throw new Error('Failed to load game recap')
@@ -41,17 +52,12 @@ export function useGameFinal() {
 
             const meta = data?.meta || {}
 
-            const players =
-                data?.players ||
-                data?.roster ||
-                []
+            const players = data?.players || []
 
-            const normalizedRecap = {
+            recap.value = {
                 ...data,
                 mvp: enrichMvp(data?.mvp || data?.recap?.mvp, players)
             }
-
-            recap.value = normalizedRecap
 
             game.value = {
                 gameId,
@@ -81,6 +87,11 @@ export function useGameFinal() {
     }
 
     onMounted(fetchGame)
+
+    watch(
+        () => filters.value?.quarter,
+        () => fetchGame()
+    )
 
     return {
         gameId,

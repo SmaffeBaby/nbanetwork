@@ -1,9 +1,17 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 import { teamsFullNames } from '../../../../constants/TeamFullName.ts'
 import { nbaTeamLogos } from '../../../../constants/nbaTeamLogo.ts'
 
-export function useGamePlayersTable(players: any, recap: any) {
-    const search = ref('')
+type Filters = {
+    search: string
+    quarter: number | null
+}
+
+export function useGamePlayersTable(
+    players: Ref<any[]>,
+    recap: Ref<any>,
+    filters: Ref<Filters>
+) {
     const sortKey = ref('points')
     const sortDir = ref<'asc' | 'desc'>('desc')
     const activeTeam = ref('')
@@ -52,14 +60,22 @@ export function useGamePlayersTable(players: any, recap: any) {
 
     const filtered = computed(() => {
         const key = sortKey.value
-        const q = search.value.toLowerCase()
+        const q = (filters.value.search || '').toLowerCase().trim()
 
-        return [...players.value]
-            .filter((p: any) =>
-                (p.name || '').toLowerCase().includes(q) ||
-                (p.position || '').toLowerCase().includes(q)
-            )
+        return [...(players.value || [])]
+
             .filter((p: any) => {
+                if (!q) return true
+
+                return (
+                    (p.name || '').toLowerCase().includes(q) ||
+                    (p.position || '').toLowerCase().includes(q)
+                )
+            })
+
+            .filter((p: any) => {
+                if (!activeTeam.value) return true
+
                 const isHome = recap.value?.players?.home?.some(
                     (x: any) => String(x.personId) === p.PLAYER_ID
                 )
@@ -70,6 +86,7 @@ export function useGamePlayersTable(players: any, recap: any) {
 
                 return team === activeTeam.value
             })
+
             .sort((a: any, b: any) => {
                 const A = num(a[key])
                 const B = num(b[key])
@@ -77,10 +94,7 @@ export function useGamePlayersTable(players: any, recap: any) {
             })
     })
 
-
-
     return {
-        search,
         sortKey,
         sortDir,
         activeTeam,

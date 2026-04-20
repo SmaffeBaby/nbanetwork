@@ -2,17 +2,46 @@ const axios = require('axios')
 const generateAIRecap = require('./generateAIRecap')
 const TEAM_MAP = require('../constants/teamMap')
 
-async function fetchGameRecap(gameId) {
+async function fetchGameRecap(gameId, quarter = null) {
     try {
-        const boxUrl = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`
-        const pbpUrl = `https://cdn.nba.com/static/json/liveData/playbyplay/playbyplay_${gameId}.json`
+        let game = null
+        let plays = []
+        let playersHome = []
+        let playersAway = []
 
-        const [boxRes, pbpRes] = await Promise.all([
-            axios.get(boxUrl),
-            axios.get(pbpUrl)
-        ])
+        if (quarter) {
+            const url = `http://python-backend:8000/game-boxscore-v3/${gameId}/quarter/${quarter}`
 
-        const game = boxRes.data?.game || {}
+            const res = await axios.get(url)
+            const root = res.data
+
+            const box = root?.boxScoreTraditional || root?.game || root
+
+            game = {
+                homeTeam: box?.homeTeam || {},
+                awayTeam: box?.awayTeam || {},
+                gameTimeUTC: root?.meta?.time || null
+            }
+
+            playersHome = box?.homeTeam?.players || []
+            playersAway = box?.awayTeam?.players || []
+
+            plays = []
+        } else {
+            const boxUrl = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`
+            const pbpUrl = `https://cdn.nba.com/static/json/liveData/playbyplay/playbyplay_${gameId}.json`
+
+            const [boxRes, pbpRes] = await Promise.all([
+                axios.get(boxUrl),
+                axios.get(pbpUrl)
+            ])
+
+            game = boxRes.data?.game || {}
+            plays = pbpRes.data?.game?.actions || []
+
+            playersHome = game.homeTeam?.players || []
+            playersAway = game.awayTeam?.players || []
+        }
 
         const gameDateUTC = game?.gameTimeUTC || null
 
@@ -30,29 +59,31 @@ async function fetchGameRecap(gameId) {
                 minute: '2-digit'
             })
         }
-        const plays = pbpRes.data?.game?.actions || []
 
+        const homeTeamId = game?.homeTeam?.teamId
+        const awayTeamId = game?.awayTeam?.teamId
 
-        const homeMeta = TEAM_MAP[game.homeTeam?.teamId] || {}
-        const awayMeta = TEAM_MAP[game.awayTeam?.teamId] || {}
+        const homeMeta = TEAM_MAP[homeTeamId] || {}
+        const awayMeta = TEAM_MAP[awayTeamId] || {}
 
-        const homeTeam = homeMeta.name || game.homeTeam?.teamName || 'Home'
-        const awayTeam = awayMeta.name || game.awayTeam?.teamName || 'Away'
+        const homeTeam = homeMeta.name || game?.homeTeam?.teamName || 'Home'
+        const awayTeam = awayMeta.name || game?.awayTeam?.teamName || 'Away'
 
-        const homeAbbr = game.homeTeam?.teamTricode || homeMeta.abbr || ''
-        const awayAbbr = game.awayTeam?.teamTricode || awayMeta.abbr || ''
+        const homeAbbr = game?.homeTeam?.teamTricode || homeMeta.abbr || ''
+        const awayAbbr = game?.awayTeam?.teamTricode || awayMeta.abbr || ''
 
-        const homeScore = game.homeTeam?.score ?? 0
-        const awayScore = game.awayTeam?.score ?? 0
+        const homeScore = game?.homeTeam?.score ?? 0
+        const awayScore = game?.awayTeam?.score ?? 0
 
-        const topPlayers = getTopPlayers(game)
-        const mvp = topPlayers[0] || null
+        const topPlayers = getTopPlayers(game || {})
+        const mvp = topPlayers?.[0] || null
 
-        const runs = detectRuns(plays)
-        const keyMoments = getKeyMoments(plays)
-        const clutch = getClutchMoment(plays)
+        const runs = plays?.length ? detectRuns(plays) : []
+        const keyMoments = plays?.length ? getKeyMoments(plays) : []
+        const clutch = plays?.length ? getClutchMoment(plays) : null
+
         const insight = getGameInsight(homeScore, awayScore)
-        const quarters = getQuarterBreakdown(game)
+        const quarters = getQuarterBreakdown(game || {})
 
         const aiRecap = generateAIRecap({
             homeTeam,
@@ -94,13 +125,13 @@ async function fetchGameRecap(gameId) {
             },
 
             players: {
-                home: game.homeTeam?.players || [],
-                away: game.awayTeam?.players || []
+                home: playersHome,
+                away: playersAway
             }
         }
 
     } catch (e) {
-        console.error('Recap error:', e.message)
+        console.error('Recap error:', e)
         return null
     }
 }

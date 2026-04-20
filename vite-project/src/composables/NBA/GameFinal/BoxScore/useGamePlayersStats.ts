@@ -35,10 +35,27 @@ export interface PlayerStats {
     plusMinus: number
 }
 
-function parseMinutes(min: string) {
+function parseMinutes(min: any) {
     if (!min) return 0
-    const match = min.match(/PT(\d+)M/)
-    return match ? Number(match[1]) : 0
+
+    let value = 0
+
+    if (typeof min === 'string' && min.includes(':')) {
+        const [m, s] = min.split(':').map(Number)
+        value = m + (s / 60)
+    }
+
+    else if (typeof min === 'string') {
+        const isoMatch = min.match(/PT(\d+)M/)
+        if (isoMatch) value = Number(isoMatch[1])
+    }
+
+    else {
+        const num = Number(min)
+        value = isNaN(num) ? 0 : num
+    }
+
+    return Math.round(value * 10) / 10
 }
 
 export function useGamePlayersStats(recap: Ref<any>) {
@@ -74,7 +91,11 @@ export function useGamePlayersStats(recap: Ref<any>) {
                     TEAM_ID: String(p.teamId || ''),
 
                     position: s.position || p.position || '',
-                    jerseyNum: n(s.jerseyNum ?? p.jerseyNum ?? p.jersey),
+                    jerseyNum:
+                        s.jerseyNum ??
+                        p.jerseyNum ??
+                        p.jersey ??
+                        null,
 
                     minutes: parseMinutes(s.minutesCalculated || s.minutes),
 

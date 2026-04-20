@@ -5,6 +5,7 @@ from nba_api.stats.endpoints import teamgamelog
 from nba_api.stats.endpoints import scoreboardv2
 from datetime import datetime, timedelta
 from nba_api.stats.endpoints import boxscoresummaryv2, boxscoretraditionalv2
+from nba_api.stats.endpoints import boxscoretraditionalv3
 
 app = FastAPI()
 
@@ -222,3 +223,20 @@ def get_games_by_date(date: str):
             })
 
     return games
+
+@app.get("/game-boxscore-v3/{game_id}/quarter/{quarter}")
+def get_game_boxscore_quarter(game_id: str, quarter: int):
+    try:
+        data = boxscoretraditionalv3.BoxScoreTraditionalV3(
+            game_id=game_id,
+            range_type=1,
+            start_period=quarter,
+            end_period=quarter,
+            start_range=0,
+            end_range=28800
+        )
+
+        return data.get_dict()
+
+    except Exception as e:
+        return {"error": str(e)}

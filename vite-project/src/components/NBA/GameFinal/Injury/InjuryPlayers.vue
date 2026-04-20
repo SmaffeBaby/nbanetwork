@@ -125,14 +125,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Ref } from 'vue'
 import { useGameFinal } from '../../../../composables/NBA/GameFinal/useGameFinal'
 import { useGamePlayersStats } from '../../../../composables/NBA/GameFinal/BoxScore/useGamePlayersStats'
 
 import { teamsFullNames } from '../../../../constants/TeamFullName'
 import { getPlayerImage, handleImageError } from '../../../../utils/playerImage'
 
-const { recap } = useGameFinal()
+type Filters = {
+  search: string
+  quarter: number | null
+}
+
+const props = defineProps<{
+  filters: Filters
+}>()
+
+const filtersRef = computed(() => props.filters) as unknown as Ref<Filters>
+
+const { recap } = useGameFinal(filtersRef)
 const { inactivePlayers } = useGamePlayersStats(recap)
 
 type InactivePlayer = {
@@ -172,10 +183,6 @@ function getTeamLogo(abbr: string) {
   return abbr ? `/logos/${abbr}.svg` : '/logos/NBA.svg'
 }
 
-function getTeamName(abbr: string) {
-  return teamsFullNames[abbr] || abbr
-}
-
 function formatReason(reason: string) {
   switch (reason) {
     case 'INACTIVE_INJURY':
@@ -184,17 +191,6 @@ function formatReason(reason: string) {
       return 'DNP'
     default:
       return reason
-  }
-}
-
-function badgeClass(reason: string) {
-  switch (reason) {
-    case 'INACTIVE_INJURY':
-      return 'bg-red-100 text-red-600'
-    case 'DND_INJURY':
-      return 'bg-orange-100 text-orange-600'
-    default:
-      return 'bg-gray-100 text-gray-600'
   }
 }
 </script>
