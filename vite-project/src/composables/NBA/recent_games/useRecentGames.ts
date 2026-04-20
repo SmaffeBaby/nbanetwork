@@ -87,7 +87,7 @@ export function useRecentGames() {
     let timeout: ReturnType<typeof setTimeout> | null = null
 
     const d = new Date()
-    d.setDate(d.getDate() - 1)
+    d.setDate(d.getDate())
     d.setHours(0, 0, 0, 0)
 
     const currentDate = ref<Date>(d)
