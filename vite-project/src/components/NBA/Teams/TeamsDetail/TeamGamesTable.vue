@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-4">
 
-    <div class="flex gap-4 items-center">
+    <div class="flex items-center gap-4">
 
       <select v-model="filter" class="px-3 py-2 rounded-lg border text-sm">
         <option value="ALL">Все игры</option>
@@ -23,7 +23,7 @@
           <div
               class="bg-white w-4 h-4 rounded-full shadow-md transform transition"
               :class="hideScoresModel ? '' : 'translate-x-6'"
-          ></div>
+          />
         </div>
 
         <span class="ml-2 text-gray-700 text-sm">
@@ -38,25 +38,19 @@
 
         <thead class="bg-gray-100 text-gray-600 text-xs uppercase">
         <tr>
-          <th class="p-2 cursor-pointer" @click="setSort('GAME_DATE')">
-            Дата {{ getSortIcon('GAME_DATE') }}
-          </th>
-          <th>Матч</th>
+          <th class="p-3 text-left">Матч</th>
+          <th class="p-3 text-left">Дата</th>
 
-          <th v-if="!hideScoresModel" @click="setSort('WL')" class="cursor-pointer">
-            W/L {{ getSortIcon('WL') }}
-          </th>
-
-          <th v-if="!hideScoresModel" @click="setSort('PTS')" class="cursor-pointer">PTS {{ getSortIcon('PTS') }}</th>
-          <th v-if="!hideScoresModel" @click="setSort('REB')" class="cursor-pointer">REB {{ getSortIcon('REB') }}</th>
-          <th v-if="!hideScoresModel" @click="setSort('AST')" class="cursor-pointer">AST {{ getSortIcon('AST') }}</th>
-          <th v-if="!hideScoresModel" @click="setSort('STL')" class="cursor-pointer">STL {{ getSortIcon('STL') }}</th>
-          <th v-if="!hideScoresModel" @click="setSort('BLK')" class="cursor-pointer">BLK {{ getSortIcon('BLK') }}</th>
-          <th v-if="!hideScoresModel" @click="setSort('TOV')" class="cursor-pointer">TOV {{ getSortIcon('TOV') }}</th>
-
-          <th @click="setSort('FG_PCT')" class="cursor-pointer">FG% {{ getSortIcon('FG_PCT') }}</th>
-          <th @click="setSort('FG3_PCT')" class="cursor-pointer">3P% {{ getSortIcon('FG3_PCT') }}</th>
-          <th @click="setSort('FT_PCT')" class="cursor-pointer">FT% {{ getSortIcon('FT_PCT') }}</th>
+          <th v-if="!hideScoresModel" class="p-3">W/L</th>
+          <th v-if="!hideScoresModel" class="p-3">PTS</th>
+          <th v-if="!hideScoresModel" class="p-3">REB</th>
+          <th v-if="!hideScoresModel" class="p-3">AST</th>
+          <th v-if="!hideScoresModel" class="p-3">STL</th>
+          <th v-if="!hideScoresModel" class="p-3">BLK</th>
+          <th v-if="!hideScoresModel" class="p-3">TOV</th>
+          <th v-if="!hideScoresModel" class="p-3">FG%</th>
+          <th v-if="!hideScoresModel" class="p-3">3P%</th>
+          <th v-if="!hideScoresModel" class="p-3">FT%</th>
         </tr>
         </thead>
 
@@ -65,29 +59,53 @@
             v-for="game in sortedGames"
             :key="game.Game_ID"
             @click="goToGame(game.Game_ID)"
-            class="border-t hover:bg-gray-50 transition cursor-pointer active:scale-[0.99]"
+            class="border-t hover:bg-gray-50 transition cursor-pointer"
         >
 
-          <td class="px-3 py-2 whitespace-nowrap text-gray-600">
-            {{ game.GAME_DATE }}
-          </td>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-3">
 
-          <td class="px-3 py-2">
-            <div class="flex items-center gap-2">
-              <img :src="getTeamLogo(parseMatchup(game.MATCHUP).away)" class="w-6 h-6" />
-              <span>{{ parseMatchup(game.MATCHUP).away }}</span>
+              <img
+                  :src="getTeamLogo(parseMatchup(game.MATCHUP).away)"
+                  class="w-7 h-7"
+              />
 
-              <span class="text-gray-400 text-xs">
-                  {{ parseMatchup(game.MATCHUP).isAway ? '@' : 'vs' }}
-                </span>
+              <div class="flex flex-col leading-tight">
 
-              <img :src="getTeamLogo(parseMatchup(game.MATCHUP).home)" class="w-6 h-6" />
-              <span>{{ parseMatchup(game.MATCHUP).home }}</span>
+                  <span class="font-medium text-gray-900">
+                    {{ parseMatchup(game.MATCHUP).away }}
+                    <span class="text-gray-400 mx-1">
+                      {{ parseMatchup(game.MATCHUP).isAway ? '@' : 'vs' }}
+                    </span>
+                    {{ parseMatchup(game.MATCHUP).home }}
+                  </span>
+
+                <span class="text-xs text-gray-400">
+                    {{ game.SEASON_TYPE === 'Playoffs'
+                    ? game.PLAYOFF_ROUND || 'Playoffs'
+                    : 'Regular Season'
+                  }}
+                  </span>
+
+              </div>
+
+              <img
+                  :src="getTeamLogo(parseMatchup(game.MATCHUP).home)"
+                  class="w-7 h-7"
+              />
+
             </div>
           </td>
 
+          <td class="px-4 py-3 whitespace-nowrap text-gray-600 text-left">
+            <span class="text-sm">
+              {{ game.GAME_DATE }}
+            </span>
+          </td>
+
           <template v-if="!hideScoresModel">
-            <td>
+
+            <td class="text-center">
                 <span
                     :class="game.WL === 'W'
                     ? 'text-green-600 font-bold'
@@ -97,17 +115,17 @@
                 </span>
             </td>
 
-            <td>{{ game.PTS }}</td>
-            <td>{{ game.REB }}</td>
-            <td>{{ game.AST }}</td>
-            <td>{{ game.STL }}</td>
-            <td>{{ game.BLK }}</td>
-            <td>{{ game.TOV }}</td>
-          </template>
+            <td class="text-center">{{ game.PTS }}</td>
+            <td class="text-center">{{ game.REB }}</td>
+            <td class="text-center">{{ game.AST }}</td>
+            <td class="text-center">{{ game.STL }}</td>
+            <td class="text-center">{{ game.BLK }}</td>
+            <td class="text-center">{{ game.TOV }}</td>
+            <td class="text-center">{{ game.FG_PCT }}</td>
+            <td class="text-center">{{ game.FG3_PCT }}</td>
+            <td class="text-center">{{ game.FT_PCT }}</td>
 
-          <td>{{ game.FG_PCT }}</td>
-          <td>{{ game.FG3_PCT }}</td>
-          <td>{{ game.FT_PCT }}</td>
+          </template>
 
         </tr>
         </tbody>

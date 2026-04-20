@@ -34,14 +34,41 @@ def get_player_gamelog(player_id: int, season: str):
         return {"error": str(e)}
 
 @app.get("/team-games/{team_id}/{season}")
-def get_team_games(team_id: int, season: str):
+def get_team_games(team_id: int, season: str, season_type: str = "all"):
     try:
-        data = teamgamelog.TeamGameLog(
-            team_id=team_id,
-            season=season,
-            season_type_all_star="Regular Season"
-        )
-        return data.get_dict()
+
+        def fetch(season_type_value):
+            result = teamgamelog.TeamGameLog(
+                team_id=team_id,
+                season=season,
+                season_type_all_star=season_type_value
+            ).get_dict()["resultSets"][0]
+
+            for row in result["rowSet"]:
+                row.append(season_type_value)
+
+            result["headers"].append("SEASON_TYPE")
+
+            return result
+
+        if season_type == "all":
+            regular = fetch("Regular Season")
+            playoffs = fetch("Playoffs")
+
+            return {
+                "headers": regular["headers"],
+                "rowSet": regular["rowSet"] + playoffs["rowSet"]
+            }
+
+        elif season_type == "playoffs":
+            return fetch("Playoffs")
+
+        elif season_type == "regular":
+            return fetch("Regular Season")
+
+        else:
+            return {"error": "Invalid season_type"}
+
     except Exception as e:
         return {"error": str(e)}
 

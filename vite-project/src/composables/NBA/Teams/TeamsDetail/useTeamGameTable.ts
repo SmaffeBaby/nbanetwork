@@ -18,15 +18,15 @@ export function useTeamGameTable(teamId: number, season: string) {
 
     const loadGames = async () => {
         const res = await axios.get(
-            `http://localhost:3000/api/team-games/${teamId}/${season}`
+            `http://localhost:3000/api/team-games/${teamId}/${season}?season_type=all`
         )
 
-        const resultSet = res.data.resultSets?.[0]
-        if (!resultSet) return
+        const data = res.data
+        if (!data?.headers || !data?.rowSet) return
 
-        const headers = resultSet.headers
+        const headers = data.headers
 
-        games.value = resultSet.rowSet.map((row: any[]) => {
+        games.value = data.rowSet.map((row: any[]) => {
             const obj: any = {}
             headers.forEach((h: string, i: number) => {
                 obj[h] = row[i]
