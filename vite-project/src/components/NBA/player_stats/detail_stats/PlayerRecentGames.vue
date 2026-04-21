@@ -4,6 +4,16 @@
     <div class="flex justify-between items-center">
       <h2 class="font-semibold">История игр</h2>
 
+      <select
+          v-model="seasonTypeFilter"
+          class="border rounded px-2 py-1 text-sm bg-white"
+      >
+        <option value="ALL">All</option>
+        <option value="Regular">Regular</option>
+        <option value="Playoffs">Playoffs</option>
+      </select>
+    </div>
+
       <label class="flex items-center cursor-pointer">
         <input type="checkbox" class="sr-only" v-model="hideScores" />
 
@@ -55,7 +65,19 @@
         >
 
           <td class="px-3 py-2 whitespace-nowrap">
-            {{ g.GAME_DATE }}
+            <div class="flex items-center gap-2">
+              <span>{{ g.GAME_DATE }}</span>
+
+              <span
+                  v-if="g.SEASON_TYPE"
+                  class="text-[10px] px-2 py-[2px] rounded-full font-semibold"
+                  :class="g.SEASON_TYPE === 'Playoffs'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'bg-gray-200 text-gray-600'"
+                        >
+                {{ g.SEASON_TYPE === 'Playoffs' ? 'PO' : 'RS' }}
+              </span>
+            </div>
           </td>
 
           <td class="px-3 py-2">
@@ -105,11 +127,11 @@
       No games yet
     </div>
 
-  </div>
+
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getTeamLogo } from '../../../../utils/getTeamLogo.ts'
 import type { GameRaw, SortKey } from '../../../../composables/NBA/player_stats/usePlayerRecentGames.ts'
@@ -118,6 +140,7 @@ import { usePlayerRecentGames } from '../../../../composables/NBA/player_stats/u
 const router = useRouter()
 
 const props = defineProps<{ games: GameRaw[]; team?: string }>()
+const seasonTypeFilter = defineModel<'ALL' | 'Regular' | 'Playoffs'>('seasonTypeFilter')
 
 const {
   hideScores,
@@ -142,13 +165,21 @@ const goToGame = (gameId: string | number) => {
 }
 
 const filteredGames = computed(() => {
-  if (!props.team) return sortedGames.value
+  let games = sortedGames.value
 
-  return sortedGames.value.filter(
-      g =>
-          g.HOME_TEAM_ABBR === props.team ||
-          g.AWAY_TEAM_ABBR === props.team
-  )
+  if (props.team) {
+    games = games.filter(
+        g =>
+            g.HOME_TEAM_ABBR === props.team ||
+            g.AWAY_TEAM_ABBR === props.team
+    )
+  }
+
+  if (seasonTypeFilter.value !== 'ALL') {
+    games = games.filter(g => g.SEASON_TYPE === seasonTypeFilter.value)
+  }
+
+  return games
 })
 </script>
 

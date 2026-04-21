@@ -28,8 +28,34 @@ def get_player_stats(season: str):
 @app.get("/player-gamelog/{player_id}/{season}")
 def get_player_gamelog(player_id: int, season: str):
     try:
-        data = playergamelog.PlayerGameLog(player_id=player_id, season=season)
-        return data.get_dict()
+        regular = playergamelog.PlayerGameLog(
+            player_id=player_id,
+            season=season,
+            season_type_all_star="Regular Season"
+        ).get_dict()
+
+        playoffs = playergamelog.PlayerGameLog(
+            player_id=player_id,
+            season=season,
+            season_type_all_star="Playoffs"
+        ).get_dict()
+
+        reg_rows = regular["resultSets"][0]["rowSet"]
+        po_rows = playoffs["resultSets"][0]["rowSet"]
+
+        for row in po_rows:
+            row.append("Playoffs")
+
+        for row in reg_rows:
+            row.append("Regular")
+
+        regular["resultSets"][0]["headers"].append("SEASON_TYPE")
+
+        combined = reg_rows + po_rows
+        regular["resultSets"][0]["rowSet"] = combined
+
+        return regular
+
     except Exception as e:
         return {"error": str(e)}
 

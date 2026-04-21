@@ -6,11 +6,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, toRef } from 'vue'
+import { ref, onMounted, watch, toRef, nextTick } from 'vue'
 import Chart from 'chart.js/auto'
 import { usePlayerChart } from '../../../../composables/NBA/player_stats/usePlayerChart'
 
-const props = defineProps<{ playerId: number; season: string; team?: string }>()
+const props = defineProps<{
+  playerId: number
+  season: string
+  team?: string
+  seasonType?: string
+}>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
@@ -18,29 +23,44 @@ let chart: Chart | null = null
 const { fetchGames, loading, chartData } = usePlayerChart(
     props.playerId,
     props.season,
-    toRef(props, 'team')
+    toRef(props, 'team'),
+    toRef(props, 'seasonType')
 )
 
 function renderChart() {
   if (!canvas.value) return
-  if (chart) chart.destroy()
+
+  if (chart) {
+    chart.destroy()
+    chart = null
+  }
+
   chart = new Chart(canvas.value, {
     type: 'line',
     data: chartData.value,
     options: {
       responsive: true,
       plugins: { legend: { display: true } },
-      scales: { x: { display: true }, y: { beginAtZero: true } }
+      scales: {
+        x: { display: true },
+        y: { beginAtZero: true }
+      }
     }
   })
 }
 
 onMounted(async () => {
   await fetchGames()
+  await nextTick()
   renderChart()
 })
 
-watch(chartData, () => {
-  renderChart()
-})
+watch(
+    () => [props.team, props.seasonType],
+    async () => {
+      await fetchGames()
+      await nextTick()
+      renderChart()
+    }
+)
 </script>

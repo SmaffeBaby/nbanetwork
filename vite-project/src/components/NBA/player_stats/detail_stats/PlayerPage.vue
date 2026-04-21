@@ -51,7 +51,7 @@
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatBox
             v-for="statKey in ['PTS','REB','AST','STL','BLK','TOV']"
-            :key="statKey"
+            :key="seasonTypeFilter + team + filteredGames.length"
             :label="statKey"
             :games="filteredGames.map(g => ({
     [statKey]: (g[statKey as keyof Pick<GameRaw, 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV'>] ?? 0)
@@ -62,7 +62,7 @@
 
       <div class="bg-white p-4 rounded-2xl shadow">
         <h2 class="font-semibold mb-2">Performance Trend</h2>
-        <PlayerChart :player-id="player.PLAYER_ID" season="2025-26" :team="team" />
+        <PlayerChart :player-id="player.PLAYER_ID" season="2025-26" :team="team" :season-type="seasonTypeFilter"/>
       </div>
 
       <div class="mt-2">
@@ -99,7 +99,7 @@
       </div>
 
       <div v-if="filteredGames.length" class="bg-white p-4 rounded-2xl shadow">
-        <PlayerRecentGames :games="filteredGames" :team="team" />
+        <PlayerRecentGames :games="filteredGames" :team="team" v-model:seasonTypeFilter="seasonTypeFilter" />
       </div>
 
     </div>
@@ -158,10 +158,12 @@ type GameRaw = {
   HOME_TEAM_ABBR?: string | null
   AWAY_TEAM_ABBR?: string | null
   Game_ID: string | number
+  SEASON_TYPE?: string
 }
 
 const route = useRoute()
 const { players, fetchPlayerStats, team, teams } = usePlayerStats()
+
 const showTeams = ref(false)
 const rawGames = ref<GameRaw[]>([])
 
@@ -169,6 +171,8 @@ const player = computed<Player | undefined>(() => {
   const name = decodeURIComponent(route.params.name as string)
   return players.value.find(p => p.PLAYER_NAME === name)
 })
+
+const seasonTypeFilter = ref<'ALL' | 'Regular' | 'Playoffs'>('ALL')
 
 onMounted(() => {
   if (!players.value.length) fetchPlayerStats()
@@ -179,50 +183,80 @@ const gamesComposable = ref<ReturnType<typeof usePlayerGameLog> | null>(null)
 
 function parseMatchup(matchup: string) {
   if (!matchup) return { home: null, away: null }
+
   if (matchup.includes(' @ ')) {
     const [away, home] = matchup.split(' @ ')
     return { home, away }
   }
+
   if (matchup.includes(' vs. ')) {
     const [home, away] = matchup.split(' vs. ')
     return { home, away }
   }
+
   const match = matchup.match(/\b[A-Z]{2,3}\b/g)
   return { home: match?.[0] ?? null, away: match?.[1] ?? null }
 }
 
 watch(player, async (p) => {
   if (!p) return
+
   const composable = usePlayerGameLog(p.PLAYER_ID, season)
   gamesComposable.value = composable
+
   await composable.fetchGames()
 
-  rawGames.value = (composable.games?.value ?? []).map(g => {
+  const list = composable.games?.value ?? []
+
+  rawGames.value = list.map((g: any) => {
     const { home, away } = parseMatchup(g.MATCHUP)
-    return { ...g,Game_ID: (g as any).Game_ID || (g as any).GAME_ID, HOME_TEAM_ABBR: home, AWAY_TEAM_ABBR: away }
+
+    return {
+      ...g,
+      Game_ID: g.Game_ID ?? g.GAME_ID ?? '',
+      HOME_TEAM_ABBR: home,
+      AWAY_TEAM_ABBR: away,
+    } as GameRaw
   })
 }, { immediate: true })
 
 const filteredGames = computed(() => {
   if (!player.value) return []
+
+  let games = [...rawGames.value]
+
   const playerTeam = player.value.TEAM_ABBREVIATION
-  const selectedTeam = team.value
 
-  if (!selectedTeam) return rawGames.value.filter(
-      g => g.HOME_TEAM_ABBR === playerTeam || g.AWAY_TEAM_ABBR === playerTeam
-  )
+  if (team.value) {
+    games = games.filter((g: GameRaw) =>
+        (g.HOME_TEAM_ABBR === playerTeam && g.AWAY_TEAM_ABBR === team.value) ||
+        (g.AWAY_TEAM_ABBR === playerTeam && g.HOME_TEAM_ABBR === team.value)
+    )
+  } else {
+    games = games.filter((g: GameRaw) =>
+        g.HOME_TEAM_ABBR === playerTeam || g.AWAY_TEAM_ABBR === playerTeam
+    )
+  }
 
-  return rawGames.value.filter(
-      g =>
-          (g.HOME_TEAM_ABBR === playerTeam && g.AWAY_TEAM_ABBR === selectedTeam) ||
-          (g.AWAY_TEAM_ABBR === playerTeam && g.HOME_TEAM_ABBR === selectedTeam)
-  )
+  if (seasonTypeFilter.value !== 'ALL') {
+    games = games.filter((g: GameRaw) =>
+        g.SEASON_TYPE === seasonTypeFilter.value
+    )
+  }
+
+  return games
 })
 
 const stats = computed<Stat[]>(() => {
   if (!player.value) return []
+
   const keys: Array<Stat['key']> = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV']
-  return keys.map(k => ({ key: k, label: k, value: player.value![k] }))
+
+  return keys.map(k => ({
+    key: k,
+    label: k,
+    value: player.value![k]
+  }))
 })
 
 const { teamFullName, teamStyle, cardStyle, hasTeam } = usePlayerPage(player)
