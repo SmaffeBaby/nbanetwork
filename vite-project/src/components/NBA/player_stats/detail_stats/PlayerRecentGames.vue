@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white p-4 rounded-2xl shadow space-y-4">
+  <div class="bg-white p-4 rounded-2xl shadow space-y-4 mb-2">
 
     <div class="flex justify-between items-center">
       <h2 class="font-semibold">История игр</h2>

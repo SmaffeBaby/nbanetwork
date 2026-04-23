@@ -110,19 +110,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { usePlayerStats } from '../../../../composables/NBA/player_stats/usePlayerStats.ts'
-import { usePlayerPage } from '../../../../composables/NBA/player_stats/usePlayerPage.ts'
-import { usePlayerGameLog } from '../../../../composables/NBA/player_stats/usePlayerGameLog.ts'
+import { usePlayerStats } from '../../../../composables/NBA/player_stats/usePlayerStats'
+import { usePlayerPage } from '../../../../composables/NBA/player_stats/usePlayerPage'
+import { usePlayerGames } from '../../../../composables/NBA/player_stats/usePlayerGames'
+import type { GameRaw } from '../../../../composables/NBA/player_stats/usePlayerGames'
 
 import PlayerRecentGames from './PlayerRecentGames.vue'
 import StatBox from './StatBox.vue'
 import PlayerChart from './PlayerChart.vue'
 
-import { getPlayerImage, handleImageError } from '../../../../utils/playerImage.ts'
-import { getTeamLogo } from '../../../../utils/getTeamLogo.ts'
+import { getPlayerImage, handleImageError } from '../../../../utils/playerImage'
+import { getTeamLogo } from '../../../../utils/getTeamLogo'
 
 type Player = {
   PLAYER_ID: number
@@ -142,110 +143,24 @@ type Stat = {
   value: number
 }
 
-type GameRaw = {
-  GAME_DATE: string
-  MATCHUP: string
-  WL?: string
-  MIN?: number
-  PTS?: number
-  REB?: number
-  AST?: number
-  STL?: number
-  BLK?: number
-  TOV?: number
-  HOME_SCORE?: number
-  AWAY_SCORE?: number
-  HOME_TEAM_ABBR?: string | null
-  AWAY_TEAM_ABBR?: string | null
-  Game_ID: string | number
-  SEASON_TYPE?: string
-}
-
 const route = useRoute()
 const { players, fetchPlayerStats, team, teams } = usePlayerStats()
 
 const showTeams = ref(false)
-const rawGames = ref<GameRaw[]>([])
 
 const player = computed<Player | undefined>(() => {
   const name = decodeURIComponent(route.params.name as string)
   return players.value.find(p => p.PLAYER_NAME === name)
 })
 
-const seasonTypeFilter = ref<'ALL' | 'Regular' | 'Playoffs'>('ALL')
-
 onMounted(() => {
   if (!players.value.length) fetchPlayerStats()
 })
 
 const season = '2025-26'
-const gamesComposable = ref<ReturnType<typeof usePlayerGameLog> | null>(null)
 
-function parseMatchup(matchup: string) {
-  if (!matchup) return { home: null, away: null }
-
-  if (matchup.includes(' @ ')) {
-    const [away, home] = matchup.split(' @ ')
-    return { home, away }
-  }
-
-  if (matchup.includes(' vs. ')) {
-    const [home, away] = matchup.split(' vs. ')
-    return { home, away }
-  }
-
-  const match = matchup.match(/\b[A-Z]{2,3}\b/g)
-  return { home: match?.[0] ?? null, away: match?.[1] ?? null }
-}
-
-watch(player, async (p) => {
-  if (!p) return
-
-  const composable = usePlayerGameLog(p.PLAYER_ID, season)
-  gamesComposable.value = composable
-
-  await composable.fetchGames()
-
-  const list = composable.games?.value ?? []
-
-  rawGames.value = list.map((g: any) => {
-    const { home, away } = parseMatchup(g.MATCHUP)
-
-    return {
-      ...g,
-      Game_ID: g.Game_ID ?? g.GAME_ID ?? '',
-      HOME_TEAM_ABBR: home,
-      AWAY_TEAM_ABBR: away,
-    } as GameRaw
-  })
-}, { immediate: true })
-
-const filteredGames = computed(() => {
-  if (!player.value) return []
-
-  let games = [...rawGames.value]
-
-  const playerTeam = player.value.TEAM_ABBREVIATION
-
-  if (team.value) {
-    games = games.filter((g: GameRaw) =>
-        (g.HOME_TEAM_ABBR === playerTeam && g.AWAY_TEAM_ABBR === team.value) ||
-        (g.AWAY_TEAM_ABBR === playerTeam && g.HOME_TEAM_ABBR === team.value)
-    )
-  } else {
-    games = games.filter((g: GameRaw) =>
-        g.HOME_TEAM_ABBR === playerTeam || g.AWAY_TEAM_ABBR === playerTeam
-    )
-  }
-
-  if (seasonTypeFilter.value !== 'ALL') {
-    games = games.filter((g: GameRaw) =>
-        g.SEASON_TYPE === seasonTypeFilter.value
-    )
-  }
-
-  return games
-})
+const { filteredGames, seasonTypeFilter } =
+    usePlayerGames(player, team, season)
 
 const stats = computed<Stat[]>(() => {
   if (!player.value) return []

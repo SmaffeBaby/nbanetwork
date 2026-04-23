@@ -9,9 +9,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, watch, computed } from 'vue'
 
-type Game = Record<string, number | string | undefined | null>
+type Game = Record<string, number | string | null | undefined>
 
 const props = defineProps<{
   label: string
@@ -19,18 +19,36 @@ const props = defineProps<{
   color?: string
 }>()
 
-const averageValue = computed(() => {
-  const vals = props.games
+const averageValue = ref<number>(0)
+
+function calculate() {
+  const key = props.label
+
+  const values = props.games
       .map(g => {
-        const v = g[props.label]
-        return typeof v === 'number' ? v : 0
+        const v = g[key]
+        return typeof v === 'number' ? v : null
       })
+      .filter((v): v is number => v !== null)
 
-  if (!vals.length) return 0
 
-  const sum = vals.reduce((a, b) => a + b, 0)
-  return Math.round(sum / vals.length)
-})
+  if (!values.length) {
+    averageValue.value = 0
+    return
+  }
+
+  const sum = values.reduce((a, b) => a + b, 0)
+
+  averageValue.value = Number((sum / values.length).toFixed(1))
+}
+
+watch(
+    () => [props.games, props.label],
+    () => {
+      calculate()
+    },
+    { deep: true, immediate: true }
+)
 
 function hexToRgba(hex: string, alpha: number) {
   let h = hex.replace('#', '')
