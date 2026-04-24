@@ -20,9 +20,9 @@ const props = defineProps<{
 const canvas = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
 
-const { fetchGames, loading, chartData } = usePlayerChart(
+const { loading, chartData } = usePlayerChart(
     props.playerId,
-    props.season,
+    toRef(props, 'season'),
     toRef(props, 'team'),
     toRef(props, 'seasonType')
 )
@@ -49,18 +49,13 @@ function renderChart() {
   })
 }
 
-onMounted(async () => {
-  await fetchGames()
-  await nextTick()
-  renderChart()
-})
 
 watch(
-    () => [props.team, props.seasonType],
+    () => chartData.value,
     async () => {
-      await fetchGames()
       await nextTick()
       renderChart()
-    }
+    },
+    { deep: true }
 )
 </script>

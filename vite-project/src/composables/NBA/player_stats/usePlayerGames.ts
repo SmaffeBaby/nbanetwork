@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, type Ref } from 'vue'
 import { usePlayerGameLog } from './usePlayerGameLog'
 
 export type GameRaw = {
@@ -20,36 +20,38 @@ export type GameRaw = {
     SEASON_TYPE?: string
 }
 
-export function usePlayerGames(player: any, team: any, season: string) {
+function parseMatchup(matchup: string) {
+    if (!matchup) return { home: null, away: null }
+
+    if (matchup.includes(' @ ')) {
+        const [away, home] = matchup.split(' @ ')
+        return { home, away }
+    }
+
+    if (matchup.includes(' vs. ')) {
+        const [home, away] = matchup.split(' vs. ')
+        return { home, away }
+    }
+
+    return { home: null, away: null }
+}
+
+export function usePlayerGames(
+    player: Ref<any>,
+    team: Ref<string>,
+    season: Ref<string>
+) {
     const rawGames = ref<GameRaw[]>([])
     const seasonTypeFilter = ref<'ALL' | 'Regular' | 'Playoffs'>('ALL')
 
-    function parseMatchup(matchup: string) {
-        if (!matchup) return { home: null, away: null }
-
-        if (matchup.includes(' @ ')) {
-            const [away, home] = matchup.split(' @ ')
-            return { home, away }
-        }
-
-        if (matchup.includes(' vs. ')) {
-            const [home, away] = matchup.split(' vs. ')
-            return { home, away }
-        }
-
-        const match = matchup.match(/\b[A-Z]{2,3}\b/g)
-        return { home: match?.[0] ?? null, away: match?.[1] ?? null }
-    }
-
-    watch(player, async (p) => {
+    watch([player, season], async ([p, s]) => {
         if (!p) return
 
-        const composable = usePlayerGameLog(p.PLAYER_ID, season)
-        await composable.fetchGames()
+        const { games, fetchGames } = usePlayerGameLog(p.PLAYER_ID, s)
 
-        const list = composable.games?.value ?? []
+        await fetchGames()
 
-        rawGames.value = list.map((g: any) => {
+        rawGames.value = (games.value || []).map((g: any) => {
             const { home, away } = parseMatchup(g.MATCHUP)
 
             return {
@@ -69,12 +71,8 @@ export function usePlayerGames(player: any, team: any, season: string) {
 
         if (team.value) {
             games = games.filter(g =>
-                (g.HOME_TEAM_ABBR === playerTeam && g.AWAY_TEAM_ABBR === team.value) ||
-                (g.AWAY_TEAM_ABBR === playerTeam && g.HOME_TEAM_ABBR === team.value)
-            )
-        } else {
-            games = games.filter(g =>
-                g.HOME_TEAM_ABBR === playerTeam || g.AWAY_TEAM_ABBR === playerTeam
+                g.HOME_TEAM_ABBR === team.value ||
+                g.AWAY_TEAM_ABBR === team.value
             )
         }
 
@@ -90,6 +88,6 @@ export function usePlayerGames(player: any, team: any, season: string) {
     return {
         rawGames,
         filteredGames,
-        seasonTypeFilter,
+        seasonTypeFilter
     }
 }

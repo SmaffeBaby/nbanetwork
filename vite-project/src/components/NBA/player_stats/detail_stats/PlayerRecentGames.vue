@@ -131,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, toRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { getTeamLogo } from '../../../../utils/getTeamLogo.ts'
 import type { GameRaw, SortKey } from '../../../../composables/NBA/player_stats/usePlayerRecentGames.ts'
@@ -149,7 +149,7 @@ const {
   sortBy,
   getWinLoss,
   sortedGames
-} = usePlayerRecentGames(props.games)
+} = usePlayerRecentGames(toRef(props, 'games'))
 
 const statCols: SortKey[] = ['MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV']
 

@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch, type Ref } from 'vue'
 import axios from 'axios'
 
 export interface PlayerStats {
@@ -16,7 +16,7 @@ export interface PlayerStats {
 
 export type StatKey = 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV' | 'MIN'
 
-export function usePlayerStats() {
+export function usePlayerStats(season: Ref<string>) {
     const players = ref<PlayerStats[]>([])
     const loading = ref(false)
 
@@ -27,7 +27,7 @@ export function usePlayerStats() {
     const fetchPlayerStats = async () => {
         loading.value = true
 
-        const res = await axios.get(`/api/player-stats/2025-26`)
+        const res = await axios.get(`/api/player-stats/${season.value}`)
 
         const rows = res.data.resultSets[0].rowSet
         const headers = res.data.resultSets[0].headers
@@ -42,6 +42,8 @@ export function usePlayerStats() {
 
         loading.value = false
     }
+
+    watch(season, fetchPlayerStats)
 
     const teams = computed(() =>
         [...new Set(players.value.map(p => p.TEAM_ABBREVIATION))]

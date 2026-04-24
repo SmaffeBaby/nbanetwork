@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import type { Ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../../../stores/auth'
 
@@ -22,7 +23,7 @@ export type GameRaw = {
     SEASON_TYPE?: string
 }
 
-export function usePlayerRecentGames(gamesProp: GameRaw[]) {
+export function usePlayerRecentGames(gamesProp: Ref<GameRaw[]>) {
     const authStore = useAuthStore()
     const { user } = storeToRefs(authStore)
 
@@ -49,7 +50,7 @@ export function usePlayerRecentGames(gamesProp: GameRaw[]) {
     }
 
     const sortedGames = computed(() => {
-        return [...gamesProp]
+        return [...gamesProp.value]
             .filter(g => g.GAME_DATE)
             .sort((a, b) => {
                 let aVal: any = a[sortField.value]

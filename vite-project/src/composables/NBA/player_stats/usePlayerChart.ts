@@ -1,16 +1,30 @@
-import { computed } from 'vue'
-import type { Ref } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 import { usePlayerGameLog } from './usePlayerGameLog'
 
 type StatKey = 'PTS' | 'REB' | 'AST'
 
 export function usePlayerChart(
     playerId: number,
-    season: string,
+    season: Ref<string>,
     team: Ref<string | undefined>,
     seasonType: Ref<string | undefined>
 ) {
-    const { games, fetchGames, loading } = usePlayerGameLog(playerId, season)
+    const games = ref<any[]>([])
+    const loading = ref(false)
+
+    const loadGames = async () => {
+        loading.value = true
+
+        const { games: g, fetchGames } =
+            usePlayerGameLog(playerId, season.value)
+
+        await fetchGames()
+        games.value = g.value || []
+
+        loading.value = false
+    }
+
+    watch([season, team, seasonType], loadGames, { immediate: true })
 
     function parseMatchup(matchup: string) {
         let home: string | null = null
@@ -66,7 +80,12 @@ export function usePlayerChart(
         })
     })
 
-    function makeDataset(games: any[], key: StatKey, label: string, color: string) {
+    function makeDataset(
+        games: any[],
+        key: StatKey,
+        label: string,
+        color: string
+    ) {
         return {
             label,
             data: games.map(g => g[key] ?? 0),
@@ -91,9 +110,8 @@ export function usePlayerChart(
     })
 
     return {
-        fetchGames,
         loading,
-        filteredGames: sortedGames,
-        chartData
+        chartData,
+        filteredGames: sortedGames
     }
 }

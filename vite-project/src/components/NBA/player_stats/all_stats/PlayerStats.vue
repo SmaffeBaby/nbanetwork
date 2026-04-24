@@ -144,7 +144,7 @@ type Player = {
   BLK: number
   TOV: number
 }
-
+const season = ref('2025-26')
 const router = useRouter()
 const {
   loading,
@@ -153,9 +153,10 @@ const {
   team,
   teams,
   filteredPlayers
-} = usePlayerStats()
+} = usePlayerStats(season)
 
 const showTeams = ref(false)
+
 
 onMounted(fetchPlayerStats)
 
