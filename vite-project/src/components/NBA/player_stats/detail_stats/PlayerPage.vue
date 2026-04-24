@@ -177,6 +177,7 @@ import { useRouter } from 'vue-router'
 import { usePlayerStats } from '../../../../composables/NBA/player_stats/usePlayerStats'
 import { usePlayerPage } from '../../../../composables/NBA/player_stats/usePlayerPage'
 import { usePlayerGames } from '../../../../composables/NBA/player_stats/usePlayerGames'
+import { useCurrentSeason } from '../../../../composables/NBA/useCurrentSeason'
 import type { GameRaw } from '../../../../composables/NBA/player_stats/usePlayerGames'
 
 import PlayerRecentGames from './PlayerRecentGames.vue'
@@ -195,9 +196,9 @@ function goToTeam() {
   router.push(`/team/${player.value.TEAM_ABBREVIATION}`)
 }
 
-const season = ref('2025-26')
+const { season, seasons, fetchCurrentSeason } = useCurrentSeason()
 
-const seasons = ['2025-26', '2024-25', '2023-24', '2022-23']
+
 
 const { players, fetchPlayerStats, team, teams } = usePlayerStats(season)
 
@@ -206,8 +207,9 @@ const player = computed(() => {
   return players.value.find(p => p.PLAYER_NAME === name)
 })
 
-onMounted(() => {
-  fetchPlayerStats()
+onMounted(async () => {
+  await fetchCurrentSeason()
+
 })
 
 const { filteredGames, seasonTypeFilter } =

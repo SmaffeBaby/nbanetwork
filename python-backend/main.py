@@ -9,6 +9,21 @@ from nba_api.stats.endpoints import boxscoretraditionalv3
 
 app = FastAPI()
 
+def get_current_nba_season():
+    now = datetime.now()
+    year = now.year
+
+    if now.month >= 10:
+        return f"{year}-{str(year + 1)[-2:]}"
+    else:
+        return f"{year - 1}-{str(year)[-2:]}"
+
+@app.get("/current-season")
+def current_season():
+    return {
+        "season": get_current_nba_season()
+    }
+
 @app.get("/standings/{season}")
 def get_standings(season: str):
     data = leaguestandings.LeagueStandings(season=season)
