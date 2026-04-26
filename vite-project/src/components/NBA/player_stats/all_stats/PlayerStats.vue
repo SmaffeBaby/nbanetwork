@@ -9,6 +9,21 @@
       />
     </div>
 
+    <div class="flex justify-center mt-2">
+      <select
+          v-model="season"
+          class="p-2 border rounded"
+      >
+        <option
+            v-for="s in seasons"
+            :key="s"
+            :value="s"
+        >
+          {{ s }}
+        </option>
+      </select>
+    </div>
+
     <div class="flex gap-2 bg-gray-200 p-1 rounded-lg">
       <button
           @click="switchMode('regular')"
@@ -162,7 +177,16 @@ type Player = {
   BLK: number
   TOV: number
 }
-const season = ref('2025-26')
+const seasons = [
+  '2025-26',
+  '2024-25',
+  '2023-24',
+  '2022-23',
+  '2021-22'
+]
+
+const season = ref(seasons[0])
+
 const router = useRouter()
 const route = useRoute()
 
@@ -196,6 +220,10 @@ watch(
     },
     { immediate: true }
 )
+
+watch(season, () => {
+  fetchPlayerStats()
+})
 
 const players = computed<Player[]>(() => filteredPlayers.value)
 
