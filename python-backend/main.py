@@ -30,15 +30,51 @@ def get_standings(season: str):
     return data.get_dict()
 
 @app.get("/player-stats/{season}")
-def get_player_stats(season: str):
-    stats = leaguedashplayerstats.LeagueDashPlayerStats(
+def get_regular(season: str):
+    return leaguedashplayerstats.LeagueDashPlayerStats(
         season=season,
-        season_type_all_star="Regular Season",  # 🔥 важно
+        season_type_all_star="Regular Season",
         per_mode_detailed="PerGame",
         measure_type_detailed_defense="Base",
         timeout=60
-    )
-    return stats.get_dict()
+    ).get_dict()
+
+
+@app.get("/player-stats/playoffs/{season}")
+def get_playoffs(season: str):
+    return leaguedashplayerstats.LeagueDashPlayerStats(
+        season=season,
+        season_type_all_star="Playoffs",
+        per_mode_detailed="PerGame",
+        measure_type_detailed_defense="Base",
+        timeout=60
+    ).get_dict()
+
+
+@app.get("/player-stats/all/{season}")
+def get_all(season: str):
+    reg = leaguedashplayerstats.LeagueDashPlayerStats(
+        season=season,
+        season_type_all_star="Regular Season",
+        per_mode_detailed="PerGame",
+        measure_type_detailed_defense="Base",
+        timeout=60
+    ).get_dict()
+
+    po = leaguedashplayerstats.LeagueDashPlayerStats(
+        season=season,
+        season_type_all_star="Playoffs",
+        per_mode_detailed="PerGame",
+        measure_type_detailed_defense="Base",
+        timeout=60
+    ).get_dict()
+
+    reg_rows = reg["resultSets"][0]["rowSet"]
+    po_rows = po["resultSets"][0]["rowSet"]
+
+    reg["resultSets"][0]["rowSet"] = reg_rows + po_rows
+
+    return reg
 
 @app.get("/player-gamelog/{player_id}/{season}")
 def get_player_gamelog(player_id: int, season: str):

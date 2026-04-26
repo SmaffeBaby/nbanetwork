@@ -9,6 +9,24 @@
       />
     </div>
 
+    <div class="flex gap-2 bg-gray-200 p-1 rounded-lg">
+      <button
+          @click="switchMode('regular')"
+          class="px-4 py-1 rounded transition"
+          :class="mode === 'regular' ? 'bg-white shadow' : 'opacity-60'"
+      >
+        Regular
+      </button>
+
+      <button
+          @click="switchMode('playoffs')"
+          class="px-4 py-1 rounded transition"
+          :class="mode === 'playoffs' ? 'bg-white shadow' : 'opacity-60'"
+      >
+        Playoffs
+      </button>
+    </div>
+
     <div class="grid md:grid-cols-2 gap-6">
       <StatLeaders title="Points Per Game" stat="PTS" :players="players" />
       <StatLeaders title="Rebounds Per Game" stat="REB" :players="players" />
@@ -124,8 +142,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { usePlayerStats } from '../../../../composables/NBA/player_stats/usePlayerStats.ts'
 import { getPlayerImage, handleImageError } from '../../../../utils/playerImage.ts'
 import { useSorting } from '../../../../utils/useSorting.ts'
@@ -146,6 +164,19 @@ type Player = {
 }
 const season = ref('2025-26')
 const router = useRouter()
+const route = useRoute()
+
+const mode = computed(() => {
+  return route.path.includes('playoffs') ? 'playoffs' : 'regular'
+})
+
+const switchMode = (newMode: 'regular' | 'playoffs') => {
+  if (newMode === 'playoffs') {
+    router.push('/player-stats/playoffs')
+  } else {
+    router.push('/player-stats')
+  }
+}
 const {
   loading,
   fetchPlayerStats,
@@ -158,7 +189,13 @@ const {
 const showTeams = ref(false)
 
 
-onMounted(fetchPlayerStats)
+watch(
+    () => route.path,
+    () => {
+      fetchPlayerStats()
+    },
+    { immediate: true }
+)
 
 const players = computed<Player[]>(() => filteredPlayers.value)
 

@@ -27,7 +27,17 @@ export function usePlayerStats(season: Ref<string>) {
     const fetchPlayerStats = async () => {
         loading.value = true
 
-        const res = await axios.get(`/api/player-stats/${season.value}`)
+        const segment = window.location.pathname.split('/')[2]
+
+        const allowedTypes = ['playoffs', 'all', 'regular']
+
+        const type = allowedTypes.includes(segment) ? segment : null
+
+        const url = type
+            ? `/api/player-stats/${type}/${season.value}`
+            : `/api/player-stats/${season.value}`
+
+        const res = await axios.get(url)
 
         const rows = res.data.resultSets[0].rowSet
         const headers = res.data.resultSets[0].headers
