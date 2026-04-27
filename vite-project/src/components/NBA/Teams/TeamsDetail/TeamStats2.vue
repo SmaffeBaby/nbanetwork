@@ -34,16 +34,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount, nextTick } from 'vue'
+import { ref, watch, onBeforeUnmount, nextTick, toRef } from 'vue'
 import Chart from 'chart.js/auto'
 import { useTeamStats2 } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamStats2'
 import StatCard from './StatCard.vue'
 
 const props = defineProps<{
   teamId: number
+  season: string
 }>()
 
-const { stats, loading } = useTeamStats2(props.teamId, '2025-26')
+const seasonRef = toRef(props, 'season')
+
+const { stats, loading } =
+    useTeamStats2(props.teamId, seasonRef)
 
 const chartRef = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null

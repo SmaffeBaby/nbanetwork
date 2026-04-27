@@ -1,19 +1,18 @@
-import { ref, watch, toRef } from 'vue'
+import { ref, watch } from 'vue'
+import type { Ref } from 'vue'
 import axios from 'axios'
 
-export function useTeamStats2(teamId: number, season: string) {
+export function useTeamStats2(teamId: number, season: Ref<string>) {
     const stats = ref<any>(null)
-    const loading = ref(true)
+    const loading = ref(false)
 
-    const teamIdRef = ref(teamId)
-
-    const loadStats = async () => {
-        if (!teamIdRef.value) return
+    const fetchStats = async () => {
+        if (!teamId) return
 
         loading.value = true
 
         try {
-            const res = await axios.get(`/api/standings/${season}`)
+            const res = await axios.get(`/api/standings/${season.value}`)
 
             const resultSet = res.data.resultSets?.[0]
             if (!resultSet) return
@@ -29,8 +28,8 @@ export function useTeamStats2(teamId: number, season: string) {
             })
 
             stats.value = teams.find(
-                (t: any) => t.TeamID == teamIdRef.value
-            )
+                (t: any) => t.TeamID == teamId
+            ) || null
 
         } catch (e) {
             console.error('Team stats error:', e)
@@ -39,10 +38,11 @@ export function useTeamStats2(teamId: number, season: string) {
         }
     }
 
-    watch(teamIdRef, loadStats, { immediate: true })
+    watch(season, fetchStats, { immediate: true })
 
     return {
         stats,
-        loading
+        loading,
+        fetchStats
     }
 }

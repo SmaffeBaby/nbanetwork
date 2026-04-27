@@ -1,8 +1,9 @@
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
+import type { Ref } from 'vue'
 import axios from 'axios'
 import { useAuthStore } from '../../../../stores/auth'
 
-export function useTeamGameTable(teamId: number, season: string) {
+export function useTeamGameTable(teamId: number, season: Ref<string>) {
     const auth = useAuthStore()
 
     const games = ref<any[]>([])
@@ -16,9 +17,9 @@ export function useTeamGameTable(teamId: number, season: string) {
         }
     })
 
-    const loadGames = async () => {
+    const fetchGames = async () => {
         const res = await axios.get(
-            `http://localhost:3000/api/team-games/${teamId}/${season}?season_type=all`
+            `/api/team-games/${teamId}/${season.value}?season_type=all`
         )
 
         const data = res.data
@@ -35,14 +36,14 @@ export function useTeamGameTable(teamId: number, season: string) {
         })
     }
 
+    watch(season, fetchGames, { immediate: true })
+
     const filteredGames = computed(() => {
         if (filter.value === 'ALL') return games.value
         return games.value.filter(g => g.WL === filter.value)
     })
 
-    const parseDate = (dateStr: string) => {
-        return new Date(dateStr)
-    }
+    const parseDate = (dateStr: string) => new Date(dateStr)
 
     const parseMatchup = (matchup: string) => {
         const isAway = matchup.includes('@')
@@ -93,17 +94,13 @@ export function useTeamGameTable(teamId: number, season: string) {
         return sortAsc.value ? '↑' : '↓'
     }
 
-    onMounted(loadGames)
-
     return {
         filter,
         hideScoresModel,
-
         sortedGames,
-
         parseMatchup,
-
         setSort,
-        getSortIcon
+        getSortIcon,
+        fetchGames
     }
 }

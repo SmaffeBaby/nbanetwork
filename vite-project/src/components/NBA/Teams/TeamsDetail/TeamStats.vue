@@ -71,17 +71,25 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, watch, toRef } from 'vue'
 import { useTeamDetail } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamDetail'
 import { useSlider } from '../../../../composables/useSlider'
-import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import StatLeaders from '../../player_stats/all_stats/StatLeaders.vue'
 import PlayerTable from './TeamPlayerTable.vue'
 
-const props = defineProps<{ teamAbbr: string }>()
+const props = defineProps<{
+  teamAbbr: string
+  season: string
+}>()
 
-const { players, loading, search, fetchPlayers } = useTeamDetail(props.teamAbbr)
+const seasonRef = toRef(props, 'season')
+
+const { players, loading, search, fetchPlayers } =
+    useTeamDetail(props.teamAbbr, seasonRef)
+
 onMounted(fetchPlayers)
+
+watch(seasonRef, fetchPlayers)
 
 const stats = [
   { title: 'Points Per Game', stat: 'PTS' },
@@ -91,7 +99,17 @@ const stats = [
   { title: 'Blocks Per Game', stat: 'BLK' },
 ] as const
 
-const { currentSlide, nextIndex, next, prev, goTo, start, pause, onTouchStart, onTouchEnd } = useSlider(stats.length)
+const {
+  currentSlide,
+  nextIndex,
+  next,
+  prev,
+  goTo,
+  start,
+  pause,
+  onTouchStart,
+  onTouchEnd
+} = useSlider(stats.length)
 </script>
 
 <style scoped>

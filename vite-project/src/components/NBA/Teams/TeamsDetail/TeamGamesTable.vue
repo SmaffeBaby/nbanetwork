@@ -138,6 +138,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { toRef, watch, onMounted } from 'vue'
 import { useTeamGameTable } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamGameTable'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 
@@ -148,14 +149,20 @@ const props = defineProps<{
   season: string
 }>()
 
+const seasonRef = toRef(props, 'season')
 const {
   filter,
   sortedGames,
   hideScoresModel,
   parseMatchup,
   setSort,
-  getSortIcon
-} = useTeamGameTable(props.teamId, props.season)
+  getSortIcon,
+  fetchGames
+} = useTeamGameTable(props.teamId, seasonRef)
+
+onMounted(fetchGames)
+
+watch(seasonRef, fetchGames)
 
 const goToGame = (gameId: string | number) => {
   if (!gameId) return

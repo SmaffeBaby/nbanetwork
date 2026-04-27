@@ -6,8 +6,8 @@
     </div>
 
     <div class="bg-white p-4 rounded-xl shadow">
-      <div class="h-72">
-        <canvas ref="chartRef"></canvas>
+      <div class="h-72 relative">
+        <canvas ref="chartRef" class="w-full h-full"></canvas>
       </div>
     </div>
 
@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { watch, toRef } from 'vue'
 import { useTeamsPointsTrendTable } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamsPointsTrendTable'
 
 const props = defineProps<{
@@ -23,12 +23,25 @@ const props = defineProps<{
   season: string
 }>()
 
-const {
-  chartRef,
-  init
-} = useTeamsPointsTrendTable(props.teamId, props.season)
+const seasonRef = toRef(props, 'season')
 
-onMounted(init)
+const { chartRef, fetchGames } =
+    useTeamsPointsTrendTable(props.teamId, seasonRef)
 
-watch(() => props.teamId, init)
+
+fetchGames()
+
+watch(
+    seasonRef,
+    () => {
+      fetchGames()
+    }
+)
+
+watch(
+    () => props.teamId,
+    () => {
+      fetchGames()
+    }
+)
 </script>

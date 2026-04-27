@@ -19,6 +19,14 @@
       Back
     </button>
 
+    <div class="flex justify-center mt-4">
+      <select v-model="season" class="p-2 border rounded">
+        <option v-for="s in seasons" :key="s" :value="s">
+          {{ s }}
+        </option>
+      </select>
+    </div>
+
     <div class="mt-6 border-b border-gray-300">
       <nav class="-mb-px flex space-x-4">
         <button
@@ -43,14 +51,22 @@
       <TeamGamesTable
           v-if="activeTab === 'История игр'"
           :teamId="teamId"
-          season="2025-26"
+          :season="season"
       />
-      <TeamStats v-if="activeTab === 'Команда'" :teamAbbr="teamAbbr" />
-      <TeamStats2 v-if="activeTab === 'Статистика'" :teamId="teamId" />
+      <TeamStats
+          v-if="activeTab === 'Команда'"
+          :teamAbbr="teamAbbr"
+          :season="season"
+      />
+      <TeamStats2
+          v-if="activeTab === 'Статистика'"
+          :teamId="teamId"
+          :season="season"
+      />
       <TeamPointsTrendTable
           v-if="activeTab === 'Форма'"
           :teamId="teamId"
-          season="2025-26"
+          :season="season"
       />
     </div>
 
@@ -68,6 +84,7 @@ import TeamStats2 from './TeamStats2.vue'
 import TeamPointsTrendTable from './TeamPointsTrendTable.vue'
 
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
+import { generateNbaSeasons } from '../../../../utils/generateNbaSeasons'
 import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
 
 const route = useRoute()
@@ -77,4 +94,8 @@ const tabs = ['Будущие игры','Команда', 'История игр
 const activeTab = ref('Команда')
 
 const teamId = computed(() => TEAM_ID_MAP[teamAbbr])
+
+const seasons = generateNbaSeasons(2000, 2025)
+
+const season = ref(seasons[0])
 </script>

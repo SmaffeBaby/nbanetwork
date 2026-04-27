@@ -1,19 +1,31 @@
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
+import type { Ref } from 'vue'
 import axios from 'axios'
 import Chart from 'chart.js/auto'
 
-export function useTeamsPointsTrendTable(teamId: number, season: string) {
+export function useTeamsPointsTrendTable(
+    teamId: number,
+    season: Ref<string>
+) {
     const chartRef = ref<HTMLCanvasElement | null>(null)
     const games = ref<any[]>([])
     let chart: Chart | null = null
 
+
     const load = async () => {
+
         const res = await axios.get(
-            `/api/team-games/${teamId}/${season}`
+            `/api/team-games/${teamId}/${season.value}`
         )
 
-        const resultSet = res.data.resultSets?.[0]
-        if (!resultSet) return
+        const resultSet =
+            res.data?.resultSets?.[0] ||
+            res.data?.resultSet?.[0] ||
+            res.data
+
+        if (!resultSet?.headers || !resultSet?.rowSet) {
+            return
+        }
 
         const headers = resultSet.headers
 
@@ -26,30 +38,49 @@ export function useTeamsPointsTrendTable(teamId: number, season: string) {
         })
     }
 
+    const parseDate = (str: string) => new Date(str)
+
     const isHome = (matchup: string) => !matchup.includes('@')
 
     const render = () => {
-        if (!chartRef.value || !games.value.length) return
+
+        if (!chartRef.value) {
+            return
+        }
+
+        if (!games.value.length) {
+            return
+        }
+
+        const ctx = chartRef.value.getContext('2d')
+        if (!ctx) {
+            return
+        }
 
         if (chart) {
             chart.destroy()
             chart = null
         }
 
-        const ctx = chartRef.value.getContext('2d')
-        if (!ctx) return
-
-        const sorted = games.value.slice().reverse()
+        const sorted = [...games.value].sort(
+            (a, b) =>
+                parseDate(a.GAME_DATE).getTime() -
+                parseDate(b.GAME_DATE).getTime()
+        )
 
         const labels = sorted.map(g => {
-            const d = new Date(g.GAME_DATE)
-            return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`
+            const d = parseDate(g.GAME_DATE)
+            return `${String(d.getDate()).padStart(2, '0')}.${String(
+                d.getMonth() + 1
+            ).padStart(2, '0')}`
         })
 
         const overall = sorted.map(g => Number(g.PTS))
+
         const home = sorted.map(g =>
             isHome(g.MATCHUP) ? Number(g.PTS) : null
         )
+
         const away = sorted.map(g =>
             !isHome(g.MATCHUP) ? Number(g.PTS) : null
         )
@@ -63,7 +94,6 @@ export function useTeamsPointsTrendTable(teamId: number, season: string) {
                         label: 'Общее',
                         data: overall,
                         borderColor: '#6366f1',
-                        backgroundColor: '#6366f1',
                         tension: 0.3,
                         pointRadius: 3
                     },
@@ -71,18 +101,16 @@ export function useTeamsPointsTrendTable(teamId: number, season: string) {
                         label: 'Дома',
                         data: home,
                         borderColor: '#22c55e',
-                        backgroundColor: '#22c55e',
-                        spanGaps: true,
                         tension: 0.3,
+                        spanGaps: true,
                         pointRadius: 3
                     },
                     {
                         label: 'На выезде',
                         data: away,
                         borderColor: '#f97316',
-                        backgroundColor: '#f97316',
-                        spanGaps: true,
                         tension: 0.3,
+                        spanGaps: true,
                         pointRadius: 3
                     }
                 ]
@@ -97,14 +125,6 @@ export function useTeamsPointsTrendTable(teamId: number, season: string) {
                 plugins: {
                     legend: {
                         display: true
-                    },
-                    tooltip: {
-                        callbacks: {
-                            afterLabel: (ctx: any) => {
-                                const g = sorted[ctx.dataIndex]
-                                return g ? `vs ${g.MATCHUP}` : ''
-                            }
-                        }
                     }
                 },
                 scales: {
@@ -114,16 +134,26 @@ export function useTeamsPointsTrendTable(teamId: number, season: string) {
                 }
             }
         })
+
     }
 
-    const init = async () => {
+    const fetchGames = async () => {
         await load()
+        await nextTick()
         render()
     }
+
+    watch(
+        season,
+        () => {
+            fetchGames()
+        },
+        { immediate: true }
+    )
 
     return {
         chartRef,
         games,
-        init
+        fetchGames
     }
 }
