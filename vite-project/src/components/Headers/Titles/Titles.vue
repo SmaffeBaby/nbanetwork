@@ -13,6 +13,19 @@
       />
     </RouterLink>
 
+    <RouterLink to="/playoffs" class="group relative">
+      <img
+          :src="route.path === '/playoffs'
+          ? '/logos/PLAYOFFS_2.svg'
+          : '/logos/PLAYOFFS_1.svg'"
+          class="w-24 h-24 transition group-hover:opacity-0 absolute"
+      />
+      <img
+          src="/logos/PLAYOFFS_2.svg"
+          class="w-24 h-24 transition opacity-0 group-hover:opacity-100"
+      />
+    </RouterLink>
+
     <RouterLink to="/teams" class="group relative">
       <img
           :src="route.path === '/teams'

@@ -123,7 +123,7 @@ export function usePlayoffGames() {
 
             standingsMap.value = map
         } catch (e) {
-            console.error('❌ standings error:', e)
+            console.error('standings error:', e)
         }
     }
 
@@ -285,7 +285,7 @@ export function usePlayoffGames() {
 
             for (const k in opened) delete opened[k]
         } catch (e) {
-            console.error('❌ playoffs error:', e)
+            console.error('playoffs error:', e)
         }
     }
 
@@ -298,6 +298,24 @@ export function usePlayoffGames() {
         buildPlayoffSeedOverrides(series.value)
     }
 
+    async function loadSeasons() {
+        try {
+            const res = await fetch('/api/current-season')
+            const data = await res.json()
+            const currentSeason = data?.season
+
+            if (!currentSeason) return
+
+            seasons.value = generateNbaSeasons(2000, currentSeason)
+
+            if (!seasons.value.includes(selectedSeason.value)) {
+                selectedSeason.value = currentSeason
+            }
+        } catch (e) {
+            console.error('current season error:', e)
+        }
+    }
+
     return {
         seasons,
         selectedSeason,
@@ -307,6 +325,7 @@ export function usePlayoffGames() {
         getSeed,
         getSeriesScore,
         toggleSeries,
-        loadAll
+        loadAll,
+        loadSeasons
     }
 }

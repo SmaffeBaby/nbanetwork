@@ -26,8 +26,8 @@
         >
           <img
               :src="route.path === '/standings'
-      ? '/logos/RS2.svg'
-      : '/logos/RS1.svg'"
+              ? '/logos/RS2.svg'
+              : '/logos/RS1.svg'"
               class="w-44 h-44"
               alt="Standings"
           />
@@ -40,8 +40,8 @@
         >
           <img
               :src="route.path.startsWith('/teams')
-        ? '/logos/TEAMS2.svg'
-        : '/logos/TEAMS.svg'"
+              ? '/logos/TEAMS2.svg'
+              : '/logos/TEAMS.svg'"
               class="w-44 h-44"
               alt="Teams"
           />
@@ -53,14 +53,27 @@
             class="flex items-center gap-3"
         >
           <img
-              :src="route.path.startsWith('/teams')
-        ? '/logos/PLAYER_STATS_2.svg'
-        : '/logos/PLAYER_STATS_1.svg'"
+              :src="route.path.startsWith('/player-stats')
+              ? '/logos/PLAYER_STATS_2.svg'
+              : '/logos/PLAYER_STATS_1.svg'"
               class="w-44 h-44"
-              alt="Teams"
+              alt="Player Stats"
           />
         </RouterLink>
 
+        <RouterLink
+            to="/playoffs"
+            @click="isOpen = false"
+            class="flex items-center gap-3"
+        >
+          <img
+              :src="route.path.startsWith('/playoffs')
+              ? '/logos/PLAYOFFS_2.svg'
+              : '/logos/PLAYOFFS_1.svg'"
+              class="w-44 h-44"
+              alt="Playoffs"
+          />
+        </RouterLink>
 
         <AuthPanel />
       </div>
@@ -70,22 +83,26 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import AuthPanel from '../Auth/AuthPanel.vue'
-import { RouterLink } from 'vue-router'
-import { useRoute } from 'vue-router'
 
 const isOpen = ref(false)
 const route = useRoute()
 </script>
 
 <style scoped>
-.slide-enter-active, .slide-leave-active {
+.slide-enter-active,
+.slide-leave-active {
   transition: transform 0.3s ease;
 }
-.slide-enter-from, .slide-leave-to {
+
+.slide-enter-from,
+.slide-leave-to {
   transform: translateX(100%);
 }
-.slide-enter-to, .slide-leave-from {
+
+.slide-enter-to,
+.slide-leave-from {
   transform: translateX(0);
 }
 </style>
