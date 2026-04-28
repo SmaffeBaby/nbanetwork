@@ -9,6 +9,7 @@ const routes = [
     { path: '/', component: Home },
     { path: '/profile', component: Profile },
     { path: '/standings', component: Standings },
+    { path: '/playoffs', name: 'Playoffs', component: () => import('../views/Playoffs.vue')},
     { path: '/teams', component: Teams },
     { path: '/player-stats', name: 'PlayerStatsAll', component: PlayerStats },
     { path: '/player-stats/all', name: 'PlayerStatsAllType', component: PlayerStats },

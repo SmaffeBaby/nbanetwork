@@ -6,6 +6,7 @@ from nba_api.stats.endpoints import scoreboardv2
 from datetime import datetime, timedelta
 from nba_api.stats.endpoints import boxscoresummaryv2, boxscoretraditionalv2
 from nba_api.stats.endpoints import boxscoretraditionalv3
+from nba_api.stats.endpoints import leaguegamelog
 
 app = FastAPI()
 
@@ -341,6 +342,50 @@ def get_game_boxscore_quarter(game_id: str, quarter: int):
         )
 
         return data.get_dict()
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+from collections import defaultdict
+
+
+@app.get("/playoffs/{season}")
+def get_playoff_games(season: str):
+    try:
+        data = leaguegamelog.LeagueGameLog(
+            season=season,
+            season_type_all_star="Playoffs"
+        ).get_dict()
+
+        result_set = data["resultSets"][0]
+
+        headers = result_set["headers"]
+        rows = result_set["rowSet"]
+
+        games = []
+
+        for row in rows:
+            game = dict(zip(headers, row))
+
+            games.append({
+                "GAME_ID": game.get("GAME_ID"),
+                "GAME_DATE": game.get("GAME_DATE"),
+                "MATCHUP": game.get("MATCHUP"),
+                "WL": game.get("WL"),
+                "PTS": game.get("PTS"),
+                "REB": game.get("REB"),
+                "AST": game.get("AST"),
+                "SEASON_TYPE": "Playoffs",
+                "HOME_TEAM_ABBR": game.get("MATCHUP", "").split(" vs ")[0],
+                "AWAY_TEAM_ABBR": game.get("MATCHUP", "").split(" vs ")[-1],
+            })
+
+        return {
+            "season": season,
+            "count": len(games),
+            "games": games
+        }
 
     except Exception as e:
         return {"error": str(e)}
