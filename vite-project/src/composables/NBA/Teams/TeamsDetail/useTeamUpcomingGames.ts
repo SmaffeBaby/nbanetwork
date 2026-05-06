@@ -3,9 +3,53 @@ import axios from 'axios'
 
 export function useTeamUpcomingGames(teamId: number) {
     const games = ref<any[]>([])
+    const loading = ref(false)
+    const error = ref<string | null>(null)
 
-    const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr)
+    const getMoscowDateTime = (dateStr: string, timeStr: string) => {
+        if (!timeStr || timeStr === '—' || timeStr.toUpperCase() === 'TBD') {
+            return new Date(dateStr)
+        }
+
+        const clean = timeStr.replace(/\s*ET$/i, '').trim()
+        const [time, modifierRaw] = clean.split(' ')
+        const modifier = modifierRaw?.toLowerCase()
+        const [rawHours, rawMinutes] = time.split(':').map(Number)
+
+        if (!Number.isFinite(rawHours) || !Number.isFinite(rawMinutes)) {
+            return new Date(dateStr)
+        }
+
+        let hours = rawHours
+        if (modifier === 'pm' && hours !== 12) hours += 12
+        if (modifier === 'am' && hours === 12) hours = 0
+
+        const datePart = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr
+        let year
+        let month
+        let day
+
+        if (datePart.includes('-')) {
+            const parts = datePart.split('-').map(Number)
+            year = parts[0]
+            month = parts[1]
+            day = parts[2]
+        } else {
+            const [rawMonth, rawDay, rawYear] = datePart.split(/[ /]/).map(Number)
+            year = rawYear
+            month = rawMonth
+            day = rawDay
+        }
+
+        if (!year || !month || !day) {
+            return new Date(dateStr)
+        }
+
+        return new Date(Date.UTC(year, month - 1, day, hours + 4, rawMinutes))
+    }
+
+    const formatDate = (dateStr: string, timeStr: string) => {
+        const date = getMoscowDateTime(dateStr, timeStr)
 
         return date.toLocaleDateString('ru-RU', {
             day: '2-digit',
@@ -14,19 +58,10 @@ export function useTeamUpcomingGames(teamId: number) {
     }
 
     const convertToMoscowTime = (dateStr: string, timeStr: string) => {
-        if (!timeStr || timeStr === '—') return '—'
+        if (!timeStr || timeStr === '—' || timeStr.toUpperCase() === 'TBD') return '—'
 
         try {
-            const clean = timeStr.replace(' ET', '')
-
-            const [time, modifier] = clean.split(' ')
-            let [hours, minutes] = time.split(':').map(Number)
-
-            if (modifier === 'pm' && hours !== 12) hours += 12
-            if (modifier === 'am' && hours === 12) hours = 0
-
-            const baseDate = new Date(dateStr)
-            baseDate.setUTCHours(hours + 4, minutes)
+            const baseDate = getMoscowDateTime(dateStr, timeStr)
 
             return baseDate.toLocaleTimeString('ru-RU', {
                 hour: '2-digit',
@@ -40,28 +75,38 @@ export function useTeamUpcomingGames(teamId: number) {
     }
 
     const loadGames = async () => {
-        const res = await axios.get(
-            `/api/team-upcoming-games/${teamId}`
-        )
+        loading.value = true
+        error.value = null
 
-        const resultSet = res.data.resultSets?.[0]
-        if (!resultSet) return
+        try {
+            const res = await axios.get(
+                `/api/team-upcoming-games/${teamId}`
+            )
 
-        const headers = resultSet.headers
+            const resultSet = res.data.resultSets?.[0]
+            if (!resultSet) return
 
-        games.value = resultSet.rowSet.map((row: any[]) => {
-            const obj: any = {}
+            const headers = resultSet.headers
 
-            headers.forEach((h: string, i: number) => {
-                obj[h] = row[i]
+            games.value = resultSet.rowSet.map((row: any[]) => {
+                const obj: any = {}
+
+                headers.forEach((h: string, i: number) => {
+                    obj[h] = row[i]
+                })
+
+                return {
+                    ...obj,
+                    FORMATTED_DATE: formatDate(obj.GAME_DATE, obj.GAME_TIME),
+                    MOSCOW_TIME: convertToMoscowTime(obj.GAME_DATE, obj.GAME_TIME)
+                }
             })
-
-            return {
-                ...obj,
-                FORMATTED_DATE: formatDate(obj.GAME_DATE),
-                MOSCOW_TIME: convertToMoscowTime(obj.GAME_DATE, obj.GAME_TIME)
-            }
-        })
+        } catch (e) {
+            error.value = 'Не удалось загрузить будущие игры'
+            games.value = []
+        } finally {
+            loading.value = false
+        }
     }
 
     const parseMatchup = (matchup: string) => {
@@ -79,6 +124,8 @@ export function useTeamUpcomingGames(teamId: number) {
 
     return {
         games,
+        loading,
+        error,
         parseMatchup
     }
 }

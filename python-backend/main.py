@@ -13,6 +13,10 @@ from nba_api.stats.endpoints import leaguegamelog
 
 app = FastAPI()
 MSK_TZ = ZoneInfo("Europe/Moscow")
+SCHEDULE_URLS = [
+    "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json",
+    "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json",
+]
 
 def get_current_nba_season():
     now = datetime.now()
@@ -157,90 +161,176 @@ def get_team_games(team_id: int, season: str, season_type: str = "all"):
 @app.get("/team-upcoming-games/{team_id}")
 def get_team_upcoming_games(team_id: int):
     try:
-        all_games = []
-        today = datetime.today()
+        games_by_id = {}
+        today = datetime.now(MSK_TZ).date()
         days_ahead = 7
 
-        for i in range(days_ahead):
-            date = today + timedelta(days=i)
-            game_date = date.strftime("%m/%d/%Y")
+        def parse_date(value):
+            if not value:
+                return None
 
-            data = scoreboardv2.ScoreboardV2(
-                game_date=game_date,
-                league_id="00"
-            )
+            for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %I:%M:%S %p"):
+                try:
+                    return datetime.strptime(value[:19], fmt)
+                except ValueError:
+                    pass
 
-            result = data.get_dict()
+            try:
+                return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except ValueError:
+                return None
 
-            game_header = next(
-                (r for r in result["resultSets"] if r["name"] == "GameHeader"),
-                None
-            )
+        def add_game(game_id, game_date, matchup, game_time):
+            game_dt = parse_date(game_date)
+            if game_dt:
+                game_day = game_dt.astimezone(MSK_TZ).date() if game_dt.tzinfo else game_dt.date()
+                if game_day < today:
+                    return
+                sort_value = game_dt.timestamp()
+            else:
+                sort_value = 0
 
-            line_score = next(
-                (r for r in result["resultSets"] if r["name"] == "LineScore"),
-                None
-            )
+            games_by_id[game_id] = {
+                "row": [game_id, game_date, matchup, game_time],
+                "sort": sort_value,
+            }
 
-            if not game_header or not line_score:
-                continue
+        for url in SCHEDULE_URLS:
+            try:
+                request = Request(url, headers={
+                    "User-Agent": "Mozilla/5.0",
+                    "Referer": "https://www.nba.com"
+                })
 
-            gh_headers = game_header["headers"]
-            games = []
+                with urlopen(request, timeout=10) as response:
+                    schedule = json.loads(response.read().decode("utf-8"))
 
-            for row in game_header["rowSet"]:
-                obj = {}
-                for i, h in enumerate(gh_headers):
-                    obj[h] = row[i]
-                games.append(obj)
+                game_dates = schedule.get("leagueSchedule", {}).get("gameDates", [])
 
-            ls_headers = line_score["headers"]
-            teams = []
+                for game_date_entry in game_dates:
+                    for game in game_date_entry.get("games", []):
+                        home = game.get("homeTeam", {})
+                        away = game.get("awayTeam", {})
 
-            for row in line_score["rowSet"]:
-                obj = {}
-                for i, h in enumerate(ls_headers):
-                    obj[h] = row[i]
-                teams.append(obj)
+                        if home.get("teamId") != team_id and away.get("teamId") != team_id:
+                            continue
 
-            games_map = {}
+                        game_id = game.get("gameId")
+                        if not game_id:
+                            continue
 
-            for t in teams:
-                gid = t["GAME_ID"]
-                if gid not in games_map:
-                    games_map[gid] = []
-                games_map[gid].append(t)
+                        home_abbr = home.get("teamTricode") or home.get("teamAbbreviation")
+                        away_abbr = away.get("teamTricode") or away.get("teamAbbreviation")
+                        if not home_abbr or not away_abbr:
+                            continue
 
-            for g in games:
-                if g["HOME_TEAM_ID"] != team_id and g["VISITOR_TEAM_ID"] != team_id:
+                        game_date_value = (
+                            game.get("gameDateTimeEst")
+                            or game.get("gameDateEst")
+                            or game.get("gameDateUTC")
+                            or game_date_entry.get("gameDate")
+                        )
+
+                        game_time = game.get("gameStatusText") or game.get("gameTimeEst") or "TBD"
+
+                        add_game(
+                            game_id,
+                            game_date_value,
+                            f"{away_abbr} @ {home_abbr}",
+                            game_time
+                        )
+            except Exception as e:
+                print(f"Failed to fetch NBA schedule from {url}: {e}")
+
+            if games_by_id:
+                break
+
+        if not games_by_id:
+            for i in range(days_ahead):
+                date = today + timedelta(days=i)
+                game_date = date.strftime("%m/%d/%Y")
+
+                data = scoreboardv2.ScoreboardV2(
+                    game_date=game_date,
+                    league_id="00"
+                )
+
+                result = data.get_dict()
+
+                game_header = next(
+                    (r for r in result["resultSets"] if r["name"] == "GameHeader"),
+                    None
+                )
+
+                line_score = next(
+                    (r for r in result["resultSets"] if r["name"] == "LineScore"),
+                    None
+                )
+
+                if not game_header or not line_score:
                     continue
 
-                gid = g["GAME_ID"]
-                if gid not in games_map:
-                    continue
+                gh_headers = game_header["headers"]
+                games = []
 
-                teams_in_game = games_map[gid]
+                for row in game_header["rowSet"]:
+                    obj = {}
+                    for i, h in enumerate(gh_headers):
+                        obj[h] = row[i]
+                    games.append(obj)
 
-                if len(teams_in_game) < 2:
-                    continue
+                ls_headers = line_score["headers"]
+                teams = []
 
-                t1, t2 = teams_in_game
+                for row in line_score["rowSet"]:
+                    obj = {}
+                    for i, h in enumerate(ls_headers):
+                        obj[h] = row[i]
+                    teams.append(obj)
 
-                if t1["TEAM_ID"] == g["HOME_TEAM_ID"]:
-                    home = t1
-                    away = t2
-                else:
-                    home = t2
-                    away = t1
+                games_map = {}
 
-                matchup = f"{away['TEAM_ABBREVIATION']} @ {home['TEAM_ABBREVIATION']}"
+                for t in teams:
+                    gid = t["GAME_ID"]
+                    if gid not in games_map:
+                        games_map[gid] = []
+                    games_map[gid].append(t)
 
-                all_games.append([
-                    g["GAME_ID"],
-                    g["GAME_DATE_EST"],
-                    matchup,
-                    g["GAME_STATUS_TEXT"]
-                ])
+                for g in games:
+                    if g["HOME_TEAM_ID"] != team_id and g["VISITOR_TEAM_ID"] != team_id:
+                        continue
+
+                    gid = g["GAME_ID"]
+                    if gid not in games_map:
+                        continue
+
+                    teams_in_game = games_map[gid]
+
+                    if len(teams_in_game) < 2:
+                        continue
+
+                    t1, t2 = teams_in_game
+
+                    if t1["TEAM_ID"] == g["HOME_TEAM_ID"]:
+                        home = t1
+                        away = t2
+                    else:
+                        home = t2
+                        away = t1
+
+                    matchup = f"{away['TEAM_ABBREVIATION']} @ {home['TEAM_ABBREVIATION']}"
+
+                    add_game(
+                        g["GAME_ID"],
+                        g["GAME_DATE_EST"],
+                        matchup,
+                        g["GAME_STATUS_TEXT"]
+                    )
+
+        all_games = [
+            item["row"]
+            for item in sorted(games_by_id.values(), key=lambda item: item["sort"])
+        ]
 
         return {
             "resultSets": [

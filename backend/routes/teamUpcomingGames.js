@@ -11,7 +11,7 @@ router.get('/team-upcoming-games/:teamId', async (req, res) => {
 
     try {
         const data = await fetchWithCache({
-            key: `team-upcoming-${teamId}`,
+            key: `team-upcoming-v2-${teamId}`,
             ttl: TTL,
             fetcher: async () => {
                 console.log('🌐 fetching upcoming games from FastAPI')
