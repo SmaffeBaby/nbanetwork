@@ -13,6 +13,7 @@ router.get('/games/by-date/:date', async (req, res) => {
         const games = await fetchWithCache({
             key: `games-by-date:${date}`,
             ttl: ONE_HOUR,
+            staleWhileRevalidate: false,
             fetcher: async () => {
                 const response = await axios.get(
                     `http://python-backend:8000/games/by-date/${date}`

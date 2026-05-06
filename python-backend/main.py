@@ -19,6 +19,11 @@ SCHEDULE_URLS = [
     "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json",
     "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json",
 ]
+NBA_CDN_HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Referer": "https://www.nba.com",
+}
+STATIC_SCOREBOARD_CACHE = {}
 
 def get_current_nba_season():
     now = datetime.now()
@@ -483,30 +488,29 @@ def get_games_by_date(date: str):
     ]
 
     def fetch_static_scoreboard(nba_date):
+        cached = STATIC_SCOREBOARD_CACHE.get(nba_date)
+        if cached is not None:
+            return cached
+
         date_key = nba_date.strftime("%Y%m%d")
         url = f"https://cdn.nba.com/static/json/staticData/scores/scores_{date_key}.json"
-        request = Request(url, headers={
-            "User-Agent": "Mozilla/5.0",
-            "Referer": "https://www.nba.com"
-        })
+        request = Request(url, headers=NBA_CDN_HEADERS)
 
         with urlopen(request, timeout=10) as response:
             payload = json.loads(response.read().decode("utf-8"))
 
         games = payload.get("scoreboard", {}).get("games", [])
-        return {
+        games_by_id = {
             game.get("gameId"): game
             for game in games
             if game.get("gameId")
         }
+        STATIC_SCOREBOARD_CACHE[nba_date] = games_by_id
 
-    static_scoreboards_cache = {}
+        return games_by_id
 
     def get_static_scoreboard(nba_date):
-        if nba_date not in static_scoreboards_cache:
-            static_scoreboards_cache[nba_date] = fetch_static_scoreboard(nba_date)
-
-        return static_scoreboards_cache[nba_date]
+        return fetch_static_scoreboard(nba_date)
 
     def find_static_game(game_id, game_date):
         for date_candidate in [
@@ -531,6 +535,61 @@ def get_games_by_date(date: str):
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             return None
+
+    def add_static_games():
+        fetched_any_scoreboard = False
+
+        for nba_date in dates_to_fetch:
+            try:
+                static_games = get_static_scoreboard(nba_date)
+                fetched_any_scoreboard = True
+            except Exception as e:
+                print(f"Failed to fetch NBA static scoreboard for {nba_date}: {e}")
+                continue
+
+            for gid, game in static_games.items():
+                game_time_utc = game.get("gameTimeUTC")
+                game_dt_utc = parse_utc(game_time_utc)
+
+                if game_dt_utc:
+                    game_msk_date = game_dt_utc.astimezone(MSK_TZ).date()
+                    if game_msk_date != target_msk_date:
+                        continue
+                    game_date_msk = game_msk_date.isoformat()
+                else:
+                    game_date_value = (
+                        game.get("gameDateEst")
+                        or game.get("gameDateUTC")
+                        or game.get("gameDate")
+                        or nba_date.isoformat()
+                    )
+                    game_date_msk = str(game_date_value)[:10]
+                    if game_date_msk != target_msk_date.isoformat():
+                        continue
+
+                home = game.get("homeTeam", {})
+                away = game.get("awayTeam", {})
+
+                games_by_id[gid] = {
+                    "GAME_ID": gid,
+
+                    "GAME_DATE_EST": game.get("gameDateEst") or game.get("gameDateUTC") or f"{nba_date.isoformat()}T00:00:00",
+                    "GAME_DATE_MSK": game_date_msk,
+                    "GAME_TIME_UTC": game_time_utc,
+
+                    "HOME_TEAM_ID": home.get("teamId"),
+                    "VISITOR_TEAM_ID": away.get("teamId"),
+
+                    "HOME_TEAM_ABBREVIATION": home.get("teamTricode") or home.get("teamAbbreviation"),
+                    "VISITOR_TEAM_ABBREVIATION": away.get("teamTricode") or away.get("teamAbbreviation"),
+
+                    "HOME_TEAM_SCORE": home.get("score"),
+                    "VISITOR_TEAM_SCORE": away.get("score"),
+
+                    "GAME_STATUS": game.get("gameStatusText") or game.get("gameStatus") or ""
+                }
+
+        return fetched_any_scoreboard
 
     def add_completed_games_from_log(season_type):
         data = leaguegamelog.LeagueGameLog(
@@ -595,6 +654,9 @@ def get_games_by_date(date: str):
             }
 
     games_by_id = {}
+
+    if add_static_games():
+        return list(games_by_id.values())
 
     for nba_date in dates_to_fetch:
         formatted = nba_date.strftime("%m/%d/%Y")

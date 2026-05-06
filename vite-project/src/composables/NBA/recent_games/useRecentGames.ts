@@ -12,6 +12,7 @@ const TEAM_ID_TO_ABBR: Record<number, string> = Object.fromEntries(
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? ''
 const gamesCache = new Map<string, DailyGameDTO[]>()
+const pendingGamesRequests = new Map<string, Promise<DailyGameDTO[]>>()
 
 type DailyGameDTO = {
     GAME_ID: string
@@ -84,14 +85,53 @@ const getGamesByDate = async (dateStr: string): Promise<DailyGameDTO[]> => {
     const cached = gamesCache.get(dateStr)
     if (cached) return cached
 
-    try {
-        const res = await fetch(`${API_BASE}/api/games/by-date/${dateStr}`)
-        const data = await res.json()
-        if (!res.ok) throw new Error('HTTP error')
-        const games = Array.isArray(data) ? data : []
+    const pending = pendingGamesRequests.get(dateStr)
+    if (pending) return pending
 
-        gamesCache.set(dateStr, games)
-        return games
+    const request = fetch(`${API_BASE}/api/games/by-date/${dateStr}`)
+        .then(async (res) => {
+            const data = await res.json()
+            if (!res.ok) throw new Error('HTTP error')
+
+            const games = Array.isArray(data) ? data : []
+            gamesCache.set(dateStr, games)
+
+            return games
+        })
+        .catch(() => [])
+        .finally(() => pendingGamesRequests.delete(dateStr))
+
+    pendingGamesRequests.set(dateStr, request)
+
+    return request
+}
+
+const prefetchGamesByDate = (dateStr: string) => {
+    if (gamesCache.has(dateStr) || pendingGamesRequests.has(dateStr)) return
+    void getGamesByDate(dateStr)
+}
+
+const shiftDate = (date: Date, days: number) => {
+    const shifted = new Date(date)
+    shifted.setDate(shifted.getDate() + days)
+    shifted.setHours(0, 0, 0, 0)
+
+    return shifted
+}
+
+const prefetchAdjacentDays = (date: Date) => {
+    const prev = getDateKey(shiftDate(date, -1))
+    const next = getDateKey(shiftDate(date, 1))
+
+    prefetchGamesByDate(prev)
+    prefetchGamesByDate(next)
+}
+
+const hasCachedGames = (date: Date) => gamesCache.has(getDateKey(date))
+
+const loadGamesForDate = async (date: Date) => {
+    try {
+        return await getGamesByDate(getDateKey(date))
     } catch {
         return []
     }
@@ -152,16 +192,17 @@ export function useRecentGames() {
 
     const loadGames = async (date: Date) => {
         const requestId = ++loadRequestId
-        isLoading.value = true
+        isLoading.value = !hasCachedGames(date)
 
         try {
             const targetDay = getDateKey(date)
-            const games = await getGamesByDate(targetDay)
+            const games = await loadGamesForDate(date)
             const all = games.map(normalizeGame)
 
             if (requestId !== loadRequestId) return
 
             gamesList.value = all.filter(g => g.gameDay === targetDay)
+            prefetchAdjacentDays(date)
 
             error.value = null
         } catch {
@@ -200,7 +241,7 @@ export function useRecentGames() {
     watch(currentDate, (d) => {
         if (!d) return
         if (timeout) clearTimeout(timeout)
-        timeout = setTimeout(() => loadGames(d), 250)
+        timeout = setTimeout(() => loadGames(d), 80)
     })
 
     onMounted(() => loadGames(currentDate.value))
