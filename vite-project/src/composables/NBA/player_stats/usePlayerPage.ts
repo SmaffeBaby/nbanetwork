@@ -8,7 +8,7 @@ type Player = {
     PLAYER_ID: number
     PLAYER_NAME: string
     TEAM_ABBREVIATION: string
-} & Record<StatKey, number>
+} & Partial<Record<StatKey, number>>
 
 type TeamStyle = {
     bgColorHex: string

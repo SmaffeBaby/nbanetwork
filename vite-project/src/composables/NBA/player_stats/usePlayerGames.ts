@@ -45,7 +45,7 @@ export function usePlayerGames(
     const seasonTypeFilter = ref<'ALL' | 'Regular' | 'Playoffs'>('ALL')
 
     watch([player, season], async ([p, s]) => {
-        if (!p) return
+        if (!p || !s) return
 
         const { games, fetchGames } = usePlayerGameLog(p.PLAYER_ID, s)
 

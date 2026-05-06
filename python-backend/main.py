@@ -3,6 +3,8 @@ import json
 from urllib.request import Request, urlopen
 from nba_api.stats.endpoints import leaguestandings
 from nba_api.stats.endpoints import leaguedashplayerstats, playergamelog
+from nba_api.stats.endpoints import playercareerstats
+from nba_api.stats.static import players as static_players
 from nba_api.stats.endpoints import teamgamelog
 from nba_api.stats.endpoints import scoreboardv2
 from datetime import datetime, timedelta
@@ -84,6 +86,109 @@ def get_all(season: str):
     reg["resultSets"][0]["rowSet"] = reg_rows + po_rows
 
     return reg
+
+@app.get("/player-career/{player_name}")
+def get_player_career(player_name: str):
+    try:
+        matches = static_players.find_players_by_full_name(player_name)
+        exact_match = next(
+            (player for player in matches if player.get("full_name", "").lower() == player_name.lower()),
+            None
+        )
+        player = exact_match or (matches[0] if matches else None)
+
+        if not player:
+            return {"error": "Player not found"}
+
+        data = playercareerstats.PlayerCareerStats(
+            player_id=player["id"],
+            timeout=60
+        ).get_dict()
+
+        regular = next(
+            (
+                result_set for result_set in data.get("resultSets", [])
+                if result_set.get("name") == "SeasonTotalsRegularSeason"
+            ),
+            None
+        )
+
+        if not regular:
+            return {
+                "player": {
+                    "PLAYER_ID": player["id"],
+                    "PLAYER_NAME": player["full_name"],
+                    "TEAM_ABBREVIATION": "",
+                },
+                "seasons": [],
+                "careerTeams": [],
+                "resultSets": data.get("resultSets", [])
+            }
+
+        headers = regular.get("headers", [])
+        rows = regular.get("rowSet", [])
+        season_index = headers.index("SEASON_ID")
+        team_index = headers.index("TEAM_ABBREVIATION")
+
+        seasons = sorted(
+            {row[season_index] for row in rows if row[season_index]},
+            key=lambda season: int(str(season).split("-")[0]),
+            reverse=True
+        )
+
+        seasons_ascending = list(reversed(seasons))
+        career_teams = []
+
+        def season_end_year(season):
+            start_year = int(str(season).split("-")[0])
+            return start_year + 1
+
+        for season in seasons_ascending:
+            teams = []
+            for row in rows:
+                if row[season_index] != season:
+                    continue
+
+                team = row[team_index]
+                if team and team != "TOT" and team not in teams:
+                    teams.append(team)
+
+            if not teams:
+                for row in rows:
+                    if row[season_index] == season and row[team_index] and row[team_index] not in teams:
+                        teams.append(row[team_index])
+
+            team_label = " / ".join(teams)
+            if not team_label:
+                continue
+
+            if career_teams and career_teams[-1]["team"] == team_label:
+                career_teams[-1]["endSeason"] = season
+                career_teams[-1]["endYear"] = season_end_year(season)
+            else:
+                career_teams.append({
+                    "team": team_label,
+                    "startSeason": season,
+                    "endSeason": season,
+                    "startYear": int(str(season).split("-")[0]),
+                    "endYear": season_end_year(season),
+                })
+
+        last_team = career_teams[-1]["team"].split(" / ")[-1] if career_teams else ""
+
+        return {
+            "player": {
+                "PLAYER_ID": player["id"],
+                "PLAYER_NAME": player["full_name"],
+                "TEAM_ABBREVIATION": last_team,
+            },
+            "seasons": seasons,
+            "careerTeams": list(reversed(career_teams)),
+            "resultSets": data.get("resultSets", [])
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/player-gamelog/{player_id}/{season}")
 def get_player_gamelog(player_id: int, season: str):

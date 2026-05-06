@@ -103,6 +103,45 @@
 
       </div>
 
+      <div
+          v-if="careerTeams.length"
+          class="bg-white p-4 rounded-2xl shadow space-y-3"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="font-semibold">Career</h2>
+
+          <button
+              v-if="careerTeams.length > visibleCareerLimit"
+              @click="careerExpanded = !careerExpanded"
+              class="px-3 py-1.5 rounded-lg bg-gray-100 text-sm font-medium hover:bg-gray-200 transition"
+          >
+            {{ careerExpanded ? 'Свернуть' : 'Показать все' }}
+          </button>
+        </div>
+
+        <div class="grid gap-2">
+          <div
+              v-for="item in visibleCareerTeams"
+              :key="`${item.startSeason}-${item.endSeason}-${item.team}`"
+              class="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-2"
+          >
+            <div class="flex items-center gap-2 min-w-0">
+              <img
+                  :src="getCareerTeamLogo(item.team)"
+                  alt="Logo"
+                  class="w-7 h-7 rounded-full object-contain bg-gray-50 shrink-0"
+              />
+
+              <span class="font-medium truncate">{{ item.team }}</span>
+            </div>
+
+            <span class="text-sm text-gray-500 shrink-0">
+              {{ formatCareerYears(item) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatBox
             v-for="statKey in ['PTS','REB','AST','STL','BLK','TOV']"
@@ -170,7 +209,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 
@@ -178,6 +217,7 @@ import { usePlayerStats } from '../../../../composables/NBA/player_stats/usePlay
 import { usePlayerPage } from '../../../../composables/NBA/player_stats/usePlayerPage'
 import { usePlayerGames } from '../../../../composables/NBA/player_stats/usePlayerGames'
 import { useCurrentSeason } from '../../../../composables/NBA/useCurrentSeason'
+import { usePlayerCareer, type CareerTeam } from '../../../../composables/NBA/player_stats/usePlayerCareer'
 import type { GameRaw } from '../../../../composables/NBA/player_stats/usePlayerGames'
 
 import PlayerRecentGames from './PlayerRecentGames.vue'
@@ -190,27 +230,70 @@ import { getTeamLogo } from '../../../../utils/getTeamLogo'
 const route = useRoute()
 const router = useRouter()
 const showTeams = ref(false)
+const careerExpanded = ref(false)
+const visibleCareerLimit = 4
 
 function goToTeam() {
   if (!player.value?.TEAM_ABBREVIATION) return
   router.push(`/team/${player.value.TEAM_ABBREVIATION}`)
 }
 
-const { season, seasons, fetchCurrentSeason } = useCurrentSeason()
+const { season, seasons: currentSeasons, fetchCurrentSeason } = useCurrentSeason()
+const {
+  careerPlayer,
+  careerSeasons,
+  careerTeams,
+  latestSeason,
+  fetchPlayerCareer,
+} = usePlayerCareer()
 
+const playerName = computed(() => decodeURIComponent(route.params.name as string))
+const seasons = computed(() => careerSeasons.value.length ? careerSeasons.value : currentSeasons.value)
 
 
 const { players, fetchPlayerStats, team, teams } = usePlayerStats(season)
 
 const player = computed(() => {
-  const name = decodeURIComponent(route.params.name as string)
-  return players.value.find(p => p.PLAYER_NAME === name)
+  return players.value.find(p => p.PLAYER_NAME === playerName.value) ?? careerPlayer.value ?? undefined
 })
 
 onMounted(async () => {
-  await fetchCurrentSeason()
+  await Promise.all([
+    fetchCurrentSeason(),
+    fetchPlayerCareer(playerName.value),
+  ])
+
+  if (latestSeason.value && season.value !== latestSeason.value) {
+    season.value = latestSeason.value
+  }
 
 })
+
+watch(
+    playerName,
+    async (name) => {
+      await fetchPlayerCareer(name)
+      careerExpanded.value = false
+
+      if (latestSeason.value) {
+        season.value = latestSeason.value
+      }
+    }
+)
+
+const visibleCareerTeams = computed(() => {
+  if (careerExpanded.value) return careerTeams.value
+  return careerTeams.value.slice(0, visibleCareerLimit)
+})
+
+function formatCareerYears(item: CareerTeam) {
+  return `${item.startYear}-${item.endYear}`
+}
+
+function getCareerTeamLogo(team: string) {
+  const firstTeam = team.split(' / ')[0]
+  return getTeamLogo(firstTeam)
+}
 
 const { filteredGames, seasonTypeFilter } =
     usePlayerGames(player, team, season)
