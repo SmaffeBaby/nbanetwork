@@ -42,12 +42,14 @@ import StatCard from './StatCard.vue'
 const props = defineProps<{
   teamId: number
   season: string
+  seasonType: 'regular' | 'playoffs'
 }>()
 
 const seasonRef = toRef(props, 'season')
+const seasonTypeRef = toRef(props, 'seasonType')
 
 const { stats, loading } =
-    useTeamStats2(props.teamId, seasonRef)
+    useTeamStats2(props.teamId, seasonRef, seasonTypeRef)
 
 const chartRef = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null

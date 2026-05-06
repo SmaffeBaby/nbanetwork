@@ -21,22 +21,14 @@ import { useTeamsPointsTrendTable } from '../../../../composables/NBA/Teams/Team
 const props = defineProps<{
   teamId: number
   season: string
+  seasonType: 'regular' | 'playoffs'
 }>()
 
 const seasonRef = toRef(props, 'season')
+const seasonTypeRef = toRef(props, 'seasonType')
 
 const { chartRef, fetchGames } =
-    useTeamsPointsTrendTable(props.teamId, seasonRef)
-
-
-fetchGames()
-
-watch(
-    seasonRef,
-    () => {
-      fetchGames()
-    }
-)
+    useTeamsPointsTrendTable(props.teamId, seasonRef, seasonTypeRef)
 
 watch(
     () => props.teamId,

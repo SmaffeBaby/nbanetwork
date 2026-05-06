@@ -27,6 +27,27 @@
       </select>
     </div>
 
+    <div
+        v-if="showSeasonTypeSwitcher"
+        class="flex w-fit gap-2 bg-gray-200 p-1 rounded-lg"
+    >
+      <button
+          @click="seasonType = 'regular'"
+          class="px-4 py-1 rounded transition"
+          :class="seasonType === 'regular' ? 'bg-white shadow' : 'opacity-60'"
+      >
+        Regular
+      </button>
+
+      <button
+          @click="seasonType = 'playoffs'"
+          class="px-4 py-1 rounded transition"
+          :class="seasonType === 'playoffs' ? 'bg-white shadow' : 'opacity-60'"
+      >
+        Playoffs
+      </button>
+    </div>
+
     <div class="mt-6 border-b border-gray-300">
       <nav class="-mb-px flex space-x-4">
         <button
@@ -57,16 +78,19 @@
           v-if="activeTab === 'Команда'"
           :teamAbbr="teamAbbr"
           :season="season"
+          :seasonType="seasonType"
       />
       <TeamStats2
           v-if="activeTab === 'Статистика'"
           :teamId="teamId"
           :season="season"
+          :seasonType="seasonType"
       />
       <TeamPointsTrendTable
           v-if="activeTab === 'Форма'"
           :teamId="teamId"
           :season="season"
+          :seasonType="seasonType"
       />
     </div>
 
@@ -92,8 +116,12 @@ const teamAbbr = route.params.abbr as string
 
 const tabs = ['Будущие игры','Команда', 'История игр', 'Статистика','Форма']
 const activeTab = ref('Команда')
+const seasonType = ref<'regular' | 'playoffs'>('regular')
 
 const teamId = computed(() => TEAM_ID_MAP[teamAbbr])
+const showSeasonTypeSwitcher = computed(() =>
+    ['Команда', 'Статистика', 'Форма'].includes(activeTab.value)
+)
 
 const seasons = generateNbaSeasons(2000, 2025)
 

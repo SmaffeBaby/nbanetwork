@@ -5,7 +5,8 @@ import Chart from 'chart.js/auto'
 
 export function useTeamsPointsTrendTable(
     teamId: number,
-    season: Ref<string>
+    season: Ref<string>,
+    seasonType: Ref<'regular' | 'playoffs'>
 ) {
     const chartRef = ref<HTMLCanvasElement | null>(null)
     const games = ref<any[]>([])
@@ -15,7 +16,7 @@ export function useTeamsPointsTrendTable(
     const load = async () => {
 
         const res = await axios.get(
-            `/api/team-games/${teamId}/${season.value}`
+            `/api/team-games/${teamId}/${season.value}?season_type=${seasonType.value}`
         )
 
         const resultSet =
@@ -144,7 +145,7 @@ export function useTeamsPointsTrendTable(
     }
 
     watch(
-        season,
+        [season, seasonType],
         () => {
             fetchGames()
         },

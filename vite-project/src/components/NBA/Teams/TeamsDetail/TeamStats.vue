@@ -80,16 +80,18 @@ import PlayerTable from './TeamPlayerTable.vue'
 const props = defineProps<{
   teamAbbr: string
   season: string
+  seasonType: 'regular' | 'playoffs'
 }>()
 
 const seasonRef = toRef(props, 'season')
+const seasonTypeRef = toRef(props, 'seasonType')
 
 const { players, loading, search, fetchPlayers } =
-    useTeamDetail(props.teamAbbr, seasonRef)
+    useTeamDetail(props.teamAbbr, seasonRef, seasonTypeRef)
 
 onMounted(fetchPlayers)
 
-watch(seasonRef, fetchPlayers)
+watch([seasonRef, seasonTypeRef], fetchPlayers)
 
 const stats = [
   { title: 'Points Per Game', stat: 'PTS' },
