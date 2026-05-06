@@ -81,6 +81,18 @@ async function fetchGameRecap(gameId, quarter = null) {
         const runs = plays?.length ? detectRuns(plays) : []
         const keyMoments = plays?.length ? getKeyMoments(plays) : []
         const clutch = plays?.length ? getClutchMoment(plays) : null
+        const teamStats = getTeamStats(game || {}, plays || [], {
+            homeTeamId,
+            awayTeamId
+        })
+        const leadTracker = plays?.length
+            ? getLeadTracker(plays, {
+                homeTeamId,
+                awayTeamId,
+                homeAbbr,
+                awayAbbr
+            })
+            : null
 
         const insight = getGameInsight(homeScore, awayScore)
         const quarters = getQuarterBreakdown(game || {})
@@ -121,7 +133,9 @@ async function fetchGameRecap(gameId, quarter = null) {
                 runs,
                 clutch,
                 keyMoments,
-                quarters
+                quarters,
+                teamStats,
+                leadTracker
             },
 
             players: {
@@ -133,6 +147,135 @@ async function fetchGameRecap(gameId, quarter = null) {
     } catch (e) {
         console.error('Recap error:', e)
         return null
+    }
+}
+
+function getFirstNumber(source, keys) {
+    for (const key of keys) {
+        const value = source?.[key]
+        if (value !== undefined && value !== null && value !== '') {
+            const parsed = Number(value)
+            return Number.isFinite(parsed) ? parsed : 0
+        }
+    }
+
+    return 0
+}
+
+function getTeamStats(game) {
+    const homeStats = game?.homeTeam?.statistics || game?.homeTeam?.stats || {}
+    const awayStats = game?.awayTeam?.statistics || game?.awayTeam?.stats || {}
+    const homePlayerStats = game?.homeTeam?.players || []
+    const awayPlayerStats = game?.awayTeam?.players || []
+
+    const pick = (stats, keys) => getFirstNumber(stats, keys)
+    const sumPlayers = (players, keys) => players.reduce((total, player) => {
+        const stats = player?.statistics || player?.stats || {}
+        return total + pick(stats, keys)
+    }, 0)
+    const pct = (stats, keys) => {
+        const value = pick(stats, keys)
+        return value <= 1 && value > 0 ? +(value * 100).toFixed(1) : +value.toFixed(1)
+    }
+
+    const build = (stats, fallbackPoints, players) => {
+        const playerSecondChance = sumPlayers(players, ['pointsSecondChance', 'secondChancePoints'])
+
+        return {
+            points: pick(stats, ['points', 'pts']) || Number(fallbackPoints || 0),
+            rebounds: pick(stats, ['reboundsTotal', 'rebounds', 'reb']),
+            assists: pick(stats, ['assists', 'ast']),
+            steals: pick(stats, ['steals', 'stl']),
+            blocks: pick(stats, ['blocks', 'blk']),
+            turnovers: pick(stats, ['turnovers', 'tov']),
+            fgPct: pct(stats, ['fieldGoalsPercentage', 'fgPercentage', 'fgPct']),
+            tpPct: pct(stats, ['threePointersPercentage', 'threePointPercentage', 'fg3Pct', 'tpPct']),
+            ftPct: pct(stats, ['freeThrowsPercentage', 'ftPercentage', 'ftPct']),
+            pointsInThePaint: pick(stats, ['pointsInThePaint', 'pointsPaint', 'pitp']),
+            secondChancePoints: playerSecondChance || pick(stats, ['pointsSecondChance', 'secondChancePoints']),
+            fastBreakPoints: pick(stats, ['pointsFastBreak', 'fastBreakPoints'])
+        }
+    }
+
+    return {
+        home: build(homeStats, game?.homeTeam?.score, homePlayerStats),
+        away: build(awayStats, game?.awayTeam?.score, awayPlayerStats)
+    }
+}
+
+function parseClockSeconds(clock) {
+    if (!clock) return 0
+
+    const match = String(clock).match(/PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/)
+    if (!match) return 0
+
+    const minutes = Number(match[1] || 0)
+    const seconds = Number(match[2] || 0)
+
+    return minutes * 60 + seconds
+}
+
+function getLeadTracker(plays, teams) {
+    const points = []
+    let biggestHomeLead = 0
+    let biggestAwayLead = 0
+    let timesTied = 0
+    let leadChanges = 0
+    let previousLeader = null
+    let previousDiff = null
+
+    for (const play of plays) {
+        const homeScore = Number(play?.scoreHome)
+        const awayScore = Number(play?.scoreAway)
+
+        if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) {
+            continue
+        }
+
+        const period = Number(play?.period || 1)
+        const periodLength = period <= 4 ? 720 : 300
+        const elapsed = (Math.max(period, 1) - 1) * 720 + (periodLength - parseClockSeconds(play?.clock))
+        const diff = homeScore - awayScore
+        const leader = diff > 0 ? 'home' : diff < 0 ? 'away' : null
+
+        biggestHomeLead = Math.max(biggestHomeLead, diff)
+        biggestAwayLead = Math.max(biggestAwayLead, Math.abs(Math.min(diff, 0)))
+
+        if (diff === 0 && previousDiff !== null && previousDiff !== 0) {
+            timesTied += 1
+        } else if (previousLeader && leader && previousLeader !== leader) {
+            leadChanges += 1
+        }
+
+        if (leader) {
+            previousLeader = leader
+        }
+
+        previousDiff = diff
+
+        points.push({
+            actionNumber: play?.actionNumber || points.length,
+            period,
+            clock: play?.clock || '',
+            elapsed: Math.max(0, elapsed),
+            homeScore,
+            awayScore,
+            diff
+        })
+    }
+
+    const longestRun = detectRuns(plays)[0]?.points || 0
+
+    return {
+        teams,
+        points,
+        summary: {
+            biggestHomeLead,
+            biggestAwayLead,
+            timesTied,
+            leadChanges,
+            longestRun
+        }
     }
 }
 
@@ -178,13 +321,26 @@ function getTopPlayers(game) {
 function detectRuns(plays) {
     let runs = []
     let currentRun = { team: null, points: 0 }
+    let previousHomeScore = 0
+    let previousAwayScore = 0
 
     for (let p of plays) {
-        const desc = p?.description || ''
-        const team = p?.teamId
-        const pts = extractPoints(desc)
+        const homeScore = Number(p?.scoreHome)
+        const awayScore = Number(p?.scoreAway)
 
-        if (!pts) continue
+        if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) {
+            continue
+        }
+
+        const homeDelta = homeScore - previousHomeScore
+        const awayDelta = awayScore - previousAwayScore
+        const team = homeDelta > 0 ? 'home' : awayDelta > 0 ? 'away' : null
+        const pts = Math.max(homeDelta, awayDelta, 0)
+
+        previousHomeScore = homeScore
+        previousAwayScore = awayScore
+
+        if (!pts || !team) continue
 
         if (currentRun.team === team) {
             currentRun.points += pts

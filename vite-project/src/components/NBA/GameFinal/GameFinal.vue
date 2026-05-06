@@ -33,6 +33,13 @@
         <GamePlayersStats :filters="filters" />
       </template>
 
+      <template #teamStats>
+        <TeamStats
+            v-if="recap"
+            :recap="recap"
+        />
+      </template>
+
       <template #injury>
         <InjuryPlayers :filters="filters"/>
       </template>
@@ -56,6 +63,7 @@ import GameRecapCard from './GameRecapCard.vue'
 import GamePlayersStats from './BoxScore/GamePlayersStats.vue'
 import InjuryPlayers from './Injury/InjuryPlayers.vue'
 import TabsContent from './TabsContent.vue'
+import TeamStats from './TeamStats/TeamStats.vue'
 
 const filters = ref({
   search: '',

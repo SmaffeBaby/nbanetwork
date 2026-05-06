@@ -14,7 +14,7 @@ router.get('/game-recap/:gameId', async (req, res) => {
                 : null
 
         const data = await fetchWithCache({
-            key: `recap_${gameId}_q${parsedQuarter || 'all'}`,
+            key: `recap_v4_${gameId}_q${parsedQuarter || 'all'}`,
             ttl: 1000 * 60 * 30,
             fetcher: async () => {
                 return await fetchGameRecap(gameId, parsedQuarter)
