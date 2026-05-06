@@ -1,6 +1,6 @@
 import { ref, onMounted } from 'vue'
 import type { Game } from '../../../api/api.ts'
-import { formatGameTime, toMSK } from '../utils'
+import { formatGameTime, getDateKey, toMSK } from '../utils'
 
 export function useDailyGames() {
     const gamesList = ref<Game[]>([])
@@ -28,7 +28,7 @@ export function useDailyGames() {
 
             let allGames: Game[] = []
             for (const d of datesToFetch) {
-                const dateKey = d.toISOString().slice(0, 10)
+                const dateKey = getDateKey(d)
                 const res = await fetch(`/api/daily-games?date=${dateKey}`)
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
                 const data: Game[] = await res.json()

@@ -1,14 +1,18 @@
 from fastapi import FastAPI
+import json
+from urllib.request import Request, urlopen
 from nba_api.stats.endpoints import leaguestandings
 from nba_api.stats.endpoints import leaguedashplayerstats, playergamelog
 from nba_api.stats.endpoints import teamgamelog
 from nba_api.stats.endpoints import scoreboardv2
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from nba_api.stats.endpoints import boxscoresummaryv2, boxscoretraditionalv2
 from nba_api.stats.endpoints import boxscoretraditionalv3
 from nba_api.stats.endpoints import leaguegamelog
 
 app = FastAPI()
+MSK_TZ = ZoneInfo("Europe/Moscow")
 
 def get_current_nba_season():
     now = datetime.now()
@@ -271,63 +275,215 @@ def get_game_detail(game_id: str):
 
 @app.get("/games/by-date/{date}")
 def get_games_by_date(date: str):
-    dt = datetime.strptime(date, "%Y-%m-%d")
-    formatted = dt.strftime("%m/%d/%Y")
-
-    data = scoreboardv2.ScoreboardV2(
-        game_date=formatted,
-        league_id="00"
+    target_msk_date = datetime.strptime(date, "%Y-%m-%d").date()
+    season = (
+        f"{target_msk_date.year}-{str(target_msk_date.year + 1)[-2:]}"
+        if target_msk_date.month >= 10
+        else f"{target_msk_date.year - 1}-{str(target_msk_date.year)[-2:]}"
     )
+    dates_to_fetch = [
+        target_msk_date - timedelta(days=1),
+        target_msk_date,
+        target_msk_date + timedelta(days=1),
+    ]
 
-    result = data.get_dict()
+    def fetch_static_scoreboard(nba_date):
+        date_key = nba_date.strftime("%Y%m%d")
+        url = f"https://cdn.nba.com/static/json/staticData/scores/scores_{date_key}.json"
+        request = Request(url, headers={
+            "User-Agent": "Mozilla/5.0",
+            "Referer": "https://www.nba.com"
+        })
 
-    game_header = None
-    line_score = None
+        with urlopen(request, timeout=10) as response:
+            payload = json.loads(response.read().decode("utf-8"))
 
-    for rs in result["resultSets"]:
-        if rs["name"] == "GameHeader":
-            game_header = rs
-        if rs["name"] == "LineScore":
-            line_score = rs
+        games = payload.get("scoreboard", {}).get("games", [])
+        return {
+            game.get("gameId"): game
+            for game in games
+            if game.get("gameId")
+        }
 
-    teams_map = {}
+    static_scoreboards_cache = {}
 
-    if line_score:
-        for row in line_score["rowSet"]:
-            team = dict(zip(line_score["headers"], row))
-            gid = team["GAME_ID"]
-            teams_map.setdefault(gid, []).append(team)
+    def get_static_scoreboard(nba_date):
+        if nba_date not in static_scoreboards_cache:
+            static_scoreboards_cache[nba_date] = fetch_static_scoreboard(nba_date)
 
-    games = []
+        return static_scoreboards_cache[nba_date]
 
-    if game_header:
-        for row in game_header["rowSet"]:
-            game = dict(zip(game_header["headers"], row))
-            gid = game["GAME_ID"]
+    def find_static_game(game_id, game_date):
+        for date_candidate in [
+            game_date - timedelta(days=1),
+            game_date,
+            game_date + timedelta(days=1),
+        ]:
+            try:
+                static_game = get_static_scoreboard(date_candidate).get(game_id)
+                if static_game:
+                    return static_game
+            except Exception as e:
+                print(f"Failed to fetch NBA static scoreboard for {date_candidate}: {e}")
 
-            teams = teams_map.get(gid, [])
+        return {}
 
-            home = next((t for t in teams if t["TEAM_ID"] == game["HOME_TEAM_ID"]), None)
-            away = next((t for t in teams if t["TEAM_ID"] == game["VISITOR_TEAM_ID"]), None)
+    def parse_utc(value):
+        if not value:
+            return None
 
-            games.append({
-                "GAME_ID": game["GAME_ID"],
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
 
-                "GAME_DATE_EST": game["GAME_DATE_EST"],
+    def add_completed_games_from_log(season_type):
+        data = leaguegamelog.LeagueGameLog(
+            season=season,
+            season_type_all_star=season_type
+        ).get_dict()
 
-                "HOME_TEAM_ID": game["HOME_TEAM_ID"],
-                "VISITOR_TEAM_ID": game["VISITOR_TEAM_ID"],
+        result_set = data["resultSets"][0]
+        headers = result_set["headers"]
+        games_map = {}
 
-                "HOME_TEAM_ABBREVIATION": home["TEAM_ABBREVIATION"] if home else None,
-                "VISITOR_TEAM_ABBREVIATION": away["TEAM_ABBREVIATION"] if away else None,
+        for row in result_set["rowSet"]:
+            team_game = dict(zip(headers, row))
+            game_date = datetime.strptime(team_game["GAME_DATE"], "%Y-%m-%d").date()
 
-                "HOME_TEAM_SCORE": home["PTS"] if home else None,
-                "VISITOR_TEAM_SCORE": away["PTS"] if away else None,
+            # NBA games usually start on the previous US calendar day for Moscow.
+            # With no exact UTC timestamp in LeagueGameLog, this keeps completed
+            # playoff games aligned with the app's MSK calendar.
+            game_date_msk = game_date + timedelta(days=1)
+            if game_date_msk != target_msk_date:
+                continue
 
-                "GAME_STATUS": game["GAME_STATUS_TEXT"]
-            })
+            games_map.setdefault(team_game["GAME_ID"], []).append(team_game)
 
-    return games
+        for gid, teams in games_map.items():
+            if len(teams) < 2:
+                continue
+
+            home = next((t for t in teams if " vs. " in t.get("MATCHUP", "")), None)
+            away = next((t for t in teams if " @ " in t.get("MATCHUP", "")), None)
+
+            if not home or not away:
+                continue
+
+            game_date = datetime.strptime(home["GAME_DATE"], "%Y-%m-%d").date()
+            static_game = find_static_game(gid, game_date)
+            game_time_utc = static_game.get("gameTimeUTC")
+            game_dt_utc = parse_utc(game_time_utc)
+            game_date_msk = (
+                game_dt_utc.astimezone(MSK_TZ).date().isoformat()
+                if game_dt_utc
+                else target_msk_date.isoformat()
+            )
+
+            games_by_id[gid] = {
+                "GAME_ID": gid,
+
+                "GAME_DATE_EST": f"{home['GAME_DATE']}T00:00:00",
+                "GAME_DATE_MSK": game_date_msk,
+                "GAME_TIME_UTC": game_time_utc,
+
+                "HOME_TEAM_ID": home["TEAM_ID"],
+                "VISITOR_TEAM_ID": away["TEAM_ID"],
+
+                "HOME_TEAM_ABBREVIATION": home["TEAM_ABBREVIATION"],
+                "VISITOR_TEAM_ABBREVIATION": away["TEAM_ABBREVIATION"],
+
+                "HOME_TEAM_SCORE": home["PTS"],
+                "VISITOR_TEAM_SCORE": away["PTS"],
+
+                "GAME_STATUS": "Final"
+            }
+
+    games_by_id = {}
+
+    for nba_date in dates_to_fetch:
+        formatted = nba_date.strftime("%m/%d/%Y")
+
+        data = scoreboardv2.ScoreboardV2(
+            game_date=formatted,
+            league_id="00"
+        )
+
+        result = data.get_dict()
+
+        game_header = None
+        line_score = None
+
+        for rs in result["resultSets"]:
+            if rs["name"] == "GameHeader":
+                game_header = rs
+            if rs["name"] == "LineScore":
+                line_score = rs
+
+        teams_map = {}
+
+        if line_score:
+            for row in line_score["rowSet"]:
+                team = dict(zip(line_score["headers"], row))
+                gid = team["GAME_ID"]
+                teams_map.setdefault(gid, []).append(team)
+
+        static_games = {}
+        try:
+            static_games = get_static_scoreboard(nba_date)
+        except Exception as e:
+            print(f"Failed to fetch NBA static scoreboard for {nba_date}: {e}")
+
+        if game_header:
+            for row in game_header["rowSet"]:
+                game = dict(zip(game_header["headers"], row))
+                gid = game["GAME_ID"]
+
+                teams = teams_map.get(gid, [])
+
+                home = next((t for t in teams if t["TEAM_ID"] == game["HOME_TEAM_ID"]), None)
+                away = next((t for t in teams if t["TEAM_ID"] == game["VISITOR_TEAM_ID"]), None)
+
+                static_game = static_games.get(gid, {})
+                game_time_utc = static_game.get("gameTimeUTC")
+                game_dt_utc = parse_utc(game_time_utc)
+
+                if game_dt_utc:
+                    game_msk_date = game_dt_utc.astimezone(MSK_TZ).date()
+                    if game_msk_date != target_msk_date:
+                        continue
+                    game_date_msk = game_msk_date.isoformat()
+                else:
+                    game_date_msk = game["GAME_DATE_EST"][:10]
+                    if game_date_msk != target_msk_date.isoformat():
+                        continue
+
+                games_by_id[gid] = {
+                    "GAME_ID": game["GAME_ID"],
+
+                    "GAME_DATE_EST": game["GAME_DATE_EST"],
+                    "GAME_DATE_MSK": game_date_msk,
+                    "GAME_TIME_UTC": game_time_utc,
+
+                    "HOME_TEAM_ID": game["HOME_TEAM_ID"],
+                    "VISITOR_TEAM_ID": game["VISITOR_TEAM_ID"],
+
+                    "HOME_TEAM_ABBREVIATION": home["TEAM_ABBREVIATION"] if home else None,
+                    "VISITOR_TEAM_ABBREVIATION": away["TEAM_ABBREVIATION"] if away else None,
+
+                    "HOME_TEAM_SCORE": home["PTS"] if home else None,
+                    "VISITOR_TEAM_SCORE": away["PTS"] if away else None,
+
+                    "GAME_STATUS": game["GAME_STATUS_TEXT"]
+                }
+
+    try:
+        add_completed_games_from_log("Regular Season")
+        add_completed_games_from_log("Playoffs")
+    except Exception as e:
+        print(f"Failed to fetch completed games from LeagueGameLog: {e}")
+
+    return list(games_by_id.values())
 
 @app.get("/game-boxscore-v3/{game_id}/quarter/{quarter}")
 def get_game_boxscore_quarter(game_id: str, quarter: int):

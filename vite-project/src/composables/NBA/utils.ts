@@ -12,7 +12,13 @@ export const toMSK = (date: Date) => {
     return new Date(date.toLocaleString('en-US', { timeZone: MSK_TIMEZONE }))
 }
 
-export const getDateKey = (date: Date) => date.toISOString().split('T')[0]
+export const getDateKey = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
 
 export const getWeekday = (date: Date) => {
     const weekdays = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота']

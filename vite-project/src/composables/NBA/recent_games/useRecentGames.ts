@@ -2,7 +2,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../../../stores/auth'
 
-import { getDateKey, delay } from '../utils'
+import { getDateKey } from '../utils'
 import { TEAM_ID_MAP } from '../../../constants/nbaTeams'
 import { teamsFullNames } from '../../../constants/TeamFullName'
 
@@ -11,6 +11,7 @@ const TEAM_ID_TO_ABBR: Record<number, string> = Object.fromEntries(
 )
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? ''
+const gamesCache = new Map<string, DailyGameDTO[]>()
 
 type DailyGameDTO = {
     GAME_ID: string
@@ -20,6 +21,8 @@ type DailyGameDTO = {
     HOME_TEAM_SCORE?: number
     VISITOR_TEAM_SCORE?: number
     GAME_STATUS?: string
+    GAME_DATE_MSK?: string
+    GAME_TIME_UTC?: string
 }
 
 export type RecentGame = {
@@ -37,6 +40,26 @@ const getDayFromString = (dateStr: string): string => {
 
     // поддержка "2026-04-13T01:00:00Z" или "2026-04-13 ..."
     return dateStr.slice(0, 10)
+}
+
+const getGameDateTime = (game: DailyGameDTO): string => {
+    return game.GAME_TIME_UTC || ''
+}
+
+const getGameDay = (game: DailyGameDTO): string => {
+    return game.GAME_DATE_MSK || getDayFromString(game.GAME_DATE_EST)
+}
+
+const formatMSKTime = (dateStr: string): string => {
+    const date = new Date(dateStr)
+    if (!dateStr || isNaN(date.getTime())) return ''
+
+    return new Intl.DateTimeFormat('ru-RU', {
+        timeZone: 'Europe/Moscow',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).format(date)
 }
 
 const convertETToMSKTime = (status: string): string => {
@@ -58,11 +81,17 @@ const convertETToMSKTime = (status: string): string => {
 }
 
 const getGamesByDate = async (dateStr: string): Promise<DailyGameDTO[]> => {
+    const cached = gamesCache.get(dateStr)
+    if (cached) return cached
+
     try {
         const res = await fetch(`${API_BASE}/api/games/by-date/${dateStr}`)
         const data = await res.json()
         if (!res.ok) throw new Error('HTTP error')
-        return Array.isArray(data) ? data : []
+        const games = Array.isArray(data) ? data : []
+
+        gamesCache.set(dateStr, games)
+        return games
     } catch {
         return []
     }
@@ -85,6 +114,7 @@ export function useRecentGames() {
     const collapsed = ref(false)
     const isLoading = ref(false)
     let timeout: ReturnType<typeof setTimeout> | null = null
+    let loadRequestId = 0
 
     const d = new Date()
     d.setDate(d.getDate())
@@ -98,11 +128,11 @@ export function useRecentGames() {
 
         return {
             Game_ID: g.GAME_ID,
-            datetime: g.GAME_DATE_EST,
-            gameDay: getDayFromString(g.GAME_DATE_EST),
+            datetime: getGameDateTime(g),
+            gameDay: getGameDay(g),
 
             status: g.GAME_STATUS ?? '',
-            statusTime: convertETToMSKTime(g.GAME_STATUS ?? ''),
+            statusTime: formatMSKTime(getGameDateTime(g)) || convertETToMSKTime(g.GAME_STATUS ?? '') || g.GAME_STATUS || '',
 
             home: {
                 id: g.HOME_TEAM_ID,
@@ -121,33 +151,28 @@ export function useRecentGames() {
     }
 
     const loadGames = async (date: Date) => {
-        if (isLoading.value) return
+        const requestId = ++loadRequestId
         isLoading.value = true
 
         try {
-            const prev = new Date(date.getTime() - 86400000)
-            const next = new Date(date.getTime() + 86400000)
+            const targetDay = getDateKey(date)
+            const games = await getGamesByDate(targetDay)
+            const all = games.map(normalizeGame)
 
-            const days = [prev, date, next]
-
-            let all: RecentGame[] = []
-
-            for (const d of days) {
-                const games = await getGamesByDate(getDateKey(d))
-                all.push(...games.map(normalizeGame))
-                await delay(100)
-            }
-
-            const targetDay = getDayFromString(date.toISOString())
+            if (requestId !== loadRequestId) return
 
             gamesList.value = all.filter(g => g.gameDay === targetDay)
 
             error.value = null
         } catch {
+            if (requestId !== loadRequestId) return
+
             error.value = 'Не удалось загрузить игры'
             gamesList.value = []
         } finally {
-            isLoading.value = false
+            if (requestId === loadRequestId) {
+                isLoading.value = false
+            }
         }
     }
 
@@ -181,16 +206,7 @@ export function useRecentGames() {
     onMounted(() => loadGames(currentDate.value))
 
     const formatGameTime = (dateStr: string): string => {
-        const d = new Date(dateStr)
-        if (isNaN(d.getTime())) return ''
-
-        const msk = new Date(d.getTime() + 7 * 60 * 60 * 1000)
-
-        return msk.toLocaleTimeString('ru-RU', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        })
+        return formatMSKTime(dateStr)
     }
 
     return {
@@ -199,6 +215,7 @@ export function useRecentGames() {
         collapsed,
         currentDate,
         error,
+        isLoading,
         prevDay,
         nextDay,
         selectDate,
