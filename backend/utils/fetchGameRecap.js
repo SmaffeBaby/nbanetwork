@@ -1,5 +1,6 @@
 const axios = require('axios')
 const generateAIRecap = require('./generateAIRecap')
+const fetchApNbaRecap = require('./fetchApNbaRecap')
 const TEAM_MAP = require('../constants/teamMap')
 
 async function fetchGameRecap(gameId, quarter = null) {
@@ -109,6 +110,17 @@ async function fetchGameRecap(gameId, quarter = null) {
             insight,
             quarters
         })
+        const apRecap = !quarter
+            ? await fetchApNbaRecap({
+                homeTeam,
+                awayTeam,
+                homeAbbr,
+                awayAbbr,
+                homeScore,
+                awayScore,
+                gameDateUTC
+            })
+            : null
 
         return {
             title: aiRecap?.title || '',
@@ -117,6 +129,7 @@ async function fetchGameRecap(gameId, quarter = null) {
             runs: aiRecap?.runs || null,
             clutch: aiRecap?.clutch || null,
             quarters: aiRecap?.quarters || [],
+            apRecap,
 
             mvp,
 
