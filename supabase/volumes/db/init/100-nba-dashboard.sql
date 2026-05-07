@@ -22,6 +22,28 @@ create table if not exists public.map_points (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.game_comments (
+  id uuid primary key default gen_random_uuid(),
+  game_id text not null,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  message text not null default '',
+  image_data text,
+  created_at timestamptz not null default now(),
+  constraint game_comments_has_content check (
+    length(trim(message)) > 0 or image_data is not null
+  )
+);
+
+create index if not exists game_comments_game_id_created_at_idx
+on public.game_comments (game_id, created_at);
+
+create table if not exists public.game_comment_reads (
+  game_id text not null,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  read_at timestamptz not null default now(),
+  primary key (game_id, user_id)
+);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -44,12 +66,20 @@ for each row execute function public.set_updated_at();
 
 alter table public.profiles enable row level security;
 alter table public.map_points enable row level security;
+alter table public.game_comments enable row level security;
+alter table public.game_comment_reads enable row level security;
 
 drop policy if exists "Profiles are visible to their owners" on public.profiles;
 create policy "Profiles are visible to their owners"
 on public.profiles for select
 to authenticated
 using (auth.uid() = id);
+
+drop policy if exists "Authenticated users can read profiles" on public.profiles;
+create policy "Authenticated users can read profiles"
+on public.profiles for select
+to authenticated
+using (true);
 
 drop policy if exists "Users can insert their own profile" on public.profiles;
 create policy "Users can insert their own profile"
@@ -117,10 +147,42 @@ using (
   )
 );
 
+drop policy if exists "Authenticated users can read game comments" on public.game_comments;
+create policy "Authenticated users can read game comments"
+on public.game_comments for select
+to authenticated
+using (true);
+
+drop policy if exists "Users can insert their own game comments" on public.game_comments;
+create policy "Users can insert their own game comments"
+on public.game_comments for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users can read their game comment reads" on public.game_comment_reads;
+create policy "Users can read their game comment reads"
+on public.game_comment_reads for select
+to authenticated
+using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert their game comment reads" on public.game_comment_reads;
+create policy "Users can insert their game comment reads"
+on public.game_comment_reads for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their game comment reads" on public.game_comment_reads;
+create policy "Users can update their game comment reads"
+on public.game_comment_reads for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
 do $$
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
     alter publication supabase_realtime add table public.profiles;
+    alter publication supabase_realtime add table public.game_comments;
   end if;
 exception
   when duplicate_object then null;

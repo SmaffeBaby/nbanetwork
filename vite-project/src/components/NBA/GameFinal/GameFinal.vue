@@ -21,7 +21,7 @@
       Back
     </button>
 
-    <TabsContent>
+    <TabsContent :comments-unread-count="commentsUnreadCount">
       <template #overview>
         <GameRecapCard
             v-if="recap"
@@ -48,6 +48,14 @@
         <GameBroadcastCard :game-id="gameId" />
       </template>
 
+      <template #comments="{ active }">
+        <GameComments
+            :game-id="gameId"
+            :active="active"
+            @unread-change="setUnreadCount"
+        />
+      </template>
+
       <template #data>
         <div v-if="game" class="p-4 border rounded text-xs overflow-auto bg-gray-50">
           <pre>{{ game }}</pre>
@@ -68,6 +76,8 @@ import InjuryPlayers from './Injury/InjuryPlayers.vue'
 import TabsContent from './TabsContent.vue'
 import TeamStats from './TeamStats/TeamStats.vue'
 import GameBroadcastCard from './GameBroadcastCard.vue'
+import GameComments from './GameComments.vue'
+import { useGameCommentsUnread } from '../../../composables/NBA/GameFinal/useGameComments'
 
 const filters = ref({
   search: '',
@@ -75,4 +85,5 @@ const filters = ref({
 })
 
 const { gameId, game, recap, loading, error } = useGameFinal(filters)
+const { unreadCount: commentsUnreadCount, setUnreadCount } = useGameCommentsUnread(ref(gameId))
 </script>

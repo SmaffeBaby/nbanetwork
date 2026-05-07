@@ -53,6 +53,22 @@
       </button>
 
       <button
+          class="relative px-4 py-2 text-sm transition"
+          :class="activeTab === 'comments'
+          ? 'border-b-2 border-black font-semibold'
+          : 'text-gray-500 hover:text-black'"
+          @click="activeTab = 'comments'"
+      >
+        Комментарии
+        <span
+            v-if="normalizedCommentsUnreadCount > 0"
+            class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-5 h-5 px-1 text-xs font-bold text-white bg-red-500 rounded-full"
+        >
+          {{ normalizedCommentsUnreadCount }}
+        </span>
+      </button>
+
+      <button
           class="px-4 py-2 text-sm transition"
           :class="activeTab === 'data'
           ? 'border-b-2 border-black font-semibold'
@@ -92,6 +108,10 @@
           <slot name="broadcasts" />
         </div>
 
+        <div v-else-if="activeTab === 'comments'">
+          <slot name="comments" :active="activeTab === 'comments' && !isLocked" />
+        </div>
+
         <div v-else>
           <slot name="data" />
         </div>
@@ -122,10 +142,15 @@
 import { ref, computed } from 'vue'
 import { EyeIcon } from '@heroicons/vue/24/outline'
 
-type Tab = 'overview' | 'players' | 'teamStats' | 'injury' | 'broadcasts' | 'data'
+type Tab = 'overview' | 'players' | 'teamStats' | 'injury' | 'broadcasts' | 'comments' | 'data'
+
+const props = defineProps<{
+  commentsUnreadCount?: number
+}>()
 
 const activeTab = ref<Tab>('overview')
 const revealed = ref(false)
+const normalizedCommentsUnreadCount = computed(() => props.commentsUnreadCount ?? 0)
 
 const reveal = () => {
   revealed.value = true
