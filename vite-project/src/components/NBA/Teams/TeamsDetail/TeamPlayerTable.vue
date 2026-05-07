@@ -32,13 +32,21 @@
           class="border-b cursor-pointer hover:bg-gray-100"
           @click="goToPlayer(p)"
       >
-        <td class="p-2 flex items-center gap-2">
-          <img
-              :src="getImage(p)"
-              class="w-10 h-10 rounded-full object-cover"
-              @error="handleImageErr"
-          />
-          {{ p.PLAYER_NAME }}
+        <td class="p-2">
+          <div class="group/player flex items-center gap-2">
+            <img
+                :src="getImage(p)"
+                :data-player-id="p.PLAYER_ID"
+                class="w-10 h-10 rounded-full object-cover"
+                @error="handleImageErr"
+            />
+            <span>{{ p.PLAYER_NAME }}</span>
+            <FavoritePlayerButton
+                :player="p"
+                size="sm"
+                class="md:opacity-0 md:group-hover/player:opacity-100"
+            />
+          </div>
         </td>
         <td>{{ p.TEAM_ABBREVIATION }}</td>
         <td>{{ p.MIN }}</td>
@@ -60,6 +68,7 @@ import { useSorting } from '../../../../utils/useSorting'
 import { getPlayerImage, handleImageError } from '../../../../utils/playerImage'
 import type { PlayerStats } from '../../../../composables/NBA/player_stats/usePlayerStats'
 import { goToPlayer as navigateToPlayer } from '../../../../utils/playerRoutes'
+import FavoritePlayerButton from '../../Favorites/FavoritePlayerButton.vue'
 
 interface Props {
   players: PlayerStats[]

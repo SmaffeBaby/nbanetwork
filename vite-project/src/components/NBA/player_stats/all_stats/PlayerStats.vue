@@ -130,14 +130,19 @@
             @click="handleClick(p)"
         >
           <td class="p-2">
-            <div class="flex items-center gap-2">
+            <div class="group/player flex items-center gap-2">
               <img
                   :src="getImage(p)"
                   :data-player-id="p.PLAYER_ID"
                   class="w-10 h-10 rounded-full object-cover"
                   @error="handleImageErr"
               />
-              {{ p.PLAYER_NAME }}
+              <span>{{ p.PLAYER_NAME }}</span>
+              <FavoritePlayerButton
+                  :player="p"
+                  size="sm"
+                  class="md:opacity-0 md:group-hover/player:opacity-100"
+              />
             </div>
           </td>
 
@@ -165,6 +170,7 @@ import { useSorting } from '../../../../utils/useSorting.ts'
 import { goToPlayer as navigateToPlayer } from '../../../../utils/playerRoutes.ts'
 import StatLeaders from './StatLeaders.vue'
 import { getTeamLogo } from '../../../../utils/getTeamLogo.ts'
+import FavoritePlayerButton from '../../Favorites/FavoritePlayerButton.vue'
 
 type Player = {
   PLAYER_ID: number

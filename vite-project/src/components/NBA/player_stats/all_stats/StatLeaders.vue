@@ -9,14 +9,19 @@
         class="flex justify-between items-center py-1 cursor-pointer hover:bg-gray-100"
         @click="$router.push(`/player/${encodeURIComponent(p.PLAYER_NAME)}`)"
     >
-      <div class="flex items-center gap-2">
+      <div class="group/player flex items-center gap-2">
         <img
             :src="getPlayerImage(p)"
             :data-player-id="p.PLAYER_ID"
             class="w-10 h-10 rounded-full object-cover"
             @error="handleImageError"
         />
-        {{ p.PLAYER_NAME }}
+        <span>{{ p.PLAYER_NAME }}</span>
+        <FavoritePlayerButton
+            :player="p"
+            size="sm"
+            class="md:opacity-0 md:group-hover/player:opacity-100"
+        />
       </div>
 
       <span class="font-bold">{{ p[stat] }}</span>
@@ -35,6 +40,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { getPlayerImage, handleImageError } from '../../../../utils/playerImage.ts'
+import FavoritePlayerButton from '../../Favorites/FavoritePlayerButton.vue'
 
 type StatKey = 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV'
 

@@ -85,7 +85,7 @@
                 name: 'PlayerPage',
                 params: { name: encodeURIComponent(p.name) }
               }"
-              class="flex items-center gap-2 hover:underline"
+              class="group/player flex items-center gap-2 hover:underline"
           >
             <img
                 :src="getPlayerImage(p)"
@@ -94,6 +94,11 @@
                 class="w-8 h-8 rounded-full bg-gray-200 object-cover"
             />
             <span class="font-medium text-gray-700 no-underline hover:text-gray-700">{{ p.name }}</span>
+            <FavoritePlayerButton
+                :player="p"
+                size="sm"
+                class="md:opacity-0 md:group-hover/player:opacity-100"
+            />
           </router-link>
         </td>
 
@@ -133,6 +138,8 @@
 </template>
 
 <script setup lang="ts">
+import FavoritePlayerButton from '../../Favorites/FavoritePlayerButton.vue'
+
 defineProps<{
   players: any[]
 

@@ -15,9 +15,16 @@
         />
 
         <div class="flex flex-col gap-2 z-10 relative">
-          <h1 class="text-2xl font-bold drop-shadow-md" style="color: white">
-            {{ player.PLAYER_NAME }}
-          </h1>
+          <div class="group/player flex items-center gap-2">
+            <h1 class="text-2xl font-bold drop-shadow-md" style="color: white">
+              {{ player.PLAYER_NAME }}
+            </h1>
+            <FavoritePlayerButton
+                :player="player"
+                size="md"
+                class="md:opacity-0 md:group-hover/player:opacity-100"
+            />
+          </div>
 
           <div
               v-if="hasTeam"
@@ -223,6 +230,7 @@ import type { GameRaw } from '../../../../composables/NBA/player_stats/usePlayer
 import PlayerRecentGames from './PlayerRecentGames.vue'
 import StatBox from './StatBox.vue'
 import PlayerChart from './PlayerChart.vue'
+import FavoritePlayerButton from '../../Favorites/FavoritePlayerButton.vue'
 
 import { getPlayerImage, handleImageError } from '../../../../utils/playerImage'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'

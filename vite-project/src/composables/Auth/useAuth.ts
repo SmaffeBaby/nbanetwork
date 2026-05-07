@@ -17,6 +17,8 @@ export function useAuth() {
         subscribeAuthState: store.subscribeAuthState,
         updateHideScores: store.updateHideScores,
         updateFavoriteTeams: store.updateFavoriteTeams,
-        toggleFavoriteTeam: store.toggleFavoriteTeam
+        toggleFavoriteTeam: store.toggleFavoriteTeam,
+        updateFavoritePlayers: store.updateFavoritePlayers,
+        toggleFavoritePlayer: store.toggleFavoritePlayer
     }
 }

@@ -5,6 +5,7 @@ create table profiles (
   avatar_url text,
   website text,
   favorites_teams text[] not null default '{}',
+  favorites_players jsonb not null default '[]'::jsonb,
 
   primary key (id),
   unique(username),

@@ -10,6 +10,13 @@ export type AppUser = {
     avatarImg: string | null
     hideScores: boolean
     favoriteTeams: string[]
+    favoritePlayers: FavoritePlayer[]
+}
+
+export type FavoritePlayer = {
+    id: number
+    name: string
+    teamAbbr: string
 }
 
 type CachedUser = AppUser & {
@@ -59,7 +66,8 @@ export const useAuthStore = defineStore('auth', () => {
                 lastName: cached.lastName,
                 avatarImg: cached.avatarImg ?? null,
                 hideScores: cached.hideScores ?? true,
-                favoriteTeams: cached.favoriteTeams ?? []
+                favoriteTeams: cached.favoriteTeams ?? [],
+                favoritePlayers: cached.favoritePlayers ?? []
             }
         } catch {
             localStorage.removeItem(CACHE_KEY)
@@ -74,7 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
     const fetchProfile = async (userId: string, email: string): Promise<AppUser> => {
         const { data, error } = await supabase
             .from('profiles')
-            .select('first_name, last_name, avatar_img, hide_scores, favorites_teams')
+            .select('first_name, last_name, avatar_img, hide_scores, favorites_teams, favorites_players')
             .eq('id', userId)
             .single()
 
@@ -86,7 +94,8 @@ export const useAuthStore = defineStore('auth', () => {
                 lastName: '',
                 avatarImg: null,
                 hideScores: true,
-                favoriteTeams: []
+                favoriteTeams: [],
+                favoritePlayers: []
             }
         }
 
@@ -97,7 +106,8 @@ export const useAuthStore = defineStore('auth', () => {
             lastName: data.last_name,
             avatarImg: data.avatar_img ?? null,
             hideScores: data.hide_scores ?? true,
-            favoriteTeams: Array.isArray(data.favorites_teams) ? data.favorites_teams : []
+            favoriteTeams: Array.isArray(data.favorites_teams) ? data.favorites_teams : [],
+            favoritePlayers: normalizeFavoritePlayers(data.favorites_players)
         }
     }
 
@@ -128,6 +138,7 @@ export const useAuthStore = defineStore('auth', () => {
                         avatar_img?: string | null
                         hide_scores?: boolean
                         favorites_teams?: string[]
+                        favorites_players?: FavoritePlayer[]
                         email?: string
                     }
                     if (!user.value) return
@@ -139,6 +150,9 @@ export const useAuthStore = defineStore('auth', () => {
                         avatarImg: updated.avatar_img ?? user.value.avatarImg,
                         hideScores: updated.hide_scores ?? user.value.hideScores,
                         favoriteTeams: updated.favorites_teams ?? user.value.favoriteTeams,
+                        favoritePlayers: updated.favorites_players
+                            ? normalizeFavoritePlayers(updated.favorites_players)
+                            : user.value.favoritePlayers,
                         email: updated.email ?? user.value.email
                     }
                     saveToCache(user.value)
@@ -235,6 +249,41 @@ export const useAuthStore = defineStore('auth', () => {
         await updateFavoriteTeams(favoriteTeams)
     }
 
+    const updateFavoritePlayers = async (players: FavoritePlayer[]) => {
+        if (!user.value) return
+
+        const normalized = normalizeFavoritePlayers(players)
+        const previous = user.value.favoritePlayers
+
+        user.value.favoritePlayers = normalized
+        saveToCache(user.value)
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ favorites_players: normalized })
+            .eq('id', user.value.id)
+            .select()
+
+        if (error || !data || data.length === 0) {
+            console.error('update favorites_players error:', error)
+            user.value.favoritePlayers = previous
+            saveToCache(user.value)
+        }
+    }
+
+    const toggleFavoritePlayer = async (player: FavoritePlayer) => {
+        if (!user.value) return
+
+        const normalized = normalizeFavoritePlayer(player)
+        if (!normalized) return
+
+        const favoritePlayers = user.value.favoritePlayers.some(item => item.id === normalized.id)
+            ? user.value.favoritePlayers.filter(item => item.id !== normalized.id)
+            : [...user.value.favoritePlayers, normalized]
+
+        await updateFavoritePlayers(favoritePlayers)
+    }
+
     const signIn = async (email: string, password: string) => {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
@@ -266,7 +315,8 @@ export const useAuthStore = defineStore('auth', () => {
             last_name: data.lastName,
             avatar_img: null,
             hide_scores: true,
-            favorites_teams: []
+            favorites_teams: [],
+            favorites_players: []
         })
 
         const newUser: AppUser = {
@@ -276,7 +326,8 @@ export const useAuthStore = defineStore('auth', () => {
             lastName: data.lastName,
             avatarImg: null,
             hideScores: true,
-            favoriteTeams: []
+            favoriteTeams: [],
+            favoritePlayers: []
         }
 
         user.value = newUser
@@ -326,6 +377,34 @@ export const useAuthStore = defineStore('auth', () => {
         subscribeAuthState,
         updateHideScores,
         updateFavoriteTeams,
-        toggleFavoriteTeam
+        toggleFavoriteTeam,
+        updateFavoritePlayers,
+        toggleFavoritePlayer
     }
 })
+
+function normalizeFavoritePlayers(value: unknown): FavoritePlayer[] {
+    if (!Array.isArray(value)) return []
+
+    const byId = new Map<number, FavoritePlayer>()
+
+    value.forEach((player) => {
+        const normalized = normalizeFavoritePlayer(player)
+        if (normalized) byId.set(normalized.id, normalized)
+    })
+
+    return [...byId.values()]
+}
+
+function normalizeFavoritePlayer(value: unknown): FavoritePlayer | null {
+    if (!value || typeof value !== 'object') return null
+
+    const raw = value as Partial<FavoritePlayer>
+    const id = Number(raw.id)
+    const name = String(raw.name ?? '').trim()
+    const teamAbbr = String(raw.teamAbbr ?? '').trim().toUpperCase()
+
+    if (!Number.isFinite(id) || !name) return null
+
+    return { id, name, teamAbbr }
+}
