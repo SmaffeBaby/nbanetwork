@@ -44,6 +44,9 @@
         <InjuryPlayers :filters="filters"/>
       </template>
 
+      <template #broadcasts>
+        <GameBroadcastCard :game-id="gameId" />
+      </template>
 
       <template #data>
         <div v-if="game" class="p-4 border rounded text-xs overflow-auto bg-gray-50">
@@ -64,11 +67,12 @@ import GamePlayersStats from './BoxScore/GamePlayersStats.vue'
 import InjuryPlayers from './Injury/InjuryPlayers.vue'
 import TabsContent from './TabsContent.vue'
 import TeamStats from './TeamStats/TeamStats.vue'
+import GameBroadcastCard from './GameBroadcastCard.vue'
 
 const filters = ref({
   search: '',
   quarter: null as number | null
 })
 
-const { game, recap, loading, error } = useGameFinal(filters)
+const { gameId, game, recap, loading, error } = useGameFinal(filters)
 </script>

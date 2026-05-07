@@ -44,6 +44,16 @@
 
       <button
           class="px-4 py-2 text-sm transition"
+          :class="activeTab === 'broadcasts'
+          ? 'border-b-2 border-black font-semibold'
+          : 'text-gray-500 hover:text-black'"
+          @click="activeTab = 'broadcasts'"
+      >
+        Трансляции
+      </button>
+
+      <button
+          class="px-4 py-2 text-sm transition"
           :class="activeTab === 'data'
           ? 'border-b-2 border-black font-semibold'
           : 'text-gray-500 hover:text-black'"
@@ -78,6 +88,10 @@
           <slot name="injury" />
         </div>
 
+        <div v-else-if="activeTab === 'broadcasts'">
+          <slot name="broadcasts" />
+        </div>
+
         <div v-else>
           <slot name="data" />
         </div>
@@ -108,7 +122,7 @@
 import { ref, computed } from 'vue'
 import { EyeIcon } from '@heroicons/vue/24/outline'
 
-type Tab = 'overview' | 'players' | 'teamStats' | 'injury' | 'data'
+type Tab = 'overview' | 'players' | 'teamStats' | 'injury' | 'broadcasts' | 'data'
 
 const activeTab = ref<Tab>('overview')
 const revealed = ref(false)
