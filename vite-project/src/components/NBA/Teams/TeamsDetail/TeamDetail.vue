@@ -2,7 +2,14 @@
   <div class="p-6 space-y-6">
 
     <div class="flex justify-center mb-4">
-      <img :src="getTeamLogo(teamAbbr)" class="w-72 h-72" />
+      <div class="relative">
+        <img :src="getTeamLogo(teamAbbr)" class="w-72 h-72" />
+        <FavoriteTeamButton
+            :teamAbbr="teamAbbr"
+            size="lg"
+            class="absolute right-2 top-2"
+        />
+      </div>
     </div>
 
     <button
@@ -106,6 +113,7 @@ import TeamGamesTable from './TeamGamesTable.vue'
 import TeamUpcomingGames from './TeamUpcomingGames.vue'
 import TeamStats2 from './TeamStats2.vue'
 import TeamPointsTrendTable from './TeamPointsTrendTable.vue'
+import FavoriteTeamButton from '../../Favorites/FavoriteTeamButton.vue'
 
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import { generateNbaSeasons } from '../../../../utils/generateNbaSeasons'

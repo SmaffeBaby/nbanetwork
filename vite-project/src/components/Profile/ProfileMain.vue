@@ -71,6 +71,8 @@
         />
       </div>
 
+      <ProfileFavoriteTeams />
+
     </div>
 
     <div class="flex flex-col sm:flex-row gap-3 pt-2 md:pt-4">
@@ -96,6 +98,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useProfile } from '../../composables/Profile/useProfile'
+import ProfileFavoriteTeams from './ProfileFavoriteTeams.vue'
 
 const props = defineProps({
   activeTab: String

@@ -5,6 +5,11 @@
       :style="{ backgroundColor: getTeamStyle(team).bgColorHex }"
       @click="emit('select', team)"
   >
+    <FavoriteTeamButton
+        :teamAbbr="teamAbbr"
+        class="absolute right-4 top-4 z-20"
+    />
+
     <img
         v-if="getTeamStyle(team).bgSvg"
         :src="getTeamStyle(team).bgSvg"
@@ -32,6 +37,10 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import FavoriteTeamButton from '../Favorites/FavoriteTeamButton.vue'
+import { getTeamAbbr } from '../../../composables/NBA/Teams/useTeamUtils'
+
 interface Props {
   team: any
   getLogo: (team: any) => string
@@ -47,4 +56,5 @@ const emit = defineEmits<{
 }>()
 
 const { team, getLogo, getFullName, getRecord, getTeamStyle } = props
+const teamAbbr = computed(() => getTeamAbbr(team))
 </script>

@@ -43,11 +43,19 @@
       <div class="flex items-center justify-between">
 
         <div class="flex flex-col items-center w-1/3">
-          <img
-              :src="getTeamLogo(game?.away?.abbr)"
-              class="w-12 h-12 cursor-pointer transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110"
-              @click="goTeam(game?.away?.abbr)"
-          />
+          <div class="relative">
+            <img
+                :src="getTeamLogo(game?.away?.abbr)"
+                class="w-12 h-12 cursor-pointer transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110"
+                @click="goTeam(game?.away?.abbr)"
+            />
+            <FavoriteTeamButton
+                v-if="game?.away?.abbr"
+                :teamAbbr="game.away.abbr"
+                size="sm"
+                class="absolute -right-4 -top-3"
+            />
+          </div>
           <div class="text-xs mt-1 text-center font-medium">
             {{ game?.away?.name }}
           </div>
@@ -89,11 +97,19 @@
         </div>
 
         <div class="flex flex-col items-center w-1/3">
-          <img
-              :src="getTeamLogo(game?.home?.abbr)"
-              class="w-12 h-12 cursor-pointer transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110"
-              @click="goTeam(game?.home?.abbr)"
-          />
+          <div class="relative">
+            <img
+                :src="getTeamLogo(game?.home?.abbr)"
+                class="w-12 h-12 cursor-pointer transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110"
+                @click="goTeam(game?.home?.abbr)"
+            />
+            <FavoriteTeamButton
+                v-if="game?.home?.abbr"
+                :teamAbbr="game.home.abbr"
+                size="sm"
+                class="absolute -right-4 -top-3"
+            />
+          </div>
           <div class="text-xs mt-1 text-center font-medium">
             {{ game?.home?.name }}
           </div>
@@ -113,6 +129,7 @@ import { getTeamLogo } from '../../../utils/getTeamLogo'
 import { EyeIcon, EyeSlashIcon, LinkIcon } from '@heroicons/vue/24/outline'
 import { useGameHeader } from '../../../composables/NBA/GameFinal/useGameHeader'
 import { useToast } from 'vue-toastification'
+import FavoriteTeamButton from '../Favorites/FavoriteTeamButton.vue'
 
 const toast = useToast()
 const route = useRoute()

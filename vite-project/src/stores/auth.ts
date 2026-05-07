@@ -9,6 +9,7 @@ export type AppUser = {
     lastName: string
     avatarImg: string | null
     hideScores: boolean
+    favoriteTeams: string[]
 }
 
 type CachedUser = AppUser & {
@@ -57,7 +58,8 @@ export const useAuthStore = defineStore('auth', () => {
                 firstName: cached.firstName,
                 lastName: cached.lastName,
                 avatarImg: cached.avatarImg ?? null,
-                hideScores: cached.hideScores ?? true
+                hideScores: cached.hideScores ?? true,
+                favoriteTeams: cached.favoriteTeams ?? []
             }
         } catch {
             localStorage.removeItem(CACHE_KEY)
@@ -72,7 +74,7 @@ export const useAuthStore = defineStore('auth', () => {
     const fetchProfile = async (userId: string, email: string): Promise<AppUser> => {
         const { data, error } = await supabase
             .from('profiles')
-            .select('first_name, last_name, avatar_img, hide_scores')
+            .select('first_name, last_name, avatar_img, hide_scores, favorites_teams')
             .eq('id', userId)
             .single()
 
@@ -83,7 +85,8 @@ export const useAuthStore = defineStore('auth', () => {
                 firstName: '',
                 lastName: '',
                 avatarImg: null,
-                hideScores: true
+                hideScores: true,
+                favoriteTeams: []
             }
         }
 
@@ -93,7 +96,8 @@ export const useAuthStore = defineStore('auth', () => {
             firstName: data.first_name,
             lastName: data.last_name,
             avatarImg: data.avatar_img ?? null,
-            hideScores: data.hide_scores ?? true
+            hideScores: data.hide_scores ?? true,
+            favoriteTeams: Array.isArray(data.favorites_teams) ? data.favorites_teams : []
         }
     }
 
@@ -123,6 +127,7 @@ export const useAuthStore = defineStore('auth', () => {
                         last_name?: string
                         avatar_img?: string | null
                         hide_scores?: boolean
+                        favorites_teams?: string[]
                         email?: string
                     }
                     if (!user.value) return
@@ -133,6 +138,7 @@ export const useAuthStore = defineStore('auth', () => {
                         lastName: updated.last_name ?? user.value.lastName,
                         avatarImg: updated.avatar_img ?? user.value.avatarImg,
                         hideScores: updated.hide_scores ?? user.value.hideScores,
+                        favoriteTeams: updated.favorites_teams ?? user.value.favoriteTeams,
                         email: updated.email ?? user.value.email
                     }
                     saveToCache(user.value)
@@ -192,6 +198,43 @@ export const useAuthStore = defineStore('auth', () => {
         saveToCache(user.value)
     }
 
+    const updateFavoriteTeams = async (teams: string[]) => {
+        if (!user.value) return
+
+        const normalized = Array.from(
+            new Set(teams.map(team => team.trim().toUpperCase()).filter(Boolean))
+        )
+        const previous = user.value.favoriteTeams
+
+        user.value.favoriteTeams = normalized
+        saveToCache(user.value)
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ favorites_teams: normalized })
+            .eq('id', user.value.id)
+            .select()
+
+        if (error || !data || data.length === 0) {
+            console.error('update favorites_teams error:', error)
+            user.value.favoriteTeams = previous
+            saveToCache(user.value)
+        }
+    }
+
+    const toggleFavoriteTeam = async (teamAbbr: string) => {
+        if (!user.value) return
+
+        const normalized = teamAbbr.trim().toUpperCase()
+        if (!normalized) return
+
+        const favoriteTeams = user.value.favoriteTeams.includes(normalized)
+            ? user.value.favoriteTeams.filter(team => team !== normalized)
+            : [...user.value.favoriteTeams, normalized]
+
+        await updateFavoriteTeams(favoriteTeams)
+    }
+
     const signIn = async (email: string, password: string) => {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
@@ -222,7 +265,8 @@ export const useAuthStore = defineStore('auth', () => {
             first_name: data.firstName,
             last_name: data.lastName,
             avatar_img: null,
-            hide_scores: true
+            hide_scores: true,
+            favorites_teams: []
         })
 
         const newUser: AppUser = {
@@ -231,7 +275,8 @@ export const useAuthStore = defineStore('auth', () => {
             firstName: data.firstName,
             lastName: data.lastName,
             avatarImg: null,
-            hideScores: true
+            hideScores: true,
+            favoriteTeams: []
         }
 
         user.value = newUser
@@ -279,6 +324,8 @@ export const useAuthStore = defineStore('auth', () => {
         signUp,
         logout,
         subscribeAuthState,
-        updateHideScores
+        updateHideScores,
+        updateFavoriteTeams,
+        toggleFavoriteTeam
     }
 })

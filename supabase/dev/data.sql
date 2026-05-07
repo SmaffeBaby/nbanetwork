@@ -4,6 +4,7 @@ create table profiles (
   username text unique,
   avatar_url text,
   website text,
+  favorites_teams text[] not null default '{}',
 
   primary key (id),
   unique(username),
