@@ -14,6 +14,37 @@
     <div class="space-y-4 md:space-y-5">
 
       <div>
+        <label class="text-sm text-gray-500">Аватарка</label>
+        <div class="mt-2 flex flex-col sm:flex-row sm:items-center gap-4">
+          <img
+              v-if="user?.avatarImg"
+              :src="user.avatarImg"
+              alt="User avatar"
+              class="w-24 h-24 rounded-full object-cover ring-2 ring-gray-200"
+          />
+          <div
+              v-else
+              class="relative inline-flex items-center justify-center w-24 h-24 overflow-hidden bg-gray-100 rounded-full ring-2 ring-gray-200"
+          >
+            <span class="font-medium text-2xl text-gray-600">{{ userInitials }}</span>
+          </div>
+
+          <div class="flex-1">
+            <input
+                type="file"
+                accept="image/*"
+                :disabled="loadingAvatar"
+                @change="uploadAvatar"
+                class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <p class="mt-1 text-xs text-gray-500">
+              {{ loadingAvatar ? 'Загрузка...' : 'PNG, JPG или WEBP до 1 МБ' }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div>
         <label class="text-sm text-gray-500">Email</label>
         <input
             :value="user?.email"
@@ -63,6 +94,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useProfile } from '../../composables/Profile/useProfile'
 
 const props = defineProps({
@@ -73,10 +105,20 @@ const {
   user,
   isEditing,
   loadingSave,
+  loadingAvatar,
   form,
   saveProfile,
+  uploadAvatar,
   logoutAndRedirect
 } = useProfile()
 
 const { activeTab } = props
+
+const userInitials = computed(() => {
+  const first = user.value?.firstName?.trim().charAt(0) ?? ''
+  const last = user.value?.lastName?.trim().charAt(0) ?? ''
+  const initials = `${first}${last}`.trim()
+
+  return initials || 'U'
+})
 </script>

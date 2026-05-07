@@ -5,6 +5,7 @@ create table if not exists public.profiles (
   email text not null,
   first_name text not null default '',
   last_name text not null default '',
+  avatar_img text,
   hide_scores boolean not null default true,
   admin boolean not null default false,
   created_at timestamptz not null default now(),

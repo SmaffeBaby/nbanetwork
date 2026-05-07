@@ -12,6 +12,7 @@ export function useProfile() {
     const activeTab = ref<'main' | 'security'>('main')
     const isEditing = ref(false)
     const loadingSave = ref(false)
+    const loadingAvatar = ref(false)
 
     const form = reactive({
         firstName: '',
@@ -51,6 +52,59 @@ export function useProfile() {
         isEditing.value = false
     }
 
+    const fileToDataUrl = (file: File) => {
+        return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(String(reader.result))
+            reader.onerror = () => reject(reader.error)
+            reader.readAsDataURL(file)
+        })
+    }
+
+    const uploadAvatar = async (event: Event) => {
+        if (!user.value) return
+
+        const input = event.target as HTMLInputElement
+        const file = input.files?.[0]
+        if (!file) return
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Выберите изображение')
+            input.value = ''
+            return
+        }
+
+        if (file.size > 1024 * 1024) {
+            toast.error('Файл должен быть меньше 1 МБ')
+            input.value = ''
+            return
+        }
+
+        loadingAvatar.value = true
+
+        try {
+            const avatarImg = await fileToDataUrl(file)
+
+            const { error } = await supabase
+                .from('profiles')
+                .update({ avatar_img: avatarImg })
+                .eq('id', user.value.id)
+
+            if (error) {
+                toast.error('Ошибка загрузки аватарки')
+                return
+            }
+
+            user.value.avatarImg = avatarImg
+            toast.success('Аватарка обновлена')
+        } catch {
+            toast.error('Не удалось прочитать файл')
+        } finally {
+            loadingAvatar.value = false
+            input.value = ''
+        }
+    }
+
     const logoutAndRedirect = async () => {
         await handleLogout()
     }
@@ -72,8 +126,10 @@ export function useProfile() {
         activeTab,
         isEditing,
         loadingSave,
+        loadingAvatar,
         form,
         saveProfile,
+        uploadAvatar,
         logoutAndRedirect
     }
 }

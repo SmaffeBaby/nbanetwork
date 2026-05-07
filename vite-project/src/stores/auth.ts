@@ -7,6 +7,7 @@ export type AppUser = {
     email: string
     firstName: string
     lastName: string
+    avatarImg: string | null
     hideScores: boolean
 }
 
@@ -55,6 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
                 email: cached.email,
                 firstName: cached.firstName,
                 lastName: cached.lastName,
+                avatarImg: cached.avatarImg ?? null,
                 hideScores: cached.hideScores ?? true
             }
         } catch {
@@ -70,7 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
     const fetchProfile = async (userId: string, email: string): Promise<AppUser> => {
         const { data, error } = await supabase
             .from('profiles')
-            .select('first_name, last_name, hide_scores')
+            .select('first_name, last_name, avatar_img, hide_scores')
             .eq('id', userId)
             .single()
 
@@ -80,6 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
                 email,
                 firstName: '',
                 lastName: '',
+                avatarImg: null,
                 hideScores: true
             }
         }
@@ -89,6 +92,7 @@ export const useAuthStore = defineStore('auth', () => {
             email,
             firstName: data.first_name,
             lastName: data.last_name,
+            avatarImg: data.avatar_img ?? null,
             hideScores: data.hide_scores ?? true
         }
     }
@@ -117,6 +121,7 @@ export const useAuthStore = defineStore('auth', () => {
                     const updated = payload.new as {
                         first_name?: string
                         last_name?: string
+                        avatar_img?: string | null
                         hide_scores?: boolean
                         email?: string
                     }
@@ -126,6 +131,7 @@ export const useAuthStore = defineStore('auth', () => {
                         ...user.value,
                         firstName: updated.first_name ?? user.value.firstName,
                         lastName: updated.last_name ?? user.value.lastName,
+                        avatarImg: updated.avatar_img ?? user.value.avatarImg,
                         hideScores: updated.hide_scores ?? user.value.hideScores,
                         email: updated.email ?? user.value.email
                     }
@@ -215,6 +221,7 @@ export const useAuthStore = defineStore('auth', () => {
             email: data.email,
             first_name: data.firstName,
             last_name: data.lastName,
+            avatar_img: null,
             hide_scores: true
         })
 
@@ -223,6 +230,7 @@ export const useAuthStore = defineStore('auth', () => {
             email: data.email,
             firstName: data.firstName,
             lastName: data.lastName,
+            avatarImg: null,
             hideScores: true
         }
 

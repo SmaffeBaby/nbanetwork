@@ -3,13 +3,28 @@
 
     <div
         v-if="user"
-        class="flex flex-col gap-1 w-44 rounded-xl p-3 text-center bg-white shadow-md border cursor-pointer hover:shadow-lg transition"
+        class="flex items-center gap-3 w-56 rounded-xl p-3 bg-white shadow-md border cursor-pointer hover:shadow-lg transition"
         @click="goToProfile"
     >
-      <p class="text-sm font-bold text-black">
-        {{ user.firstName }} {{ user.lastName }}
-      </p>
-      <p class="text-xs text-gray-500">{{ user.email }}</p>
+      <img
+          v-if="user.avatarImg"
+          :src="user.avatarImg"
+          alt="User avatar"
+          class="w-10 h-10 rounded-full object-cover"
+      />
+      <div
+          v-else
+          class="relative inline-flex items-center justify-center w-10 h-10 overflow-hidden bg-gray-100 rounded-full shrink-0"
+      >
+        <span class="font-medium text-gray-600">{{ userInitials }}</span>
+      </div>
+
+      <div class="min-w-0 text-left">
+        <p class="text-sm font-bold text-black truncate">
+          {{ user.firstName }} {{ user.lastName }}
+        </p>
+        <p class="text-xs text-gray-500 truncate">{{ user.email }}</p>
+      </div>
 
       <button
           @click.stop="handleLogout"
@@ -132,6 +147,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useAuthPanel } from '../../composables/Auth/useAuthPanel.ts'
 
 const {
@@ -148,4 +164,12 @@ const {
   goToProfile,
   loadingUser
 } = useAuthPanel()
+
+const userInitials = computed(() => {
+  const first = user.value?.firstName?.trim().charAt(0) ?? ''
+  const last = user.value?.lastName?.trim().charAt(0) ?? ''
+  const initials = `${first}${last}`.trim()
+
+  return initials || 'U'
+})
 </script>
