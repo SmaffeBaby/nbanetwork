@@ -1,4 +1,7 @@
-version: '3.9'
+include:
+  - path: ./supabase/docker-compose.yml
+    env_file:
+      - ./supabase/.env
 
 services:
   frontend:
