@@ -22,7 +22,7 @@ export function useTeamStats(recap: Ref<any>) {
     const homeColor = computed(() => teamStyles[homeAbbr.value]?.bgColorHex || fallbackHomeColor)
 
     const normalizedPlayers = computed(() => playersRaw.value
-        .filter((p: any) => !['INACTIVE_INJURY', 'DND_INJURY'].includes(p.notPlayingReason))
+        .filter((p: any) => !['INACTIVE_INJURY', 'DND_INJURY', 'DNP'].includes(p.notPlayingReason))
         .map((p: any) => {
             const s = p.statistics || p.stats || {}
             const fgM = n(s.fieldGoalsMade ?? s.fgm)
@@ -36,12 +36,12 @@ export function useTeamStats(recap: Ref<any>) {
                 name: p.name || `${p.firstName || ''} ${p.familyName || ''}`.trim(),
                 PLAYER_ID: String(p.personId || p.playerId || ''),
                 side: p.side,
-                points: n(s.points),
-                rebounds: n(s.reboundsTotal ?? s.rebounds),
-                assists: n(s.assists),
-                steals: n(s.steals),
-                blocks: n(s.blocks),
-                turnovers: n(s.turnovers),
+                points: n(s.points ?? s.pts),
+                rebounds: n(s.reboundsTotal ?? s.rebounds ?? s.reb),
+                assists: n(s.assists ?? s.ast),
+                steals: n(s.steals ?? s.stl),
+                blocks: n(s.blocks ?? s.blk),
+                turnovers: n(s.turnovers ?? s.tov),
                 fgM,
                 fgA,
                 tpM,

@@ -3,6 +3,8 @@ const generateAIRecap = require('./generateAIRecap')
 const fetchApNbaRecap = require('./fetchApNbaRecap')
 const TEAM_MAP = require('../constants/teamMap')
 
+const PYTHON_API = process.env.PYTHON_API || 'http://python-backend:8000'
+
 async function fetchGameRecap(gameId, quarter = null) {
     try {
         let game = null
@@ -11,7 +13,7 @@ async function fetchGameRecap(gameId, quarter = null) {
         let playersAway = []
 
         if (quarter) {
-            const url = `http://python-backend:8000/game-boxscore-v3/${gameId}/quarter/${quarter}`
+            const url = `${PYTHON_API}/game-boxscore-v3/${gameId}/quarter/${quarter}`
 
             const res = await axios.get(url)
             const root = res.data
@@ -29,16 +31,10 @@ async function fetchGameRecap(gameId, quarter = null) {
 
             plays = []
         } else {
-            const boxUrl = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`
-            const pbpUrl = `https://cdn.nba.com/static/json/liveData/playbyplay/playbyplay_${gameId}.json`
+            const legacy = await fetchLiveOrLegacyGame(gameId)
 
-            const [boxRes, pbpRes] = await Promise.all([
-                axios.get(boxUrl),
-                axios.get(pbpUrl)
-            ])
-
-            game = boxRes.data?.game || {}
-            plays = pbpRes.data?.game?.actions || []
+            game = legacy.game
+            plays = legacy.plays
 
             playersHome = game.homeTeam?.players || []
             playersAway = game.awayTeam?.players || []
@@ -173,6 +169,202 @@ function getFirstNumber(source, keys) {
     }
 
     return 0
+}
+
+async function fetchLiveOrLegacyGame(gameId) {
+    try {
+        const boxUrl = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`
+        const pbpUrl = `https://cdn.nba.com/static/json/liveData/playbyplay/playbyplay_${gameId}.json`
+
+        const [boxRes, pbpRes] = await Promise.all([
+            axios.get(boxUrl),
+            axios.get(pbpUrl)
+        ])
+
+        const game = boxRes.data?.game || {}
+
+        if (!game?.homeTeam?.teamId || !game?.awayTeam?.teamId) {
+            throw new Error('LiveData box score is missing teams')
+        }
+
+        return {
+            game,
+            plays: pbpRes.data?.game?.actions || []
+        }
+    } catch (error) {
+        console.warn(`[game recap] Falling back to stats.nba.com box score for ${gameId}:`, error?.message || error)
+        return fetchLegacyGame(gameId)
+    }
+}
+
+async function fetchLegacyGame(gameId) {
+    const res = await axios.get(`${PYTHON_API}/game-detail/${gameId}`)
+    const root = res.data || {}
+
+    if (root.error) {
+        throw new Error(root.error)
+    }
+
+    const summarySets = root.summary?.resultSets || []
+    const boxScoreSets = root.boxscore?.resultSets || []
+
+    const gameSummary = rowsToObjects(findResultSet(summarySets, 'GameSummary'))[0] || {}
+    const lineScore = rowsToObjects(findResultSet(summarySets, 'LineScore'))
+    const playerStats = rowsToObjects(findResultSet(boxScoreSets, 'PlayerStats'))
+    const teamStats = rowsToObjects(findResultSet(boxScoreSets, 'TeamStats'))
+
+    const homeTeamId = Number(gameSummary.HOME_TEAM_ID)
+    const awayTeamId = Number(gameSummary.VISITOR_TEAM_ID)
+
+    if (!homeTeamId || !awayTeamId) {
+        throw new Error('Legacy box score is missing teams')
+    }
+
+    return {
+        game: {
+            gameId,
+            gameTimeUTC: parseLegacyGameDate(gameSummary.GAME_DATE_EST),
+            homeTeam: buildLegacyTeam({
+                teamId: homeTeamId,
+                lineScore,
+                teamStats,
+                playerStats
+            }),
+            awayTeam: buildLegacyTeam({
+                teamId: awayTeamId,
+                lineScore,
+                teamStats,
+                playerStats
+            })
+        },
+        plays: []
+    }
+}
+
+function findResultSet(resultSets, name) {
+    return resultSets.find((set) => set.name === name)
+}
+
+function rowsToObjects(resultSet) {
+    const headers = resultSet?.headers || []
+    const rows = resultSet?.rowSet || []
+
+    return rows.map((row) => {
+        const obj = {}
+
+        headers.forEach((header, index) => {
+            obj[header] = row[index]
+        })
+
+        return obj
+    })
+}
+
+function parseLegacyGameDate(value) {
+    if (!value) return null
+
+    const parsed = new Date(value)
+
+    if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString()
+    }
+
+    return value
+}
+
+function buildLegacyTeam({ teamId, lineScore, teamStats, playerStats }) {
+    const teamMeta = TEAM_MAP[teamId] || {}
+    const line = lineScore.find((row) => Number(row.TEAM_ID) === teamId) || {}
+    const stats = teamStats.find((row) => Number(row.TEAM_ID) === teamId) || {}
+    const abbr = line.TEAM_ABBREVIATION || stats.TEAM_ABBREVIATION || teamMeta.abbr || ''
+
+    return {
+        teamId,
+        teamName: teamMeta.name || stats.TEAM_NAME || line.TEAM_NAME || abbr,
+        teamTricode: abbr,
+        score: toNumber(line.PTS ?? stats.PTS),
+        periods: getLegacyPeriods(line),
+        statistics: {
+            points: toNumber(stats.PTS ?? line.PTS),
+            reboundsTotal: toNumber(stats.REB),
+            assists: toNumber(stats.AST),
+            steals: toNumber(stats.STL),
+            blocks: toNumber(stats.BLK),
+            turnovers: toNumber(stats.TO),
+            fieldGoalsMade: toNumber(stats.FGM),
+            fieldGoalsAttempted: toNumber(stats.FGA),
+            fieldGoalsPercentage: toNumber(stats.FG_PCT),
+            threePointersMade: toNumber(stats.FG3M),
+            threePointersAttempted: toNumber(stats.FG3A),
+            threePointersPercentage: toNumber(stats.FG3_PCT),
+            freeThrowsMade: toNumber(stats.FTM),
+            freeThrowsAttempted: toNumber(stats.FTA),
+            freeThrowsPercentage: toNumber(stats.FT_PCT)
+        },
+        players: playerStats
+            .filter((row) => Number(row.TEAM_ID) === teamId)
+            .map((row) => buildLegacyPlayer(row, teamId))
+    }
+}
+
+function buildLegacyPlayer(row, teamId) {
+    const hasMinutes = row.MIN !== undefined && row.MIN !== null && row.MIN !== ''
+
+    return {
+        personId: row.PLAYER_ID,
+        playerId: row.PLAYER_ID,
+        teamId,
+        name: row.PLAYER_NAME,
+        position: row.START_POSITION || '',
+        jerseyNum: row.JERSEY_NUM || null,
+        notPlayingReason: hasMinutes ? null : 'DNP',
+        notPlayingDescription: row.COMMENT || '',
+        statistics: {
+            minutes: row.MIN || 0,
+            points: toNumber(row.PTS),
+            assists: toNumber(row.AST),
+            reboundsTotal: toNumber(row.REB),
+            steals: toNumber(row.STL),
+            blocks: toNumber(row.BLK),
+            turnovers: toNumber(row.TO),
+            foulsPersonal: toNumber(row.PF),
+            plusMinusPoints: toNumber(row.PLUS_MINUS),
+            fieldGoalsMade: toNumber(row.FGM),
+            fieldGoalsAttempted: toNumber(row.FGA),
+            threePointersMade: toNumber(row.FG3M),
+            threePointersAttempted: toNumber(row.FG3A),
+            freeThrowsMade: toNumber(row.FTM),
+            freeThrowsAttempted: toNumber(row.FTA)
+        }
+    }
+}
+
+function getLegacyPeriods(line) {
+    const periods = []
+
+    for (let i = 1; i <= 4; i += 1) {
+        periods.push({
+            period: i,
+            score: toNumber(line[`PTS_QTR${i}`])
+        })
+    }
+
+    for (let i = 1; i <= 10; i += 1) {
+        const score = line[`PTS_OT${i}`]
+        if (score === undefined || score === null || score === '') continue
+
+        periods.push({
+            period: 4 + i,
+            score: toNumber(score)
+        })
+    }
+
+    return periods
+}
+
+function toNumber(value) {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : 0
 }
 
 function getTeamStats(game) {

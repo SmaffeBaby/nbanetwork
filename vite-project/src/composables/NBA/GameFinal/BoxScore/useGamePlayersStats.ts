@@ -60,7 +60,7 @@ function parseMinutes(min: any) {
 
 export function useGamePlayersStats(recap: Ref<any>) {
 
-    const excludedReasons = ['INACTIVE_INJURY', 'DND_INJURY']
+    const excludedReasons = ['INACTIVE_INJURY', 'DND_INJURY', 'DNP']
 
     const allRaw = computed(() => {
         const home = recap.value?.players?.home || []
@@ -99,12 +99,12 @@ export function useGamePlayersStats(recap: Ref<any>) {
 
                     minutes: parseMinutes(s.minutesCalculated || s.minutes),
 
-                    points: n(s.points),
-                    assists: n(s.assists),
-                    rebounds: n(s.reboundsTotal),
+                    points: n(s.points ?? s.pts),
+                    assists: n(s.assists ?? s.ast),
+                    rebounds: n(s.reboundsTotal ?? s.rebounds ?? s.reb),
 
-                    steals: n(s.steals),
-                    blocks: n(s.blocks),
+                    steals: n(s.steals ?? s.stl),
+                    blocks: n(s.blocks ?? s.blk),
 
                     fgM,
                     fgA,
@@ -118,9 +118,9 @@ export function useGamePlayersStats(recap: Ref<any>) {
                     ftA,
                     ftPct: ftA ? +(ftM / ftA * 100).toFixed(1) : 0,
 
-                    fouls: n(s.foulsPersonal),
-                    turnovers: n(s.turnovers),
-                    plusMinus: n(s.plusMinusPoints)
+                    fouls: n(s.foulsPersonal ?? s.pf),
+                    turnovers: n(s.turnovers ?? s.tov),
+                    plusMinus: n(s.plusMinusPoints ?? s.plusMinus)
                 }
             })
     })
