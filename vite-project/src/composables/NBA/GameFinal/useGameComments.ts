@@ -11,6 +11,7 @@ export type GameComment = {
     user_id: string
     message: string
     image_data: string | null
+    reply_to_id: string | null
     created_at: string
     profiles?: {
         first_name: string
@@ -29,6 +30,7 @@ type NewGameComment = {
     gameId: string
     message: string
     imageData: string | null
+    replyToId: string | null
 }
 
 function normalizeComment(comment: RawGameComment): GameComment {
@@ -55,6 +57,7 @@ export function useGameComments(gameId: Ref<string>) {
     const message = ref('')
     const imageData = ref<string | null>(null)
     const imageName = ref('')
+    const replyTo = ref<GameComment | null>(null)
     const unreadCount = ref(0)
     const error = ref<string | null>(null)
 
@@ -185,6 +188,14 @@ export function useGameComments(gameId: Ref<string>) {
         imageName.value = ''
     }
 
+    const setReplyTo = (comment: GameComment) => {
+        replyTo.value = comment
+    }
+
+    const clearReplyTo = () => {
+        replyTo.value = null
+    }
+
     const sendCommentMutation = useMutation({
         mutationFn: async (newComment: NewGameComment) => {
             await ensureAuthReady()
@@ -209,7 +220,8 @@ export function useGameComments(gameId: Ref<string>) {
                 body: JSON.stringify({
                     gameId: newComment.gameId,
                     message: newComment.message,
-                    imageData: newComment.imageData
+                    imageData: newComment.imageData,
+                    replyToId: newComment.replyToId
                 })
             })
 
@@ -230,6 +242,7 @@ export function useGameComments(gameId: Ref<string>) {
             }
 
             message.value = ''
+            clearReplyTo()
             removeImage()
             void markAsRead()
             void commentsQuery.refetch()
@@ -255,7 +268,8 @@ export function useGameComments(gameId: Ref<string>) {
         const newComment = {
             gameId: gameId.value,
             message: message.value.trim(),
-            imageData: imageData.value
+            imageData: imageData.value,
+            replyToId: replyTo.value?.id ?? null
         }
 
         try {
@@ -273,13 +287,21 @@ export function useGameComments(gameId: Ref<string>) {
             .on(
                 'postgres_changes',
                 {
-                    event: 'INSERT',
+                    event: '*',
                     schema: 'public',
                     table: 'game_comments',
                     filter: `game_id=eq.${gameId.value}`
                 },
                 async (payload) => {
                     const incoming = payload.new as GameComment
+
+                    if (payload.eventType === 'DELETE') {
+                        queryClient.setQueryData<GameComment[]>(commentsQueryKey.value, (old = []) =>
+                            old.filter(comment => comment.id !== (payload.old as { id?: string }).id)
+                        )
+                        await fetchUnreadCount()
+                        return
+                    }
 
                     const existing = commentsQuery.data.value ?? []
                     if (!existing.some(comment => comment.id === incoming.id)) {
@@ -322,20 +344,62 @@ export function useGameComments(gameId: Ref<string>) {
         }
     )
 
+    const deleteCommentMutation = useMutation({
+        mutationFn: async (commentId: string) => {
+            await ensureAuthReady()
+
+            if (!auth.user) {
+                throw new Error('Сессия устарела. Обновите страницу или войдите снова.')
+            }
+
+            await authFetch(`/api/game-comments/${encodeURIComponent(commentId)}`, {
+                method: 'DELETE'
+            })
+
+            return commentId
+        },
+        onSuccess: (commentId) => {
+            queryClient.setQueryData<GameComment[]>(commentsQueryKey.value, (old = []) =>
+                old.filter(comment => comment.id !== commentId)
+            )
+            if (replyTo.value?.id === commentId) clearReplyTo()
+            void fetchUnreadCount()
+        },
+        onError: (e: any) => {
+            error.value = e?.message || 'Не удалось удалить комментарий'
+            void commentsQuery.refetch()
+        }
+    })
+
+    const deleteComment = async (comment: GameComment) => {
+        if (deleteCommentMutation.isPending.value) return
+        if (comment.user_id !== auth.user?.id && !auth.user?.isAdmin) return
+
+        try {
+            await deleteCommentMutation.mutateAsync(comment.id)
+        } catch {
+        }
+    }
+
     return {
         user: computed(() => auth.user),
         comments: sortedComments,
         message,
         imageData,
         imageName,
+        replyTo,
         loading: computed(() => commentsQuery.isFetching.value && sortedComments.value.length === 0),
         sending: computed(() => sendCommentMutation.isPending.value),
+        deleting: computed(() => deleteCommentMutation.isPending.value),
         unreadCount,
         error,
         canSend,
         attachImage,
         removeImage,
+        setReplyTo,
+        clearReplyTo,
         sendComment,
+        deleteComment,
         markAsRead,
         fetchComments,
         fetchUnreadCount

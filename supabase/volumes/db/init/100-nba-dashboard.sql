@@ -57,14 +57,21 @@ create table if not exists public.game_comments (
   user_id uuid not null references public.profiles(id) on delete cascade,
   message text not null default '',
   image_data text,
+  reply_to_id uuid references public.game_comments(id) on delete set null,
   created_at timestamptz not null default now(),
   constraint game_comments_has_content check (
     length(trim(message)) > 0 or image_data is not null
   )
 );
 
+alter table public.game_comments
+add column if not exists reply_to_id uuid references public.game_comments(id) on delete set null;
+
 create index if not exists game_comments_game_id_created_at_idx
 on public.game_comments (game_id, created_at);
+
+create index if not exists game_comments_reply_to_id_idx
+on public.game_comments (reply_to_id);
 
 create table if not exists public.game_comment_reads (
   game_id text not null,
@@ -248,6 +255,20 @@ create policy "Users can insert their own game comments"
 on public.game_comments for insert
 to authenticated
 with check (auth.uid() = user_id);
+
+drop policy if exists "Users and admins can delete game comments" on public.game_comments;
+create policy "Users and admins can delete game comments"
+on public.game_comments for delete
+to authenticated
+using (
+  auth.uid() = user_id
+  or exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
 
 drop policy if exists "Users can read their game comment reads" on public.game_comment_reads;
 create policy "Users can read their game comment reads"

@@ -23,7 +23,7 @@ const app = express()
 const PORT = process.env.PORT || 3000
 
 app.use(cors())
-app.use(express.json())
+app.use(express.json({ limit: '2mb' }))
 
 app.get('/', (req, res) => {
     res.send('Backend работает!')
@@ -47,6 +47,13 @@ app.use('/api', translateRoutes)
 app.use('/api', gameBroadcastRoutes)
 app.use('/api', socialRoutes)
 
+app.use((error, req, res, next) => {
+    if (error?.type === 'entity.too.large') {
+        return res.status(413).json({ error: 'Изображение слишком большое. Выберите файл меньше 1 МБ.' })
+    }
+
+    next(error)
+})
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`)

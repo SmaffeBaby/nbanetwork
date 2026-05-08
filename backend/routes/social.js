@@ -64,6 +64,7 @@ router.get('/game-comments/:gameId', requireUser, async (req, res) => {
                 user_id,
                 message,
                 image_data,
+                reply_to_id,
                 created_at,
                 profiles:user_id (
                     first_name,
@@ -87,7 +88,7 @@ router.get('/game-comments/:gameId', requireUser, async (req, res) => {
 router.post('/game-comments', requireUser, async (req, res) => {
     try {
         const admin = getAdmin()
-        const { id, gameId, message = '', imageData = null } = req.body || {}
+        const { id, gameId, message = '', imageData = null, replyToId = null } = req.body || {}
         const text = String(message || '').trim()
 
         if (!gameId) {
@@ -102,11 +103,32 @@ router.post('/game-comments', requireUser, async (req, res) => {
             return res.status(400).json({ error: 'Image is too large' })
         }
 
+        let replyToIdValue = null
+        if (replyToId) {
+            replyToIdValue = String(replyToId)
+
+            const { data: parentComment, error: parentError } = await admin
+                .from('game_comments')
+                .select('id')
+                .eq('id', replyToIdValue)
+                .eq('game_id', String(gameId))
+                .maybeSingle()
+
+            if (parentError) {
+                return res.status(500).json({ error: parentError.message })
+            }
+
+            if (!parentComment) {
+                return res.status(400).json({ error: 'Reply target not found' })
+            }
+        }
+
         const payload = {
             game_id: String(gameId),
             user_id: req.user.id,
             message: text,
-            image_data: imageData
+            image_data: imageData,
+            reply_to_id: replyToIdValue
         }
 
         if (id) payload.id = String(id)
@@ -120,6 +142,7 @@ router.post('/game-comments', requireUser, async (req, res) => {
                 user_id,
                 message,
                 image_data,
+                reply_to_id,
                 created_at,
                 profiles:user_id (
                     first_name,
@@ -149,6 +172,56 @@ router.post('/game-comments', requireUser, async (req, res) => {
         setImmediate(() => {
             void createCommentNotifications(data)
         })
+    } catch (error) {
+        res.status(500).json({ error: error.message || 'Social service is unavailable' })
+    }
+})
+
+router.delete('/game-comments/:commentId', requireUser, async (req, res) => {
+    try {
+        const admin = getAdmin()
+        const { commentId } = req.params
+
+        const { data: comment, error: commentError } = await admin
+            .from('game_comments')
+            .select('id, user_id')
+            .eq('id', commentId)
+            .maybeSingle()
+
+        if (commentError) {
+            return res.status(500).json({ error: commentError.message })
+        }
+
+        if (!comment) {
+            return res.status(404).json({ error: 'Comment not found' })
+        }
+
+        const { data: profile, error: profileError } = await admin
+            .from('profiles')
+            .select('admin')
+            .eq('id', req.user.id)
+            .maybeSingle()
+
+        if (profileError) {
+            return res.status(500).json({ error: profileError.message })
+        }
+
+        const canDelete = comment.user_id === req.user.id || profile?.admin === true
+
+        if (!canDelete) {
+            return res.status(403).json({ error: 'You cannot delete this comment' })
+        }
+
+        const { error } = await admin
+            .from('game_comments')
+            .delete()
+            .eq('id', commentId)
+
+        if (error) {
+            return res.status(500).json({ error: error.message })
+        }
+
+        res.json({ ok: true })
     } catch (error) {
         res.status(500).json({ error: error.message || 'Social service is unavailable' })
     }

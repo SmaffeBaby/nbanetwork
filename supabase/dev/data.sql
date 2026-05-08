@@ -11,6 +11,7 @@ create table profiles (
   following_profiles text[] not null default '{}',
   notify_followed_comments boolean not null default false,
   notifications jsonb not null default '[]'::jsonb,
+  admin boolean not null default false,
 
   primary key (id),
   unique(username),

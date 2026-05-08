@@ -19,6 +19,7 @@ export type AppUser = {
     followingProfiles: string[]
     notifyFollowedComments: boolean
     notifications: UserNotification[]
+    isAdmin: boolean
     createdAt: string | null
 }
 
@@ -106,6 +107,7 @@ export const useAuthStore = defineStore('auth', () => {
                 followingProfiles: cached.followingProfiles ?? [],
                 notifyFollowedComments: cached.notifyFollowedComments ?? false,
                 notifications: cached.notifications ?? [],
+                isAdmin: cached.isAdmin ?? false,
                 createdAt: cached.createdAt ?? null
             }
         } catch {
@@ -122,7 +124,7 @@ export const useAuthStore = defineStore('auth', () => {
         const [{ data, error }, followingProfiles] = await Promise.all([
             supabase
             .from('profiles')
-            .select('first_name, last_name, avatar_img, hide_scores, favorites_teams, favorites_players, favorites_games, watched_games, notify_followed_comments, notifications, created_at')
+            .select('first_name, last_name, avatar_img, hide_scores, favorites_teams, favorites_players, favorites_games, watched_games, notify_followed_comments, notifications, admin, created_at')
             .eq('id', userId)
             .single(),
             fetchFollowingProfiles(userId)
@@ -143,6 +145,7 @@ export const useAuthStore = defineStore('auth', () => {
                 followingProfiles: [],
                 notifyFollowedComments: false,
                 notifications: [],
+                isAdmin: false,
                 createdAt: null
             }
         }
@@ -161,6 +164,7 @@ export const useAuthStore = defineStore('auth', () => {
             followingProfiles,
             notifyFollowedComments: data.notify_followed_comments ?? false,
             notifications: normalizeNotifications(data.notifications),
+            isAdmin: data.admin ?? false,
             createdAt: data.created_at ?? null
         }
     }
@@ -199,6 +203,7 @@ export const useAuthStore = defineStore('auth', () => {
                         watched_games?: FavoriteGame[]
                         notify_followed_comments?: boolean
                         notifications?: UserNotification[]
+                        admin?: boolean
                         created_at?: string
                         email?: string
                     }
@@ -225,6 +230,7 @@ export const useAuthStore = defineStore('auth', () => {
                         notifications: updated.notifications
                             ? normalizeNotifications(updated.notifications)
                             : user.value.notifications,
+                        isAdmin: updated.admin ?? user.value.isAdmin,
                         createdAt: updated.created_at ?? user.value.createdAt,
                         email: updated.email ?? user.value.email
                     }
@@ -582,7 +588,8 @@ export const useAuthStore = defineStore('auth', () => {
             watched_games: [],
             following_profiles: [],
             notify_followed_comments: false,
-            notifications: []
+            notifications: [],
+            admin: false
         })
 
         const newUser: AppUser = {
@@ -599,6 +606,7 @@ export const useAuthStore = defineStore('auth', () => {
             followingProfiles: [],
             notifyFollowedComments: false,
             notifications: [],
+            isAdmin: false,
             createdAt: new Date().toISOString()
         }
 
