@@ -9,6 +9,15 @@
       </div>
 
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <PublicProfileProgressEditor
+            v-if="auth.user?.isAdmin"
+            :rules="rules"
+            :saving="saving"
+            :error="rulesError"
+            :save-rule="saveRule"
+            :delete-rule="deleteRule"
+        />
+
         <label class="flex flex-col gap-1 text-xs font-semibold uppercase text-gray-500">
           Сезон
           <select
@@ -87,10 +96,21 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
 import type { FavoriteGame } from '../../../stores/auth'
+import { useAuthStore } from '../../../stores/auth'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
+import PublicProfileProgressEditor from './PublicProfileProgressEditor.vue'
+import type {
+  ProfileProgressRule,
+  ProfileProgressRulePayload
+} from '../../../composables/NBA/PublicProfile/useProfileProgressRules'
 
 const props = defineProps<{
   games: FavoriteGame[]
+  rules: ProfileProgressRule[]
+  savingProgressRule: boolean
+  progressRuleError: string | null
+  saveProgressRule: (payload: ProfileProgressRulePayload) => Promise<boolean>
+  deleteProgressRule: (id: string) => Promise<boolean>
 }>()
 
 const tabs = [
@@ -104,6 +124,12 @@ const canvas = ref<HTMLCanvasElement | null>(null)
 const selectedSeason = ref('all')
 const activeTab = ref<TabValue>('timeline')
 let chart: Chart | null = null
+const auth = useAuthStore()
+const rules = computed(() => props.rules)
+const saving = computed(() => props.savingProgressRule)
+const rulesError = computed(() => props.progressRuleError)
+const saveRule = props.saveProgressRule
+const deleteRule = props.deleteProgressRule
 
 const toDate = (date: string | null | undefined) => {
   if (!date) return null
@@ -272,7 +298,9 @@ watch(seasons, () => {
   }
 })
 
-onMounted(renderChart)
+onMounted(() => {
+  void renderChart()
+})
 
 onBeforeUnmount(() => {
   chart?.destroy()

@@ -51,6 +51,18 @@ create table if not exists public.map_points (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.profile_progress_rules (
+  id uuid primary key default gen_random_uuid(),
+  category text not null check (category in ('watched_games', 'top_team')),
+  max_games integer not null check (max_games > 0),
+  title text not null default '',
+  description text not null default '',
+  svg text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (category, max_games)
+);
+
 create table if not exists public.game_comments (
   id uuid primary key default gen_random_uuid(),
   game_id text not null,
@@ -159,8 +171,14 @@ create trigger map_points_set_updated_at
 before update on public.map_points
 for each row execute function public.set_updated_at();
 
+drop trigger if exists profile_progress_rules_set_updated_at on public.profile_progress_rules;
+create trigger profile_progress_rules_set_updated_at
+before update on public.profile_progress_rules
+for each row execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.map_points enable row level security;
+alter table public.profile_progress_rules enable row level security;
 alter table public.game_comments enable row level security;
 alter table public.game_comment_reads enable row level security;
 alter table public.profile_follows enable row level security;
@@ -234,6 +252,59 @@ with check (
 drop policy if exists "Admins can delete map points" on public.map_points;
 create policy "Admins can delete map points"
 on public.map_points for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Profile progress rules are public" on public.profile_progress_rules;
+create policy "Profile progress rules are public"
+on public.profile_progress_rules for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Admins can insert profile progress rules" on public.profile_progress_rules;
+create policy "Admins can insert profile progress rules"
+on public.profile_progress_rules for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Admins can update profile progress rules" on public.profile_progress_rules;
+create policy "Admins can update profile progress rules"
+on public.profile_progress_rules for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Admins can delete profile progress rules" on public.profile_progress_rules;
+create policy "Admins can delete profile progress rules"
+on public.profile_progress_rules for delete
 to authenticated
 using (
   exists (

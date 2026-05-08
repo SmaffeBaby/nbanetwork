@@ -58,6 +58,65 @@ create table if not exists profile_follows (
   constraint profile_follows_no_self_follow check (follower_id <> following_id)
 );
 
+create table if not exists profile_progress_rules (
+  id uuid primary key default gen_random_uuid(),
+  category text not null check (category in ('watched_games', 'top_team')),
+  max_games integer not null check (max_games > 0),
+  title text not null default '',
+  description text not null default '',
+  svg text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (category, max_games)
+);
+
+alter table profile_progress_rules enable row level security;
+
+create policy "Profile progress rules are public"
+  on profile_progress_rules for select
+  using (true);
+
+create policy "Admins can insert profile progress rules"
+  on profile_progress_rules for insert
+  with check (
+    exists (
+      select 1
+      from profiles
+      where profiles.id = auth.uid()
+        and profiles.admin = true
+    )
+  );
+
+create policy "Admins can update profile progress rules"
+  on profile_progress_rules for update
+  using (
+    exists (
+      select 1
+      from profiles
+      where profiles.id = auth.uid()
+        and profiles.admin = true
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from profiles
+      where profiles.id = auth.uid()
+        and profiles.admin = true
+    )
+  );
+
+create policy "Admins can delete profile progress rules"
+  on profile_progress_rules for delete
+  using (
+    exists (
+      select 1
+      from profiles
+      where profiles.id = auth.uid()
+        and profiles.admin = true
+    )
+  );
+
 -- Set up Storage
 insert into storage.buckets (id, name)
 values ('avatars', 'avatars');

@@ -46,7 +46,21 @@
         </button>
       </section>
 
-      <PublicProfileWatchedStats :games="watchedGames" />
+      <PublicProfileProgressSummary
+          :watched-count="watchedGames.length"
+          :top-team-count="topWatchedTeam?.count ?? 0"
+          :top-team-abbr="topWatchedTeam?.abbr"
+          :rules="progressRules"
+      />
+
+      <PublicProfileWatchedStats
+          :games="watchedGames"
+          :rules="progressRules"
+          :saving-progress-rule="savingProgressRule"
+          :progress-rule-error="progressRuleError"
+          :save-progress-rule="saveProgressRule"
+          :delete-progress-rule="deleteProgressRule"
+      />
 
       <FavoriteTeam :teams="profile.favorites_teams" @select="goToTeam" />
 
@@ -64,8 +78,11 @@
 import FavoriteTeam from './FavoriteTeam.vue'
 import FavoritePlayers from './FavoritePlayers.vue'
 import PublicProfileGameList from './PublicProfileGameList.vue'
+import PublicProfileProgressSummary from './PublicProfileProgressSummary.vue'
 import PublicProfileWatchedStats from './PublicProfileWatchedStats.vue'
 import { usePublicProfile } from '../../../composables/NBA/PublicProfile/usePublicProfile'
+import { useProfileProgressRules } from '../../../composables/NBA/PublicProfile/useProfileProgressRules'
+import { computed, onMounted } from 'vue'
 
 const {
   profile,
@@ -82,4 +99,33 @@ const {
   goToPlayer,
   toggleFollow
 } = usePublicProfile()
+
+const {
+  rules: progressRules,
+  saving: savingProgressRule,
+  error: progressRuleError,
+  fetchRules: fetchProgressRules,
+  saveRule: saveProgressRule,
+  deleteRule: deleteProgressRule
+} = useProfileProgressRules()
+
+const topWatchedTeam = computed(() => {
+  const teams = new Map<string, { abbr: string, count: number }>()
+
+  watchedGames.value.forEach((game) => {
+    ;[game.awayAbbr, game.homeAbbr].forEach((abbr) => {
+      if (!abbr) return
+      teams.set(abbr, {
+        abbr,
+        count: (teams.get(abbr)?.count ?? 0) + 1
+      })
+    })
+  })
+
+  return [...teams.values()].sort((a, b) => b.count - a.count)[0] ?? null
+})
+
+onMounted(() => {
+  void fetchProgressRules()
+})
 </script>
