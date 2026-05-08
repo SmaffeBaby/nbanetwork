@@ -33,6 +33,7 @@ export const usePublicProfileGames = (
 ) => {
     const page = ref(1)
     const selectedDate = ref('')
+    const selectedTeam = ref('all')
     const hiddenScores = ref<string[]>([])
 
     const availableDates = computed(() =>
@@ -48,12 +49,40 @@ export const usePublicProfileGames = (
     const minDate = computed(() => availableDates.value[0] ?? '')
     const maxDate = computed(() => availableDates.value.at(-1) ?? '')
 
-    const filteredGames = computed(() => {
-        if (!selectedDate.value) return games.value
+    const teamOptions = computed(() => {
+        const teams = new Map<string, string>()
 
-        return games.value.filter(game =>
-            toDateInputValue(game.date) === selectedDate.value
-        )
+        games.value.forEach((game) => {
+            if (game.awayAbbr) {
+                teams.set(game.awayAbbr, game.awayName || game.awayAbbr)
+            }
+
+            if (game.homeAbbr) {
+                teams.set(game.homeAbbr, game.homeName || game.homeAbbr)
+            }
+        })
+
+        return [...teams.entries()]
+            .map(([abbr, name]) => ({ abbr, name }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+    })
+
+    const filteredGames = computed(() => {
+        let result = games.value
+
+        if (selectedDate.value) {
+            result = result.filter(game =>
+                toDateInputValue(game.date) === selectedDate.value
+            )
+        }
+
+        if (selectedTeam.value !== 'all') {
+            result = result.filter(game =>
+                game.awayAbbr === selectedTeam.value || game.homeAbbr === selectedTeam.value
+            )
+        }
+
+        return result
     })
 
     const totalPages = computed(() =>
@@ -81,6 +110,11 @@ export const usePublicProfileGames = (
 
     const resetSelectedDate = () => {
         selectedDate.value = ''
+        page.value = 1
+    }
+
+    const setSelectedTeam = (teamAbbr: string) => {
+        selectedTeam.value = teamAbbr || 'all'
         page.value = 1
     }
 
@@ -115,6 +149,10 @@ export const usePublicProfileGames = (
             if (selectedDate.value && !availableDates.value.includes(selectedDate.value)) {
                 selectedDate.value = ''
             }
+
+            if (selectedTeam.value !== 'all' && !teamOptions.value.some(team => team.abbr === selectedTeam.value)) {
+                selectedTeam.value = 'all'
+            }
         },
         { immediate: true }
     )
@@ -123,15 +161,18 @@ export const usePublicProfileGames = (
         page,
         pageSize,
         selectedDate,
+        selectedTeam,
         availableDates,
         minDate,
         maxDate,
+        teamOptions,
         filteredGames,
         visibleGames,
         totalPages,
         isHidden,
         setSelectedDate,
         resetSelectedDate,
+        setSelectedTeam,
         toggleScore,
         score,
         previousPage,

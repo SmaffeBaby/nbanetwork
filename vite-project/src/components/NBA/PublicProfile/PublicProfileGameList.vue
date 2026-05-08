@@ -16,7 +16,7 @@
       </span>
     </div>
 
-    <div v-if="games.length" class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div v-if="games.length" class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <Datepicker
           v-model="selectedDate"
           :available-dates="availableDates"
@@ -26,14 +26,21 @@
           @change="setSelectedDate"
       />
 
-      <button
-          v-if="selectedDate"
-          type="button"
-          class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 active:scale-95"
-          @click="resetSelectedDate"
-      >
-        Сбросить дату
-      </button>
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <PublicProfileTeamFilter
+            v-model="selectedTeam"
+            :teams="teamOptions"
+        />
+
+        <button
+            v-if="selectedDate || selectedTeam !== 'all'"
+            type="button"
+            class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 active:scale-95"
+            @click="resetFilters"
+        >
+          Сбросить
+        </button>
+      </div>
     </div>
 
     <div v-if="filteredGames.length" class="space-y-3">
@@ -132,12 +139,13 @@
 </template>
 
 <script setup lang="ts">
-import { toRef } from 'vue'
+import { watch, toRef } from 'vue'
 import { RouterLink } from 'vue-router'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 import type { FavoriteGame } from '../../../stores/auth'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
 import Datepicker from '../../Datepicker/Datepicker.vue'
+import PublicProfileTeamFilter from './PublicProfileTeamFilter.vue'
 import { usePublicProfileGames } from '../../../composables/NBA/PublicProfile/usePublicProfileGames'
 
 const props = defineProps<{
@@ -149,18 +157,28 @@ const {
   page,
   pageSize,
   selectedDate,
+  selectedTeam,
   availableDates,
   minDate,
   maxDate,
+  teamOptions,
   filteredGames,
   visibleGames,
   totalPages,
   isHidden,
   setSelectedDate,
   resetSelectedDate,
+  setSelectedTeam,
   toggleScore,
   score,
   previousPage,
   nextPage
 } = usePublicProfileGames(toRef(props, 'games'))
+
+watch(selectedTeam, setSelectedTeam)
+
+const resetFilters = () => {
+  resetSelectedDate()
+  setSelectedTeam('all')
+}
 </script>

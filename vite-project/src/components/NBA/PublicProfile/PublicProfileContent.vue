@@ -46,6 +46,8 @@
         </button>
       </section>
 
+      <PublicProfileWatchedStats :games="watchedGames" />
+
       <FavoriteTeam :teams="profile.favorites_teams" @select="goToTeam" />
 
       <FavoritePlayers :players="profile.favorites_players" @select="goToPlayer" />
@@ -62,6 +64,7 @@
 import FavoriteTeam from './FavoriteTeam.vue'
 import FavoritePlayers from './FavoritePlayers.vue'
 import PublicProfileGameList from './PublicProfileGameList.vue'
+import PublicProfileWatchedStats from './PublicProfileWatchedStats.vue'
 import { usePublicProfile } from '../../../composables/NBA/PublicProfile/usePublicProfile'
 
 const {
