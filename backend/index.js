@@ -16,6 +16,7 @@ const playoffsRoutes = require('./routes/playoffs')
 const playerCareerRoutes = require('./routes/playerCareer')
 const translateRoutes = require('./routes/translate')
 const gameBroadcastRoutes = require('./routes/gameBroadcast')
+const socialRoutes = require('./routes/social')
 
 
 const app = express()
@@ -44,6 +45,7 @@ app.use('/api', playoffsRoutes)
 app.use('/api', playerCareerRoutes)
 app.use('/api', translateRoutes)
 app.use('/api', gameBroadcastRoutes)
+app.use('/api', socialRoutes)
 
 
 app.listen(PORT, () => {

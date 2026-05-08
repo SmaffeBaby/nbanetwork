@@ -23,8 +23,8 @@
         Загружаем комментарии...
       </div>
 
-      <div v-else-if="comments.length === 0" class="h-full flex items-center justify-center text-sm text-gray-500">
-        Здесь пока тихо. Будьте первым.
+      <div v-else-if="comments.length === 0" class="h-full flex items-center justify-center px-4 text-center text-sm text-gray-500">
+        Здесь пока тихо. Будьте первым. Все комментарии удалятся через 4 дня.
       </div>
 
       <div
@@ -32,26 +32,34 @@
           :key="comment.id"
           class="flex gap-3"
       >
-        <img
-            v-if="comment.profiles?.avatar_img"
-            :src="comment.profiles.avatar_img"
-            alt="User avatar"
-            class="w-10 h-10 rounded-full object-cover shrink-0"
-        />
-        <div
-            v-else
-            class="relative inline-flex items-center justify-center w-10 h-10 overflow-hidden bg-gray-100 rounded-full shrink-0"
+        <RouterLink
+            :to="{ name: 'PublicProfile', params: { id: comment.user_id } }"
+            class="shrink-0"
         >
-          <span class="font-medium text-gray-600">
-            {{ getInitials(comment) }}
-          </span>
-        </div>
+          <img
+              v-if="comment.profiles?.avatar_img"
+              :src="comment.profiles.avatar_img"
+              alt="User avatar"
+              class="w-10 h-10 rounded-full object-cover"
+          />
+          <div
+              v-else
+              class="relative inline-flex items-center justify-center w-10 h-10 overflow-hidden bg-gray-100 rounded-full"
+          >
+            <span class="font-medium text-gray-600">
+              {{ getInitials(comment) }}
+            </span>
+          </div>
+        </RouterLink>
 
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-semibold text-gray-900 truncate">
+            <RouterLink
+                :to="{ name: 'PublicProfile', params: { id: comment.user_id } }"
+                class="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 hover:underline"
+            >
               {{ getAuthorName(comment) }}
-            </span>
+            </RouterLink>
             <span class="text-xs text-gray-500 shrink-0">
               {{ formatTime(comment.created_at) }}
             </span>
@@ -135,6 +143,7 @@
 
 <script setup lang="ts">
 import { toRef, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useGameComments, type GameComment } from '../../../composables/NBA/GameFinal/useGameComments'
 
 const props = defineProps<{

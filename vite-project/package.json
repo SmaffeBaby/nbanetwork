@@ -12,6 +12,7 @@
   "dependencies": {
     "@heroicons/vue": "^2.2.0",
     "@supabase/supabase-js": "^2.101.1",
+    "@tanstack/vue-query": "^5.100.9",
     "@vuepic/vue-datepicker": "^12.1.0",
     "axios": "^1.14.0",
     "chart.js": "^4.5.1",

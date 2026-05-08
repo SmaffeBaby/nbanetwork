@@ -8,7 +8,8 @@
 
       <Titles class="ml-8" />
 
-      <div class="ml-auto w-auto">
+      <div class="ml-auto flex w-auto items-center gap-3">
+        <NotificationsBell />
         <AuthPanel />
       </div>
     </div>
@@ -20,5 +21,6 @@
 <script setup lang="ts">
 import AuthPanel from '../Auth/AuthPanel.vue'
 import HeaderBurger from './HeaderBurger.vue'
+import NotificationsBell from './NotificationsBell.vue'
 import Titles from './Titles/Titles.vue'
 </script>

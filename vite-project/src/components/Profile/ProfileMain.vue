@@ -3,12 +3,22 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <h1 class="text-xl md:text-2xl font-bold">Основные</h1>
 
-      <button
-          @click="isEditing = !isEditing"
-          class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-full sm:w-auto"
-      >
-        {{ isEditing ? 'Отмена' : 'Редактировать' }}
-      </button>
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <RouterLink
+            v-if="user"
+            :to="{ name: 'PublicProfile', params: { id: user.id } }"
+            class="text-heading bg-gradient-to-r from-teal-200 to-lime-200 hover:bg-gradient-to-l hover:from-teal-200 hover:to-lime-200 focus:ring-4 focus:outline-none focus:ring-lime-200 dark:focus:ring-teal-700 font-medium rounded-base text-sm px-4 py-2.5 text-center leading-5"
+        >
+          Посмотреть профиль
+        </RouterLink>
+
+        <button
+            @click="isEditing = !isEditing"
+            class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-full sm:w-auto"
+        >
+          {{ isEditing ? 'Отмена' : 'Редактировать' }}
+        </button>
+      </div>
     </div>
 
     <div class="space-y-4 md:space-y-5">
@@ -73,6 +83,8 @@
 
       <ProfileFavoriteTeams />
 
+      <ProfileSubscriptions />
+
     </div>
 
     <div class="flex flex-col sm:flex-row gap-3 pt-2 md:pt-4">
@@ -97,8 +109,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useProfile } from '../../composables/Profile/useProfile'
 import ProfileFavoriteTeams from './ProfileFavoriteTeams.vue'
+import ProfileSubscriptions from './ProfileSubscriptions.vue'
 
 const props = defineProps({
   activeTab: String

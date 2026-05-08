@@ -1,6 +1,9 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { supabase } from '../../../lib/supabase'
+import { isRealtimeEnabled } from '../../../lib/realtime'
 import { useAuthStore } from '../../../stores/auth'
+import { authFetch } from '../../../api/authFetch'
 
 export type GameComment = {
     id: string
@@ -20,6 +23,12 @@ const MAX_IMAGE_SIZE = 1024 * 1024
 
 type RawGameComment = Omit<GameComment, 'profiles'> & {
     profiles?: GameComment['profiles'] | GameComment['profiles'][]
+}
+
+type NewGameComment = {
+    gameId: string
+    message: string
+    imageData: string | null
 }
 
 function normalizeComment(comment: RawGameComment): GameComment {
@@ -42,17 +51,15 @@ function fileToDataUrl(file: File) {
 
 export function useGameComments(gameId: Ref<string>) {
     const auth = useAuthStore()
-    const comments = ref<GameComment[]>([])
+    const queryClient = useQueryClient()
     const message = ref('')
     const imageData = ref<string | null>(null)
     const imageName = ref('')
-    const loading = ref(false)
-    const sending = ref(false)
     const unreadCount = ref(0)
     const error = ref<string | null>(null)
 
     let channel: ReturnType<typeof supabase.channel> | null = null
-    let pollTimer: ReturnType<typeof window.setInterval> | null = null
+    const commentsQueryKey = computed(() => ['game-comments', gameId.value])
 
     const canSend = computed(() =>
         Boolean(auth.user && (message.value.trim() || imageData.value))
@@ -63,48 +70,45 @@ export function useGameComments(gameId: Ref<string>) {
             await auth.init()
             auth.subscribeAuthState()
         }
+
+        if (!auth.user) {
+            const { data } = await supabase.auth.getSession()
+            if (data.session?.user) {
+                await auth.init()
+            }
+        }
     }
 
+    const fetchCommentsData = async () => {
+        await ensureAuthReady()
+
+        if (!auth.user || !gameId.value) return []
+
+        const data = await authFetch(`/api/game-comments/${encodeURIComponent(gameId.value)}`)
+        return ((data.comments ?? []) as unknown as RawGameComment[]).map(normalizeComment)
+    }
+
+    const commentsQuery = useQuery({
+        queryKey: commentsQueryKey,
+        enabled: computed(() => Boolean(gameId.value)),
+        refetchInterval: 5000,
+        queryFn: fetchCommentsData
+    })
+
     const sortedComments = computed(() =>
-        [...comments.value].sort((a, b) =>
+        [...(commentsQuery.data.value ?? [])].sort((a, b) =>
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         )
     )
 
     const fetchComments = async () => {
-        await ensureAuthReady()
-
-        if (!auth.user || !gameId.value) return
-
-        loading.value = true
         error.value = null
 
-        const { data, error: fetchError } = await supabase
-            .from('game_comments')
-            .select(`
-                id,
-                game_id,
-                user_id,
-                message,
-                image_data,
-                created_at,
-                profiles:user_id (
-                    first_name,
-                    last_name,
-                    avatar_img
-                )
-            `)
-            .eq('game_id', gameId.value)
-            .order('created_at', { ascending: true })
-
-        loading.value = false
-
-        if (fetchError) {
-            error.value = fetchError.message || 'Не удалось загрузить комментарии'
-            return
+        try {
+            await commentsQuery.refetch()
+        } catch (e: any) {
+            error.value = e?.message || 'Не удалось загрузить комментарии'
         }
-
-        comments.value = ((data ?? []) as unknown as RawGameComment[]).map(normalizeComment)
     }
 
     const fetchUnreadCount = async () => {
@@ -181,64 +185,87 @@ export function useGameComments(gameId: Ref<string>) {
         imageName.value = ''
     }
 
+    const sendCommentMutation = useMutation({
+        mutationFn: async (newComment: NewGameComment) => {
+            await ensureAuthReady()
+
+            if (!auth.user) {
+                error.value = 'Сессия устарела. Обновите страницу или войдите снова.'
+                throw new Error(error.value)
+            }
+
+            if (!newComment.gameId) {
+                throw new Error('Игра не найдена')
+            }
+
+            if (!newComment.message.trim() && !newComment.imageData) {
+                throw new Error('Комментарий пустой')
+            }
+
+            error.value = null
+
+            const data = await authFetch('/api/game-comments', {
+                method: 'POST',
+                body: JSON.stringify({
+                    gameId: newComment.gameId,
+                    message: newComment.message,
+                    imageData: newComment.imageData
+                })
+            })
+
+            if (!data?.comment) {
+                throw new Error('Сервер не вернул сохранённый комментарий')
+            }
+
+            return normalizeComment(data.comment as RawGameComment)
+        },
+        onSuccess: (inserted) => {
+            if (inserted) {
+                queryClient.setQueryData<GameComment[]>(commentsQueryKey.value, (old = []) => [
+                    ...old.filter(comment =>
+                        comment.id !== inserted.id
+                    ),
+                    inserted
+                ])
+            }
+
+            message.value = ''
+            removeImage()
+            void markAsRead()
+            void commentsQuery.refetch()
+        },
+        onError: (e: any) => {
+            error.value = e?.message || 'Не удалось отправить комментарий'
+            void commentsQuery.refetch()
+        }
+    })
+
     const sendComment = async () => {
         await ensureAuthReady()
 
-        if (!auth.user || !canSend.value) return
-
-        sending.value = true
-        error.value = null
-
-        const text = message.value.trim()
-        const image = imageData.value
-
-        const { data, error: sendError } = await supabase
-            .from('game_comments')
-            .insert({
-                game_id: gameId.value,
-                user_id: auth.user.id,
-                message: text,
-                image_data: image
-            })
-            .select(`
-                id,
-                game_id,
-                user_id,
-                message,
-                image_data,
-                created_at
-            `)
-            .single()
-
-        sending.value = false
-
-        if (sendError) {
-            error.value = sendError.message || 'Не удалось отправить комментарий'
+        if (!auth.user) {
+            error.value = 'Сессия устарела. Обновите страницу или войдите снова.'
             return
         }
 
-        if (data) {
-            const inserted = normalizeComment({
-                ...(data as Omit<GameComment, 'profiles'>),
-                profiles: {
-                    first_name: auth.user.firstName,
-                    last_name: auth.user.lastName,
-                    avatar_img: auth.user.avatarImg
-                }
-            })
-            comments.value = [
-                ...comments.value.filter(comment => comment.id !== inserted.id),
-                inserted
-            ]
+        if (!canSend.value) return
+
+        if (sendCommentMutation.isPending.value) return
+
+        const newComment = {
+            gameId: gameId.value,
+            message: message.value.trim(),
+            imageData: imageData.value
         }
 
-        message.value = ''
-        removeImage()
-        await markAsRead()
-        void fetchComments()
+        try {
+            await sendCommentMutation.mutateAsync(newComment)
+        } catch {
+        }
     }
 
     const subscribe = () => {
+        if (!isRealtimeEnabled()) return
         if (channel || !gameId.value) return
 
         channel = supabase
@@ -254,7 +281,8 @@ export function useGameComments(gameId: Ref<string>) {
                 async (payload) => {
                     const incoming = payload.new as GameComment
 
-                    if (!comments.value.some(comment => comment.id === incoming.id)) {
+                    const existing = commentsQuery.data.value ?? []
+                    if (!existing.some(comment => comment.id === incoming.id)) {
                         await fetchComments()
                         await nextTick()
                     }
@@ -279,16 +307,10 @@ export function useGameComments(gameId: Ref<string>) {
         await fetchComments()
         await fetchUnreadCount()
         subscribe()
-
-        pollTimer = window.setInterval(() => {
-            void fetchComments()
-            void fetchUnreadCount()
-        }, 5000)
     })
 
     onUnmounted(() => {
         void unsubscribe()
-        if (pollTimer) window.clearInterval(pollTimer)
     })
 
     watch(
@@ -306,8 +328,8 @@ export function useGameComments(gameId: Ref<string>) {
         message,
         imageData,
         imageName,
-        loading,
-        sending,
+        loading: computed(() => commentsQuery.isFetching.value && sortedComments.value.length === 0),
+        sending: computed(() => sendCommentMutation.isPending.value),
         unreadCount,
         error,
         canSend,
@@ -364,6 +386,7 @@ export function useGameCommentsUnread(gameId: Ref<string>) {
     }
 
     const subscribe = () => {
+        if (!isRealtimeEnabled()) return
         if (channel || !gameId.value) return
 
         channel = supabase

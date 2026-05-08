@@ -6,6 +6,11 @@ create table profiles (
   website text,
   favorites_teams text[] not null default '{}',
   favorites_players jsonb not null default '[]'::jsonb,
+  favorites_games jsonb not null default '[]'::jsonb,
+  watched_games jsonb not null default '[]'::jsonb,
+  following_profiles text[] not null default '{}',
+  notify_followed_comments boolean not null default false,
+  notifications jsonb not null default '[]'::jsonb,
 
   primary key (id),
   unique(username),
@@ -32,6 +37,25 @@ begin;
   create publication supabase_realtime;
 commit;
 alter publication supabase_realtime add table profiles;
+
+create table if not exists profile_comment_notifications (
+  id uuid primary key default gen_random_uuid(),
+  recipient_id uuid not null references profiles(id) on delete cascade,
+  actor_id uuid not null references profiles(id) on delete cascade,
+  game_id text not null,
+  comment_id uuid not null,
+  created_at timestamptz not null default now(),
+  read_at timestamptz,
+  unique (recipient_id, comment_id)
+);
+
+create table if not exists profile_follows (
+  follower_id uuid not null references profiles(id) on delete cascade,
+  following_id uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (follower_id, following_id),
+  constraint profile_follows_no_self_follow check (follower_id <> following_id)
+);
 
 -- Set up Storage
 insert into storage.buckets (id, name)

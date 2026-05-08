@@ -19,6 +19,16 @@ export function useAuth() {
         updateFavoriteTeams: store.updateFavoriteTeams,
         toggleFavoriteTeam: store.toggleFavoriteTeam,
         updateFavoritePlayers: store.updateFavoritePlayers,
-        toggleFavoritePlayer: store.toggleFavoritePlayer
+        toggleFavoritePlayer: store.toggleFavoritePlayer,
+        updateFavoriteGames: store.updateFavoriteGames,
+        toggleFavoriteGame: store.toggleFavoriteGame,
+        updateWatchedGames: store.updateWatchedGames,
+        toggleWatchedGame: store.toggleWatchedGame,
+        updateFollowingProfiles: store.updateFollowingProfiles,
+        toggleFollowProfile: store.toggleFollowProfile,
+        updateNotifyFollowedComments: store.updateNotifyFollowedComments,
+        updateNotifications: store.updateNotifications,
+        addNotification: store.addNotification,
+        markNotificationsRead: store.markNotificationsRead
     }
 }

@@ -19,10 +19,12 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ./vite-project/.env
+      - ./supabase/.env
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+      - SUPABASE_URL=http://kong:8000
       - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-}
       - VK_VIDEO_OWNER_ID=${VK_VIDEO_OWNER_ID:--202211208}
       - VK_VIDEO_PLAYLIST_ID=${VK_VIDEO_PLAYLIST_ID:-8}

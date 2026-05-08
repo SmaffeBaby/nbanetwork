@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../lib/supabase'
+import { isRealtimeEnabled } from '../lib/realtime'
+import { authFetch } from '../api/authFetch'
+import { clearAccessToken, setAccessToken } from '../api/authToken'
 
 export type AppUser = {
     id: string
@@ -11,12 +14,41 @@ export type AppUser = {
     hideScores: boolean
     favoriteTeams: string[]
     favoritePlayers: FavoritePlayer[]
+    favoriteGames: FavoriteGame[]
+    watchedGames: FavoriteGame[]
+    followingProfiles: string[]
+    notifyFollowedComments: boolean
+    notifications: UserNotification[]
+    createdAt: string | null
 }
 
 export type FavoritePlayer = {
     id: number
     name: string
     teamAbbr: string
+}
+
+export type FavoriteGame = {
+    id: string
+    date: string | null
+    homeName: string
+    homeAbbr: string
+    homeScore: number | null
+    awayName: string
+    awayAbbr: string
+    awayScore: number | null
+}
+
+export type UserNotification = {
+    id: string
+    userId: string
+    userName: string
+    avatarImg: string | null
+    gameId: string
+    gameLabel: string
+    commentCreatedAt: string
+    createdAt: string
+    read: boolean
 }
 
 type CachedUser = AppUser & {
@@ -41,6 +73,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     let profileChannel: ReturnType<typeof supabase.channel> | null = null
     let authSubscription: { data: { subscription: { unsubscribe: () => void } } } | null = null
+    let initPromise: Promise<void> | null = null
 
     const saveToCache = (userData: AppUser) => {
         const cached: CachedUser = { ...userData, cachedAt: Date.now() }
@@ -67,7 +100,13 @@ export const useAuthStore = defineStore('auth', () => {
                 avatarImg: cached.avatarImg ?? null,
                 hideScores: cached.hideScores ?? true,
                 favoriteTeams: cached.favoriteTeams ?? [],
-                favoritePlayers: cached.favoritePlayers ?? []
+                favoritePlayers: cached.favoritePlayers ?? [],
+                favoriteGames: cached.favoriteGames ?? [],
+                watchedGames: cached.watchedGames ?? [],
+                followingProfiles: cached.followingProfiles ?? [],
+                notifyFollowedComments: cached.notifyFollowedComments ?? false,
+                notifications: cached.notifications ?? [],
+                createdAt: cached.createdAt ?? null
             }
         } catch {
             localStorage.removeItem(CACHE_KEY)
@@ -80,11 +119,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const fetchProfile = async (userId: string, email: string): Promise<AppUser> => {
-        const { data, error } = await supabase
+        const [{ data, error }, followingProfiles] = await Promise.all([
+            supabase
             .from('profiles')
-            .select('first_name, last_name, avatar_img, hide_scores, favorites_teams, favorites_players')
+            .select('first_name, last_name, avatar_img, hide_scores, favorites_teams, favorites_players, favorites_games, watched_games, notify_followed_comments, notifications, created_at')
             .eq('id', userId)
-            .single()
+            .single(),
+            fetchFollowingProfiles(userId)
+        ])
 
         if (error || !data) {
             return {
@@ -95,7 +137,13 @@ export const useAuthStore = defineStore('auth', () => {
                 avatarImg: null,
                 hideScores: true,
                 favoriteTeams: [],
-                favoritePlayers: []
+                favoritePlayers: [],
+                favoriteGames: [],
+                watchedGames: [],
+                followingProfiles: [],
+                notifyFollowedComments: false,
+                notifications: [],
+                createdAt: null
             }
         }
 
@@ -107,7 +155,13 @@ export const useAuthStore = defineStore('auth', () => {
             avatarImg: data.avatar_img ?? null,
             hideScores: data.hide_scores ?? true,
             favoriteTeams: Array.isArray(data.favorites_teams) ? data.favorites_teams : [],
-            favoritePlayers: normalizeFavoritePlayers(data.favorites_players)
+            favoritePlayers: normalizeFavoritePlayers(data.favorites_players),
+            favoriteGames: normalizeFavoriteGames(data.favorites_games),
+            watchedGames: normalizeFavoriteGames(data.watched_games),
+            followingProfiles,
+            notifyFollowedComments: data.notify_followed_comments ?? false,
+            notifications: normalizeNotifications(data.notifications),
+            createdAt: data.created_at ?? null
         }
     }
 
@@ -119,6 +173,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const subscribeToProfile = async (userId: string) => {
+        if (!isRealtimeEnabled()) return
+
         await unsubscribeProfile()
 
         profileChannel = supabase
@@ -139,6 +195,11 @@ export const useAuthStore = defineStore('auth', () => {
                         hide_scores?: boolean
                         favorites_teams?: string[]
                         favorites_players?: FavoritePlayer[]
+                        favorites_games?: FavoriteGame[]
+                        watched_games?: FavoriteGame[]
+                        notify_followed_comments?: boolean
+                        notifications?: UserNotification[]
+                        created_at?: string
                         email?: string
                     }
                     if (!user.value) return
@@ -153,6 +214,18 @@ export const useAuthStore = defineStore('auth', () => {
                         favoritePlayers: updated.favorites_players
                             ? normalizeFavoritePlayers(updated.favorites_players)
                             : user.value.favoritePlayers,
+                        favoriteGames: updated.favorites_games
+                            ? normalizeFavoriteGames(updated.favorites_games)
+                            : user.value.favoriteGames,
+                        watchedGames: updated.watched_games
+                            ? normalizeFavoriteGames(updated.watched_games)
+                            : user.value.watchedGames,
+                        followingProfiles: user.value.followingProfiles,
+                        notifyFollowedComments: updated.notify_followed_comments ?? user.value.notifyFollowedComments,
+                        notifications: updated.notifications
+                            ? normalizeNotifications(updated.notifications)
+                            : user.value.notifications,
+                        createdAt: updated.created_at ?? user.value.createdAt,
                         email: updated.email ?? user.value.email
                     }
                     saveToCache(user.value)
@@ -161,7 +234,7 @@ export const useAuthStore = defineStore('auth', () => {
             .subscribe()
     }
 
-    const init = async () => {
+    const runInit = async () => {
         loading.value = true
 
         const cached = getFromCache()
@@ -169,9 +242,11 @@ export const useAuthStore = defineStore('auth', () => {
 
         const { data } = await supabase.auth.getSession()
         const session = data.session
+        setAccessToken(session?.access_token)
 
         if (!session?.user) {
             user.value = null
+            clearAccessToken()
             clearCache()
             loading.value = false
             return
@@ -187,6 +262,16 @@ export const useAuthStore = defineStore('auth', () => {
         saveToCache(fresh)
 
         loading.value = false
+    }
+
+    const init = async () => {
+        if (initPromise) return initPromise
+
+        initPromise = runInit().finally(() => {
+            initPromise = null
+        })
+
+        return initPromise
     }
 
     const updateHideScores = async (value: boolean) => {
@@ -284,9 +369,184 @@ export const useAuthStore = defineStore('auth', () => {
         await updateFavoritePlayers(favoritePlayers)
     }
 
+    const updateFavoriteGames = async (games: FavoriteGame[]) => {
+        if (!user.value) return
+
+        const normalized = normalizeFavoriteGames(games)
+        const previous = user.value.favoriteGames
+
+        user.value.favoriteGames = normalized
+        saveToCache(user.value)
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ favorites_games: normalized })
+            .eq('id', user.value.id)
+            .select()
+
+        if (error || !data || data.length === 0) {
+            console.error('update favorites_games error:', error)
+            user.value.favoriteGames = previous
+            saveToCache(user.value)
+        }
+    }
+
+    const toggleFavoriteGame = async (game: FavoriteGame) => {
+        if (!user.value) return
+
+        const normalized = normalizeFavoriteGame(game)
+        if (!normalized) return
+
+        const favoriteGames = user.value.favoriteGames.some(item => item.id === normalized.id)
+            ? user.value.favoriteGames.filter(item => item.id !== normalized.id)
+            : [...user.value.favoriteGames, normalized]
+
+        await updateFavoriteGames(favoriteGames)
+    }
+
+    const updateWatchedGames = async (games: FavoriteGame[]) => {
+        if (!user.value) return
+
+        const normalized = normalizeFavoriteGames(games)
+        const previous = user.value.watchedGames
+
+        user.value.watchedGames = normalized
+        saveToCache(user.value)
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ watched_games: normalized })
+            .eq('id', user.value.id)
+            .select()
+
+        if (error || !data || data.length === 0) {
+            console.error('update watched_games error:', error)
+            user.value.watchedGames = previous
+            saveToCache(user.value)
+        }
+    }
+
+    const toggleWatchedGame = async (game: FavoriteGame) => {
+        if (!user.value) return
+
+        const normalized = normalizeFavoriteGame(game)
+        if (!normalized) return
+
+        const watchedGames = user.value.watchedGames.some(item => item.id === normalized.id)
+            ? user.value.watchedGames.filter(item => item.id !== normalized.id)
+            : [...user.value.watchedGames, normalized]
+
+        await updateWatchedGames(watchedGames)
+    }
+
+    const updateFollowingProfiles = async (profiles: string[]) => {
+        if (!user.value) return
+
+        const userId = user.value.id
+        const normalized = Array.from(new Set(profiles.map(id => id.trim()).filter(Boolean)))
+        const previous = user.value.followingProfiles
+
+        user.value.followingProfiles = normalized
+        saveToCache(user.value)
+
+        const removed = previous.filter(id => !normalized.includes(id))
+        const added = normalized.filter(id => !previous.includes(id))
+
+        try {
+            await Promise.all([
+                ...removed.map(id => authFetch(`/api/profile-follows/${id}`, { method: 'DELETE' })),
+                ...added.map(id => authFetch(`/api/profile-follows/${id}`, { method: 'POST' }))
+            ])
+        } catch (error) {
+            console.error('update profile_follows error:', error)
+            user.value.followingProfiles = previous
+            saveToCache(user.value)
+            return
+        }
+
+        const fresh = await fetchFollowingProfiles(userId)
+        if (!user.value || user.value.id !== userId) return
+
+        user.value.followingProfiles = fresh
+        saveToCache(user.value)
+    }
+
+    const toggleFollowProfile = async (profileId: string) => {
+        if (!user.value || !profileId || profileId === user.value.id) return
+
+        const followingProfiles = user.value.followingProfiles.includes(profileId)
+            ? user.value.followingProfiles.filter(id => id !== profileId)
+            : [...user.value.followingProfiles, profileId]
+
+        await updateFollowingProfiles(followingProfiles)
+    }
+
+    const updateNotifyFollowedComments = async (value: boolean) => {
+        if (!user.value) return
+
+        const previous = user.value.notifyFollowedComments
+
+        user.value.notifyFollowedComments = value
+        saveToCache(user.value)
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ notify_followed_comments: value })
+            .eq('id', user.value.id)
+            .select()
+
+        if (error || !data || data.length === 0) {
+            console.error('update notify_followed_comments error:', error)
+            user.value.notifyFollowedComments = previous
+            saveToCache(user.value)
+        }
+    }
+
+    const updateNotifications = async (notifications: UserNotification[]) => {
+        if (!user.value) return
+
+        const normalized = normalizeNotifications(notifications).slice(0, 50)
+        const previous = user.value.notifications
+
+        user.value.notifications = normalized
+        saveToCache(user.value)
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ notifications: normalized })
+            .eq('id', user.value.id)
+            .select()
+
+        if (error || !data || data.length === 0) {
+            console.error('update notifications error:', error)
+            user.value.notifications = previous
+            saveToCache(user.value)
+        }
+    }
+
+    const addNotification = async (notification: UserNotification) => {
+        if (!user.value) return
+
+        const notifications = [
+            notification,
+            ...user.value.notifications.filter(item => item.id !== notification.id)
+        ]
+
+        await updateNotifications(notifications)
+    }
+
+    const markNotificationsRead = async () => {
+        if (!user.value || user.value.notifications.every(notification => notification.read)) return
+
+        await updateNotifications(
+            user.value.notifications.map(notification => ({ ...notification, read: true }))
+        )
+    }
+
     const signIn = async (email: string, password: string) => {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
+        setAccessToken(data.session?.access_token)
 
         const fresh = await fetchProfile(data.user.id, data.user.email ?? '')
 
@@ -307,6 +567,7 @@ export const useAuthStore = defineStore('auth', () => {
         })
         if (error) throw error
         if (!authData.user) throw new Error('No user')
+        setAccessToken(authData.session?.access_token)
 
         await supabase.from('profiles').insert({
             id: authData.user.id,
@@ -316,7 +577,12 @@ export const useAuthStore = defineStore('auth', () => {
             avatar_img: null,
             hide_scores: true,
             favorites_teams: [],
-            favorites_players: []
+            favorites_players: [],
+            favorites_games: [],
+            watched_games: [],
+            following_profiles: [],
+            notify_followed_comments: false,
+            notifications: []
         })
 
         const newUser: AppUser = {
@@ -327,7 +593,13 @@ export const useAuthStore = defineStore('auth', () => {
             avatarImg: null,
             hideScores: true,
             favoriteTeams: [],
-            favoritePlayers: []
+            favoritePlayers: [],
+            favoriteGames: [],
+            watchedGames: [],
+            followingProfiles: [],
+            notifyFollowedComments: false,
+            notifications: [],
+            createdAt: new Date().toISOString()
         }
 
         user.value = newUser
@@ -346,6 +618,7 @@ export const useAuthStore = defineStore('auth', () => {
         } catch {
         }
         clearCache()
+        clearAccessToken()
         user.value = null
         loading.value = false
     }
@@ -353,14 +626,16 @@ export const useAuthStore = defineStore('auth', () => {
     const subscribeAuthState = () => {
         if (authSubscription) return
 
-        authSubscription = supabase.auth.onAuthStateChange(async (_, session) => {
+        authSubscription = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
+                setAccessToken(session.access_token)
                 const fresh = await fetchProfile(session.user.id, session.user.email ?? '')
                 user.value = fresh
                 saveToCache(fresh)
                 await subscribeToProfile(session.user.id)
-            } else {
+            } else if (event === 'SIGNED_OUT') {
                 await unsubscribeProfile()
+                clearAccessToken()
                 clearCache()
                 user.value = null
             }
@@ -379,7 +654,17 @@ export const useAuthStore = defineStore('auth', () => {
         updateFavoriteTeams,
         toggleFavoriteTeam,
         updateFavoritePlayers,
-        toggleFavoritePlayer
+        toggleFavoritePlayer,
+        updateFavoriteGames,
+        toggleFavoriteGame,
+        updateWatchedGames,
+        toggleWatchedGame,
+        updateFollowingProfiles,
+        toggleFollowProfile,
+        updateNotifyFollowedComments,
+        updateNotifications,
+        addNotification,
+        markNotificationsRead
     }
 })
 
@@ -396,6 +681,18 @@ function normalizeFavoritePlayers(value: unknown): FavoritePlayer[] {
     return [...byId.values()]
 }
 
+async function fetchFollowingProfiles(userId: string): Promise<string[]> {
+    try {
+        const data = await authFetch('/api/profile-follows')
+        return (data.follows ?? [])
+            .map((row: { following_id?: string }) => row.following_id)
+            .filter(Boolean)
+    } catch (error) {
+        console.error('fetch profile_follows error:', error)
+        return []
+    }
+}
+
 function normalizeFavoritePlayer(value: unknown): FavoritePlayer | null {
     if (!value || typeof value !== 'object') return null
 
@@ -407,4 +704,68 @@ function normalizeFavoritePlayer(value: unknown): FavoritePlayer | null {
     if (!Number.isFinite(id) || !name) return null
 
     return { id, name, teamAbbr }
+}
+
+function normalizeFavoriteGames(value: unknown): FavoriteGame[] {
+    if (!Array.isArray(value)) return []
+
+    const byId = new Map<string, FavoriteGame>()
+
+    value.forEach((game) => {
+        const normalized = normalizeFavoriteGame(game)
+        if (normalized) byId.set(normalized.id, normalized)
+    })
+
+    return [...byId.values()]
+}
+
+function normalizeFavoriteGame(value: unknown): FavoriteGame | null {
+    if (!value || typeof value !== 'object') return null
+
+    const raw = value as Partial<FavoriteGame>
+    const id = String(raw.id ?? '').trim()
+
+    if (!id) return null
+
+    return {
+        id,
+        date: raw.date ? String(raw.date) : null,
+        homeName: String(raw.homeName ?? ''),
+        homeAbbr: String(raw.homeAbbr ?? '').trim().toUpperCase(),
+        homeScore: raw.homeScore == null ? null : Number(raw.homeScore),
+        awayName: String(raw.awayName ?? ''),
+        awayAbbr: String(raw.awayAbbr ?? '').trim().toUpperCase(),
+        awayScore: raw.awayScore == null ? null : Number(raw.awayScore)
+    }
+}
+
+function normalizeNotifications(value: unknown): UserNotification[] {
+    if (!Array.isArray(value)) return []
+
+    return value
+        .map((item) => normalizeNotification(item))
+        .filter((item): item is UserNotification => Boolean(item))
+}
+
+function normalizeNotification(value: unknown): UserNotification | null {
+    if (!value || typeof value !== 'object') return null
+
+    const raw = value as Partial<UserNotification>
+    const id = String(raw.id ?? '').trim()
+    const userId = String(raw.userId ?? '').trim()
+    const gameId = String(raw.gameId ?? '').trim()
+
+    if (!id || !userId || !gameId) return null
+
+    return {
+        id,
+        userId,
+        userName: String(raw.userName ?? 'Пользователь'),
+        avatarImg: raw.avatarImg ?? null,
+        gameId,
+        gameLabel: String(raw.gameLabel ?? `Матч ${gameId}`),
+        commentCreatedAt: String(raw.commentCreatedAt ?? new Date().toISOString()),
+        createdAt: String(raw.createdAt ?? new Date().toISOString()),
+        read: Boolean(raw.read)
+    }
 }

@@ -8,6 +8,7 @@ import PlayerStats from '../views/PlayerStats.vue'
 const routes = [
     { path: '/', component: Home },
     { path: '/profile', component: Profile },
+    { path: '/profile/:id', name: 'PublicProfile', component: () => import('../views/PublicProfile.vue') },
     { path: '/standings', component: Standings },
     { path: '/playoffs', name: 'Playoffs', component: () => import('../views/Playoffs.vue')},
     { path: '/teams', component: Teams },

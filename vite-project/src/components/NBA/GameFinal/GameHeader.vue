@@ -94,6 +94,11 @@
             </button>
 
           </div>
+
+          <GameUserActions
+              :game="game"
+              class="mt-3"
+          />
         </div>
 
         <div class="flex flex-col items-center w-1/3">
@@ -130,6 +135,7 @@ import { EyeIcon, EyeSlashIcon, LinkIcon } from '@heroicons/vue/24/outline'
 import { useGameHeader } from '../../../composables/NBA/GameFinal/useGameHeader'
 import { useToast } from 'vue-toastification'
 import FavoriteTeamButton from '../Favorites/FavoriteTeamButton.vue'
+import GameUserActions from '../Favorites/GameUserActions.vue'
 
 const toast = useToast()
 const route = useRoute()
