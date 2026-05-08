@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 import json
+import re
+from difflib import SequenceMatcher
 from urllib.request import Request, urlopen
 from nba_api.stats.endpoints import leaguestandings
 from nba_api.stats.endpoints import leaguedashplayerstats, playergamelog
@@ -24,6 +26,55 @@ NBA_CDN_HEADERS = {
     "Referer": "https://www.nba.com",
 }
 STATIC_SCOREBOARD_CACHE = {}
+CYRILLIC_TO_LATIN = str.maketrans({
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
+    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+    "ф": "f", "х": "h", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "sch",
+    "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+})
+PLAYER_QUERY_ALIASES = {
+    "tyrise hailybirton": "tyrese haliburton",
+    "tyrese hailybirton": "tyrese haliburton",
+    "tyris haliburton": "tyrese haliburton",
+    "micael jordan": "michael jordan",
+    "mikel jordan": "michael jordan",
+    "kobe brayant": "kobe bryant",
+    "kobi bryant": "kobe bryant",
+    "shakil o nil": "shaquille o neal",
+    "shakil onil": "shaquille o neal",
+    "shaquil oneal": "shaquille o neal",
+    "shaq": "shaquille o neal",
+}
+
+def normalize_player_query(value: str):
+    value = (value or "").lower().translate(CYRILLIC_TO_LATIN)
+    value = re.sub(r"[^a-z0-9]+", " ", value)
+    value = re.sub(r"\s+", " ", value).strip()
+    return PLAYER_QUERY_ALIASES.get(value, value)
+
+def player_match_score(query: str, name: str):
+    normalized_name = normalize_player_query(name)
+
+    if not query:
+        return 0
+
+    if normalized_name == query:
+        return 120
+
+    if query in normalized_name:
+        return 100 - normalized_name.index(query)
+
+    query_tokens = query.split()
+    name_tokens = normalized_name.split()
+
+    if query_tokens and all(
+        any(name_token.startswith(query_token) for name_token in name_tokens)
+        for query_token in query_tokens
+    ):
+        return 88
+
+    return int(SequenceMatcher(None, query, normalized_name).ratio() * 80)
 
 def get_current_nba_season():
     now = datetime.now()
@@ -38,6 +89,39 @@ def get_current_nba_season():
 def current_season():
     return {
         "season": get_current_nba_season()
+    }
+
+@app.get("/players/search")
+def search_players(q: str = ""):
+    query = normalize_player_query(q)
+
+    if len(query) < 2:
+        return {"data": []}
+
+    matches = []
+
+    for player in static_players.get_players():
+        name = player.get("full_name", "")
+        score = player_match_score(query, name)
+
+        if score < 54:
+            continue
+
+        matches.append({
+            "PLAYER_ID": player.get("id"),
+            "PLAYER_NAME": name,
+            "TEAM_ABBREVIATION": "NBA" if player.get("is_active") else "LEGEND",
+            "IS_ACTIVE": player.get("is_active", False),
+            "_score": score,
+        })
+
+    matches.sort(key=lambda player: (player["_score"], player["IS_ACTIVE"]), reverse=True)
+
+    return {
+        "data": [
+            {key: value for key, value in player.items() if key != "_score"}
+            for player in matches[:12]
+        ]
     }
 
 @app.get("/standings/{season}")
