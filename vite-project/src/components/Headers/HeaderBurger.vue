@@ -48,6 +48,20 @@
         </RouterLink>
 
         <RouterLink
+            :to="gamesPath"
+            @click="isOpen = false"
+            class="flex items-center gap-3"
+        >
+          <img
+              :src="route.path.startsWith('/games')
+              ? '/logos/GAMES_2.svg'
+              : '/logos/GAMES_1.svg'"
+              class="w-44 h-44"
+              alt="Games"
+          />
+        </RouterLink>
+
+        <RouterLink
             to="/player-stats"
             @click="isOpen = false"
             class="flex items-center gap-3"
@@ -82,12 +96,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AuthPanel from '../Auth/AuthPanel.vue'
+import { getTodayDateKey } from '../../composables/NBA/games/useGamesByDate'
 
 const isOpen = ref(false)
 const route = useRoute()
+const gamesPath = computed(() => `/games/${getTodayDateKey()}`)
 </script>
 
 <style scoped>

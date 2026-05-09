@@ -92,6 +92,21 @@ create table if not exists public.game_comment_reads (
   primary key (game_id, user_id)
 );
 
+create table if not exists public.nba_games_by_date_cache (
+  date_key date primary key,
+  payload jsonb not null default '[]'::jsonb,
+  game_count integer not null default 0,
+  source text not null default 'python-backend',
+  fetched_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint nba_games_by_date_cache_payload_is_array check (jsonb_typeof(payload) = 'array'),
+  constraint nba_games_by_date_cache_game_count_non_negative check (game_count >= 0)
+);
+
+create index if not exists nba_games_by_date_cache_fetched_at_idx
+on public.nba_games_by_date_cache (fetched_at);
+
 create or replace function public.cleanup_old_game_comment_data()
 returns void
 language plpgsql
@@ -176,11 +191,17 @@ create trigger profile_progress_rules_set_updated_at
 before update on public.profile_progress_rules
 for each row execute function public.set_updated_at();
 
+drop trigger if exists nba_games_by_date_cache_set_updated_at on public.nba_games_by_date_cache;
+create trigger nba_games_by_date_cache_set_updated_at
+before update on public.nba_games_by_date_cache
+for each row execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.map_points enable row level security;
 alter table public.profile_progress_rules enable row level security;
 alter table public.game_comments enable row level security;
 alter table public.game_comment_reads enable row level security;
+alter table public.nba_games_by_date_cache enable row level security;
 alter table public.profile_follows enable row level security;
 alter table public.profile_comment_notifications enable row level security;
 
@@ -396,6 +417,12 @@ create policy "Users can delete their profile comment notifications"
 on public.profile_comment_notifications for delete
 to authenticated
 using (auth.uid() = recipient_id);
+
+drop policy if exists "NBA games cache is public" on public.nba_games_by_date_cache;
+create policy "NBA games cache is public"
+on public.nba_games_by_date_cache for select
+to anon, authenticated
+using (true);
 
 drop trigger if exists game_comments_create_profile_notifications on public.game_comments;
 drop function if exists public.create_profile_comment_notifications();

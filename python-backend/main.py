@@ -9,7 +9,7 @@ from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.static import players as static_players
 from nba_api.stats.endpoints import teamgamelog
 from nba_api.stats.endpoints import scoreboardv2
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from nba_api.stats.endpoints import boxscoresummaryv2, boxscoretraditionalv2
 from nba_api.stats.endpoints import boxscoretraditionalv3
@@ -616,9 +616,78 @@ def get_games_by_date(date: str):
             return None
 
         try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         except ValueError:
             return None
+
+    def add_schedule_games():
+        for url in SCHEDULE_URLS:
+            try:
+                request = Request(url, headers=NBA_CDN_HEADERS)
+
+                with urlopen(request, timeout=10) as response:
+                    schedule = json.loads(response.read().decode("utf-8"))
+
+                game_dates = schedule.get("leagueSchedule", {}).get("gameDates", [])
+
+                for game_date_entry in game_dates:
+                    for game in game_date_entry.get("games", []):
+                        gid = game.get("gameId")
+                        if not gid:
+                            continue
+
+                        game_time_utc = (
+                            game.get("gameDateTimeUTC")
+                            or game.get("gameTimeUTC")
+                            or game.get("gameDateUTC")
+                        )
+                        game_dt_utc = parse_utc(game_time_utc)
+
+                        if game_dt_utc:
+                            game_msk_date = game_dt_utc.astimezone(MSK_TZ).date()
+                            if game_msk_date != target_msk_date:
+                                continue
+                            game_date_msk = game_msk_date.isoformat()
+                        else:
+                            game_date_value = (
+                                game.get("gameDateEst")
+                                or game.get("gameDate")
+                                or game_date_entry.get("gameDate")
+                                or ""
+                            )
+                            game_date_msk = str(game_date_value)[:10]
+                            if game_date_msk != target_msk_date.isoformat():
+                                continue
+
+                        home = game.get("homeTeam", {})
+                        away = game.get("awayTeam", {})
+
+                        games_by_id[gid] = {
+                            "GAME_ID": gid,
+
+                            "GAME_DATE_EST": game.get("gameDateEst") or game.get("gameDate") or f"{target_msk_date.isoformat()}T00:00:00",
+                            "GAME_DATE_MSK": game_date_msk,
+                            "GAME_TIME_UTC": game_time_utc,
+
+                            "HOME_TEAM_ID": home.get("teamId"),
+                            "VISITOR_TEAM_ID": away.get("teamId"),
+
+                            "HOME_TEAM_ABBREVIATION": home.get("teamTricode") or home.get("teamAbbreviation"),
+                            "VISITOR_TEAM_ABBREVIATION": away.get("teamTricode") or away.get("teamAbbreviation"),
+
+                            "HOME_TEAM_SCORE": home.get("score"),
+                            "VISITOR_TEAM_SCORE": away.get("score"),
+
+                            "GAME_STATUS": game.get("gameStatusText") or game.get("gameStatusTextLong") or "TBD"
+                        }
+
+                if games_by_id:
+                    return True
+            except Exception as e:
+                print(f"Failed to fetch NBA schedule from {url}: {e}")
+
+        return False
 
     def add_static_games():
         fetched_any_scoreboard = False
@@ -739,7 +808,10 @@ def get_games_by_date(date: str):
 
     games_by_id = {}
 
-    if add_static_games():
+    if add_static_games() and games_by_id:
+        return list(games_by_id.values())
+
+    if add_schedule_games():
         return list(games_by_id.values())
 
     for nba_date in dates_to_fetch:

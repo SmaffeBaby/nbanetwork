@@ -4,6 +4,7 @@ import Profile from '../views/Profile.vue'
 import Standings from '../views/Standings.vue'
 import Teams from '../views/Teams.vue'
 import PlayerStats from '../views/PlayerStats.vue'
+import { getTodayDateKey } from '../composables/NBA/games/useGamesByDate'
 
 const routes = [
     { path: '/', component: Home },
@@ -12,6 +13,8 @@ const routes = [
     { path: '/standings', component: Standings },
     { path: '/playoffs', name: 'Playoffs', component: () => import('../views/Playoffs.vue')},
     { path: '/teams', component: Teams },
+    { path: '/games', redirect: () => `/games/${getTodayDateKey()}` },
+    { path: '/games/:date', name: 'GamesByDate', component: () => import('../views/GamesByDate.vue') },
     { path: '/player-stats', name: 'PlayerStatsAll', component: PlayerStats },
     { path: '/player-stats/all', name: 'PlayerStatsAllType', component: PlayerStats },
     { path: '/player-stats/playoffs', name: 'PlayerStatsPlayoffs', component: PlayerStats },
