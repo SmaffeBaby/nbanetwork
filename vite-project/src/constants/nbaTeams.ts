@@ -1,6 +1,7 @@
 export const TEAM_ID_MAP: Record<string, number> = {
     ATL: 1610612737, // Atlanta Hawks
     BKN: 1610612751, // Brooklyn Nets
+    NJN: 1610612751,
     BOS: 1610612738, // Boston Celtics
     CHA: 1610612766, // Charlotte Hornets
     CHI: 1610612741, // Chicago Bulls

@@ -28,5 +28,8 @@ export const nbaTeamLogos = [
     '/logos/SAS.svg',
     '/logos/TOR.svg',
     '/logos/UTA.svg',
-    '/logos/WAS.svg'
+    '/logos/WAS.svg',
+    '/logos/NJN.svg',
+    '/logos/NOH.svg',
+    '/logos/SEA.svg'
 ] as const

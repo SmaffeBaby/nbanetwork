@@ -28,5 +28,8 @@ export const teamsFullNames: Record<string, string> = {
     GSW: 'Golden State Warriors',
     OKC: 'Oklahoma City Thunder',
     MIN: 'Minnesota Timberwolves',
-    NOP: 'New Orleans Pelicans'
+    NOP: 'New Orleans Pelicans',
+    NJN: 'New Jercey Nets',
+    NOH: 'New Orleans Hornets',
+    SEA: 'Seatle Super Sonics'
 }
