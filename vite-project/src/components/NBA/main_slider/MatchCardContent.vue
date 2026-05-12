@@ -30,16 +30,21 @@
     </div>
 
     <div v-if="game.period === 0" class="game-status mb-2">
-      <span class="status-upcoming">🕒 {{ countdowns[game.id] || formatGameTime(game.datetime) }}</span>
+      <span class="status-upcoming inline-flex items-center gap-1">
+        <ClockIcon class="h-4 w-4" />
+        {{ countdowns[game.id] || formatGameTime(game.datetime) }}
+      </span>
     </div>
 
-    <div class="match-start-time text-sm text-gray-500">
-      ⏰ Начало в: {{ formatGameTime(game.datetime) }}
+    <div class="match-start-time text-sm text-gray-500 inline-flex items-center gap-1">
+      <BellAlertIcon class="h-4 w-4" />
+      <span>Начало в: {{ formatGameTime(game.datetime) }}</span>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { ClockIcon, BellAlertIcon } from '@heroicons/vue/24/outline'
 import type { Game } from '../../../composables/NBA/main_slider/useDailyGames.ts'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
 

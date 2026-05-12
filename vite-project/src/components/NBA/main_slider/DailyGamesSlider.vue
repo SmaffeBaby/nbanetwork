@@ -41,8 +41,8 @@
       </SwiperSlide>
     </Swiper>
 
-    <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white to-transparent"></div>
-    <div class="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent"></div>
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-transparent to-transparent"></div>
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-transparent to-transparent"></div>
 
     <div
         v-if="isMobile && !atEnd"
