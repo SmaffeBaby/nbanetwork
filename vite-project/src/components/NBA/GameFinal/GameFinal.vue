@@ -81,7 +81,7 @@ import { useGameCommentsUnread } from '../../../composables/NBA/GameFinal/useGam
 
 const filters = ref({
   search: '',
-  quarter: null as number | null
+  period: null as string | number | null
 })
 
 const { gameId, game, recap, loading, error } = useGameFinal(filters)

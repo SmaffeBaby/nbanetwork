@@ -3,7 +3,7 @@ import { useRoute } from 'vue-router'
 
 type Filters = {
     search: string
-    quarter: number | null
+    period: string | number | null
 }
 
 export function useGameFinal(filters: Ref<Filters>) {
@@ -36,10 +36,10 @@ export function useGameFinal(filters: Ref<Filters>) {
 
     const fetchGame = async () => {
         try {
-            const quarter = filters.value?.quarter
+            const period = filters.value?.period
 
-            const url = quarter
-                ? `/api/game-recap/${gameId}?quarter=${quarter}`
+            const url = period
+                ? `/api/game-recap/${gameId}?period=${period}`
                 : `/api/game-recap/${gameId}`
 
             const res = await fetch(url)
@@ -89,7 +89,7 @@ export function useGameFinal(filters: Ref<Filters>) {
     onMounted(fetchGame)
 
     watch(
-        () => filters.value?.quarter,
+        () => filters.value?.period,
         () => fetchGame()
     )
 

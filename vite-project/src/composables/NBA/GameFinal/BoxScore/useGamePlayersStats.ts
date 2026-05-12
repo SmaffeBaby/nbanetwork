@@ -13,13 +13,20 @@ export interface PlayerStats {
     points: number
     assists: number
     rebounds: number
+    offensiveRebounds: number
+    defensiveRebounds: number
 
     steals: number
     blocks: number
 
     fgM: number
     fgA: number
+    fgMiss: number
     fgPct: number
+
+    twoM: number
+    twoA: number
+    twoPct: number
 
     tpM: number
     tpA: number
@@ -27,8 +34,12 @@ export interface PlayerStats {
 
     ftM: number
     ftA: number
+    ftMiss: number
     ftPct: number
 
+    efgPct: number
+    tsPct: number
+    gameScore: number
 
     fouls: number
     turnovers: number
@@ -46,8 +57,8 @@ function parseMinutes(min: any) {
     }
 
     else if (typeof min === 'string') {
-        const isoMatch = min.match(/PT(\d+)M/)
-        if (isoMatch) value = Number(isoMatch[1])
+        const isoMatch = min.match(/PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/)
+        if (isoMatch) value = Number(isoMatch[1] || 0) + Number(isoMatch[2] || 0) / 60
     }
 
     else {
@@ -84,6 +95,33 @@ export function useGamePlayersStats(recap: Ref<any>) {
 
                 const ftM = n(s.freeThrowsMade ?? s.ftm)
                 const ftA = n(s.freeThrowsAttempted ?? s.fta)
+                const twoM = n(s.twoPointersMade ?? s.fg2m ?? Math.max(fgM - tpM, 0))
+                const twoA = n(s.twoPointersAttempted ?? s.fg2a ?? Math.max(fgA - tpA, 0))
+                const fgMiss = Math.max(fgA - fgM, 0)
+                const ftMiss = Math.max(ftA - ftM, 0)
+                const points = n(s.points ?? s.pts)
+                const offensiveRebounds = n(s.reboundsOffensive ?? s.offensiveRebounds ?? s.oreb)
+                const defensiveRebounds = n(s.reboundsDefensive ?? s.defensiveRebounds ?? s.dreb)
+                const assists = n(s.assists ?? s.ast)
+                const steals = n(s.steals ?? s.stl)
+                const blocks = n(s.blocks ?? s.blk)
+                const turnovers = n(s.turnovers ?? s.tov)
+                const fouls = n(s.foulsPersonal ?? s.personalFouls ?? s.pf)
+                const efgPct = fgA ? +((fgM + 0.5 * tpM) / fgA * 100).toFixed(1) : 0
+                const tsPct = (fgA + 0.44 * ftA) ? +(points / (2 * (fgA + 0.44 * ftA)) * 100).toFixed(1) : 0
+                const gameScore = +(
+                    points +
+                    0.4 * fgM -
+                    0.7 * fgMiss -
+                    0.4 * ftMiss +
+                    0.7 * offensiveRebounds +
+                    0.3 * defensiveRebounds +
+                    steals +
+                    0.7 * assists +
+                    0.7 * blocks -
+                    0.4 * fouls -
+                    turnovers
+                ).toFixed(1)
 
                 return {
                     name: p.name || `${p.firstName || ''} ${p.familyName || ''}`.trim(),
@@ -99,16 +137,23 @@ export function useGamePlayersStats(recap: Ref<any>) {
 
                     minutes: parseMinutes(s.minutesCalculated || s.minutes),
 
-                    points: n(s.points ?? s.pts),
-                    assists: n(s.assists ?? s.ast),
-                    rebounds: n(s.reboundsTotal ?? s.rebounds ?? s.reb),
+                    points,
+                    assists,
+                    rebounds: n(s.reboundsTotal ?? s.rebounds ?? s.reb) || offensiveRebounds + defensiveRebounds,
+                    offensiveRebounds,
+                    defensiveRebounds,
 
-                    steals: n(s.steals ?? s.stl),
-                    blocks: n(s.blocks ?? s.blk),
+                    steals,
+                    blocks,
 
                     fgM,
                     fgA,
+                    fgMiss,
                     fgPct: fgA ? +(fgM / fgA * 100).toFixed(1) : 0,
+
+                    twoM,
+                    twoA,
+                    twoPct: twoA ? +(twoM / twoA * 100).toFixed(1) : 0,
 
                     tpM,
                     tpA,
@@ -116,10 +161,15 @@ export function useGamePlayersStats(recap: Ref<any>) {
 
                     ftM,
                     ftA,
+                    ftMiss,
                     ftPct: ftA ? +(ftM / ftA * 100).toFixed(1) : 0,
 
-                    fouls: n(s.foulsPersonal ?? s.pf),
-                    turnovers: n(s.turnovers ?? s.tov),
+                    efgPct,
+                    tsPct,
+                    gameScore,
+
+                    fouls,
+                    turnovers,
                     plusMinus: n(s.plusMinusPoints ?? s.plusMinus)
                 }
             })

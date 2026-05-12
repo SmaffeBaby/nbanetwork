@@ -5,18 +5,15 @@ const TEAM_MAP = require('../constants/teamMap')
 
 const PYTHON_API = process.env.PYTHON_API || 'http://python-backend:8000'
 
-async function fetchGameRecap(gameId, quarter = null) {
+async function fetchGameRecap(gameId, periodFilter = null) {
     try {
         let game = null
         let plays = []
         let playersHome = []
         let playersAway = []
 
-        if (quarter) {
-            const url = `${PYTHON_API}/game-boxscore-v3/${gameId}/quarter/${quarter}`
-
-            const res = await axios.get(url)
-            const root = res.data
+        if (periodFilter) {
+            const root = await fetchPeriodBoxScore(gameId, periodFilter)
 
             const box = root?.boxScoreTraditional || root?.game || root
 
@@ -106,7 +103,7 @@ async function fetchGameRecap(gameId, quarter = null) {
             insight,
             quarters
         })
-        const apRecap = !quarter
+        const apRecap = !periodFilter
             ? await fetchApNbaRecap({
                 homeTeam,
                 awayTeam,
@@ -157,6 +154,262 @@ async function fetchGameRecap(gameId, quarter = null) {
         console.error('Recap error:', e)
         return null
     }
+}
+
+async function fetchPeriodBoxScore(gameId, periodFilter) {
+    const base = await fetchLiveOrLegacyGame(gameId)
+
+    if (periodFilter.startPeriod === periodFilter.endPeriod) {
+        const url = `${PYTHON_API}/game-boxscore-v3/${gameId}/quarter/${periodFilter.startPeriod}`
+        const res = await axios.get(url)
+        return normalizePeriodRoot(res.data, base.game)
+    }
+
+    const periodRoots = await Promise.all(
+        getPeriodRange(periodFilter.startPeriod, periodFilter.endPeriod)
+            .map(async (period) => {
+                const url = `${PYTHON_API}/game-boxscore-v3/${gameId}/quarter/${period}`
+                const res = await axios.get(url)
+                return normalizePeriodRoot(res.data, base.game)
+            })
+    )
+
+    return mergePeriodBoxScores(periodRoots)
+}
+
+function normalizePeriodRoot(root, baseGame) {
+    const directBox = root?.boxScoreTraditional || root?.game || root
+
+    if (directBox?.homeTeam?.players?.length || directBox?.awayTeam?.players?.length) {
+        return root
+    }
+
+    const resultSets = getResultSets(root)
+    const playerStats = rowsToObjects(findResultSet(resultSets, 'PlayerStats'))
+    const teamStats = rowsToObjects(findResultSet(resultSets, 'TeamStats'))
+    const homeTeamId = Number(baseGame?.homeTeam?.teamId)
+    const awayTeamId = Number(baseGame?.awayTeam?.teamId)
+
+    if (!playerStats.length || !homeTeamId || !awayTeamId) {
+        return root
+    }
+
+    return {
+        ...root,
+        boxScoreTraditional: {
+            gameId: baseGame?.gameId,
+            gameTimeUTC: baseGame?.gameTimeUTC,
+            homeTeam: {
+                ...baseGame.homeTeam,
+                ...buildLegacyTeam({
+                    teamId: homeTeamId,
+                    lineScore: [],
+                    teamStats,
+                    playerStats
+                })
+            },
+            awayTeam: {
+                ...baseGame.awayTeam,
+                ...buildLegacyTeam({
+                    teamId: awayTeamId,
+                    lineScore: [],
+                    teamStats,
+                    playerStats
+                })
+            }
+        }
+    }
+}
+
+function getResultSets(root) {
+    const resultSets = root?.resultSets
+
+    if (Array.isArray(resultSets)) return resultSets
+
+    if (!resultSets || typeof resultSets !== 'object') return []
+
+    return Object.entries(resultSets).map(([name, value]) => {
+        if (Array.isArray(value)) {
+            return {
+                name,
+                headers: value[0] ? Object.keys(value[0]) : [],
+                rowSet: value
+            }
+        }
+
+        return {
+            name,
+            ...(value || {})
+        }
+    })
+}
+
+function getPeriodRange(startPeriod, endPeriod) {
+    const periods = []
+
+    for (let period = startPeriod; period <= endPeriod; period += 1) {
+        periods.push(period)
+    }
+
+    return periods
+}
+
+function mergePeriodBoxScores(roots) {
+    const validRoots = roots.filter((root) => !root?.error)
+    const firstRoot = validRoots[0] || roots[0] || {}
+    const firstBox = firstRoot?.boxScoreTraditional || firstRoot?.game || firstRoot
+    const mergedBox = {
+        ...firstBox,
+        homeTeam: mergeTeamPeriods(validRoots, 'homeTeam'),
+        awayTeam: mergeTeamPeriods(validRoots, 'awayTeam')
+    }
+
+    if (firstRoot?.boxScoreTraditional) {
+        return {
+            ...firstRoot,
+            boxScoreTraditional: mergedBox
+        }
+    }
+
+    if (firstRoot?.game) {
+        return {
+            ...firstRoot,
+            game: mergedBox
+        }
+    }
+
+    return mergedBox
+}
+
+function mergeTeamPeriods(roots, teamKey) {
+    const teams = roots
+        .map((root) => (root?.boxScoreTraditional || root?.game || root)?.[teamKey])
+        .filter(Boolean)
+    const firstTeam = teams[0] || {}
+    const playersById = new Map()
+
+    for (const team of teams) {
+        for (const player of team.players || []) {
+            const id = String(player.personId || player.playerId || player.PLAYER_ID || player.name || '')
+            const existing = playersById.get(id)
+
+            playersById.set(id, existing ? mergePlayerPeriods(existing, player) : clonePlayer(player))
+        }
+    }
+
+    return {
+        ...firstTeam,
+        score: sumTeams(teams, 'score'),
+        statistics: mergeStatistics(teams.map((team) => team.statistics || team.stats || {})),
+        players: Array.from(playersById.values())
+    }
+}
+
+function clonePlayer(player) {
+    return {
+        ...player,
+        statistics: {
+            ...(player.statistics || player.stats || {})
+        }
+    }
+}
+
+function mergePlayerPeriods(base, next) {
+    return {
+        ...base,
+        statistics: mergeStatistics([
+            base.statistics || base.stats || {},
+            next.statistics || next.stats || {}
+        ])
+    }
+}
+
+function mergeStatistics(statsList) {
+    const merged = {}
+    const percentageKeys = new Set([
+        'fieldGoalsPercentage',
+        'fgPercentage',
+        'fgPct',
+        'threePointersPercentage',
+        'threePointPercentage',
+        'fg3Pct',
+        'tpPct',
+        'freeThrowsPercentage',
+        'ftPercentage',
+        'ftPct'
+    ])
+
+    for (const stats of statsList) {
+        for (const [key, value] of Object.entries(stats || {})) {
+            if (percentageKeys.has(key)) continue
+
+            if (key === 'minutes' || key === 'minutesCalculated') {
+                merged[key] = formatIsoMinutes(parseStatMinutes(merged[key]) + parseStatMinutes(value))
+                continue
+            }
+
+            if (typeof value === 'number') {
+                merged[key] = Number(merged[key] || 0) + value
+                continue
+            }
+
+            const numeric = Number(value)
+
+            if (value !== '' && Number.isFinite(numeric)) {
+                merged[key] = Number(merged[key] || 0) + numeric
+            } else if (merged[key] === undefined) {
+                merged[key] = value
+            }
+        }
+    }
+
+    addDerivedPercentages(merged)
+
+    return merged
+}
+
+function parseStatMinutes(value) {
+    if (typeof value === 'number') return value
+
+    const raw = String(value || '')
+    const isoMatch = raw.match(/PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/)
+
+    if (isoMatch) {
+        return Number(isoMatch[1] || 0) + Number(isoMatch[2] || 0) / 60
+    }
+
+    const clockMatch = raw.match(/^(\d+):(\d+)/)
+
+    if (clockMatch) {
+        return Number(clockMatch[1] || 0) + Number(clockMatch[2] || 0) / 60
+    }
+
+    const numeric = Number(value)
+    return Number.isFinite(numeric) ? numeric : 0
+}
+
+function formatIsoMinutes(value) {
+    const minutes = Math.floor(value)
+    const seconds = Math.round((value - minutes) * 60)
+
+    return `PT${minutes}M${seconds}S`
+}
+
+function addDerivedPercentages(stats) {
+    const fgM = Number(stats.fieldGoalsMade ?? stats.fgm ?? 0)
+    const fgA = Number(stats.fieldGoalsAttempted ?? stats.fga ?? 0)
+    const tpM = Number(stats.threePointersMade ?? stats.fg3m ?? 0)
+    const tpA = Number(stats.threePointersAttempted ?? stats.fg3a ?? 0)
+    const ftM = Number(stats.freeThrowsMade ?? stats.ftm ?? 0)
+    const ftA = Number(stats.freeThrowsAttempted ?? stats.fta ?? 0)
+
+    if (fgA) stats.fieldGoalsPercentage = +(fgM / fgA).toFixed(3)
+    if (tpA) stats.threePointersPercentage = +(tpM / tpA).toFixed(3)
+    if (ftA) stats.freeThrowsPercentage = +(ftM / ftA).toFixed(3)
+}
+
+function sumTeams(teams, key) {
+    return teams.reduce((total, team) => total + Number(team?.[key] || 0), 0)
 }
 
 function getFirstNumber(source, keys) {
@@ -248,6 +501,10 @@ function findResultSet(resultSets, name) {
 function rowsToObjects(resultSet) {
     const headers = resultSet?.headers || []
     const rows = resultSet?.rowSet || []
+
+    if (rows.length && typeof rows[0] === 'object' && !Array.isArray(rows[0])) {
+        return rows
+    }
 
     return rows.map((row) => {
         const obj = {}

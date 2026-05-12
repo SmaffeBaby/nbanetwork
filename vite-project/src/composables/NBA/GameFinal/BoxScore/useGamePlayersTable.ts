@@ -4,7 +4,7 @@ import { nbaTeamLogos } from '../../../../constants/nbaTeamLogo.ts'
 
 type Filters = {
     search: string
-    quarter: number | null
+    period: string | number | null
 }
 
 export function useGamePlayersTable(

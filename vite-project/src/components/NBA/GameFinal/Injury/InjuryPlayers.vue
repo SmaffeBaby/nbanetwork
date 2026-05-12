@@ -134,7 +134,7 @@ import { getPlayerImage, handleImageError } from '../../../../utils/playerImage'
 
 type Filters = {
   search: string
-  quarter: number | null
+  period: string | number | null
 }
 
 const props = defineProps<{

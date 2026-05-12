@@ -900,12 +900,17 @@ def get_games_by_date(date: str):
 
 @app.get("/game-boxscore-v3/{game_id}/quarter/{quarter}")
 def get_game_boxscore_quarter(game_id: str, quarter: int):
+    return get_game_boxscore_range(game_id, quarter, quarter)
+
+
+@app.get("/game-boxscore-v3/{game_id}/range/{start_period}/{end_period}")
+def get_game_boxscore_range(game_id: str, start_period: int, end_period: int):
     try:
         data = boxscoretraditionalv3.BoxScoreTraditionalV3(
             game_id=game_id,
             range_type=1,
-            start_period=quarter,
-            end_period=quarter,
+            start_period=start_period,
+            end_period=end_period,
             start_range=0,
             end_range=28800
         )

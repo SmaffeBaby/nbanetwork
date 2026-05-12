@@ -5,6 +5,36 @@ const fallbackAwayColor = '#ef174f'
 const fallbackHomeColor = '#24488f'
 
 const n = (value: any) => Number(value ?? 0)
+const pct = (made: number, attempted: number) => attempted ? +(made / attempted * 100).toFixed(1) : 0
+const firstStat = (source: any, keys: string[]) => {
+    for (const key of keys) {
+        const value = source?.[key]
+
+        if (value !== undefined && value !== null && value !== '') {
+            return n(value)
+        }
+    }
+
+    return 0
+}
+const parseMinutes = (value: any) => {
+    if (typeof value === 'number') return value
+
+    const raw = String(value ?? '')
+    const isoMatch = raw.match(/PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/)
+
+    if (isoMatch) {
+        return n(isoMatch[1]) + n(isoMatch[2]) / 60
+    }
+
+    const clockMatch = raw.match(/^(\d+):(\d+)/)
+
+    if (clockMatch) {
+        return n(clockMatch[1]) + n(clockMatch[2]) / 60
+    }
+
+    return n(value)
+}
 
 export function useTeamStats(recap: Ref<any>) {
     const meta = computed(() => recap.value?.meta || {})
@@ -31,19 +61,27 @@ export function useTeamStats(recap: Ref<any>) {
             const tpA = n(s.threePointersAttempted ?? s.fg3a)
             const ftM = n(s.freeThrowsMade ?? s.ftm)
             const ftA = n(s.freeThrowsAttempted ?? s.fta)
+            const twoM = n(s.twoPointersMade ?? s.fg2m ?? Math.max(fgM - tpM, 0))
+            const twoA = n(s.twoPointersAttempted ?? s.fg2a ?? Math.max(fgA - tpA, 0))
 
             return {
                 name: p.name || `${p.firstName || ''} ${p.familyName || ''}`.trim(),
                 PLAYER_ID: String(p.personId || p.playerId || ''),
                 side: p.side,
+                minutes: parseMinutes(s.minutes ?? s.minutesCalculated ?? s.min),
                 points: n(s.points ?? s.pts),
                 rebounds: n(s.reboundsTotal ?? s.rebounds ?? s.reb),
+                offensiveRebounds: n(s.reboundsOffensive ?? s.offensiveRebounds ?? s.oreb),
+                defensiveRebounds: n(s.reboundsDefensive ?? s.defensiveRebounds ?? s.dreb),
                 assists: n(s.assists ?? s.ast),
                 steals: n(s.steals ?? s.stl),
                 blocks: n(s.blocks ?? s.blk),
                 turnovers: n(s.turnovers ?? s.tov),
+                fouls: n(s.foulsPersonal ?? s.personalFouls ?? s.pf),
                 fgM,
                 fgA,
+                twoM,
+                twoA,
                 tpM,
                 tpA,
                 ftM,
@@ -60,18 +98,65 @@ export function useTeamStats(recap: Ref<any>) {
             const sidePlayers = normalizedPlayers.value.filter((p: any) => p.side === side)
             const sum = (key: string) => sidePlayers.reduce((acc: number, p: any) => acc + n(p[key]), 0)
             const apiSide = side === 'home' ? apiStats?.home : apiStats?.away
-            const pct = (made: number, attempted: number) => attempted ? +(made / attempted * 100).toFixed(1) : 0
+            const fallbackPoints = side === 'home' ? n(meta.value.homeScore) : n(meta.value.awayScore)
+            const fgM = firstStat(apiSide, ['fieldGoalsMade', 'fgM', 'fgm']) || sum('fgM')
+            const fgA = firstStat(apiSide, ['fieldGoalsAttempted', 'fgA', 'fga']) || sum('fgA')
+            const tpM = firstStat(apiSide, ['threePointersMade', 'tpM', 'fg3m']) || sum('tpM')
+            const tpA = firstStat(apiSide, ['threePointersAttempted', 'tpA', 'fg3a']) || sum('tpA')
+            const ftM = firstStat(apiSide, ['freeThrowsMade', 'ftM', 'ftm']) || sum('ftM')
+            const ftA = firstStat(apiSide, ['freeThrowsAttempted', 'ftA', 'fta']) || sum('ftA')
+            const twoM = firstStat(apiSide, ['twoPointersMade', 'twoPM', 'fg2m']) || sum('twoM') || Math.max(fgM - tpM, 0)
+            const twoA = firstStat(apiSide, ['twoPointersAttempted', 'twoPA', 'fg2a']) || sum('twoA') || Math.max(fgA - tpA, 0)
+            const offensiveRebounds = firstStat(apiSide, ['offensiveRebounds', 'reboundsOffensive', 'oreb']) || sum('offensiveRebounds')
+            const defensiveRebounds = firstStat(apiSide, ['defensiveRebounds', 'reboundsDefensive', 'dreb']) || sum('defensiveRebounds')
+            const rebounds = firstStat(apiSide, ['rebounds', 'reboundsTotal', 'reb']) || offensiveRebounds + defensiveRebounds || sum('rebounds')
+            const fgMiss = Math.max(fgA - fgM, 0)
+            const ftMiss = Math.max(ftA - ftM, 0)
+            const points = firstStat(apiSide, ['points', 'pts']) || fallbackPoints
+            const efgPct = fgA ? +((fgM + 0.5 * tpM) / fgA * 100).toFixed(1) : 0
+            const tsPct = (fgA + 0.44 * ftA) ? +(points / (2 * (fgA + 0.44 * ftA)) * 100).toFixed(1) : 0
+            const gameScore = +(
+                points +
+                0.4 * fgM -
+                0.7 * fgMiss -
+                0.4 * ftMiss +
+                0.7 * offensiveRebounds +
+                0.3 * defensiveRebounds +
+                sum('steals') +
+                0.7 * sum('assists') +
+                0.7 * sum('blocks') -
+                0.4 * sum('fouls') -
+                sum('turnovers')
+            ).toFixed(1)
 
             return {
-                points: side === 'home' ? n(meta.value.homeScore) : n(meta.value.awayScore),
-                rebounds: sum('rebounds'),
-                assists: sum('assists'),
-                steals: sum('steals'),
-                blocks: sum('blocks'),
-                turnovers: sum('turnovers'),
-                fgPct: pct(sum('fgM'), sum('fgA')),
-                tpPct: pct(sum('tpM'), sum('tpA')),
-                ftPct: pct(sum('ftM'), sum('ftA')),
+                minutes: +(sum('minutes')).toFixed(1),
+                points,
+                fgM,
+                fgA,
+                fgMiss,
+                twoM,
+                twoA,
+                tpM,
+                tpA,
+                ftM,
+                ftA,
+                ftMiss,
+                offensiveRebounds,
+                defensiveRebounds,
+                rebounds,
+                assists: firstStat(apiSide, ['assists', 'ast']) || sum('assists'),
+                steals: firstStat(apiSide, ['steals', 'stl']) || sum('steals'),
+                blocks: firstStat(apiSide, ['blocks', 'blk']) || sum('blocks'),
+                turnovers: firstStat(apiSide, ['turnovers', 'tov']) || sum('turnovers'),
+                fouls: firstStat(apiSide, ['fouls', 'personalFouls', 'pf']) || sum('fouls'),
+                fgPct: pct(fgM, fgA),
+                twoPct: pct(twoM, twoA),
+                tpPct: pct(tpM, tpA),
+                ftPct: pct(ftM, ftA),
+                efgPct,
+                tsPct,
+                gameScore,
                 pointsInThePaint: n(apiSide?.pointsInThePaint),
                 secondChancePoints: n(apiSide?.secondChancePoints),
                 fastBreakPoints: n(apiSide?.fastBreakPoints)
@@ -120,6 +205,36 @@ export function useTeamStats(recap: Ref<any>) {
         ['pointsInThePaint', 'PTS in the paint'],
         ['secondChancePoints', '2nd chance pts'],
         ['fastBreakPoints', 'Fastbreak pts']
+    ].map(([key, label]) => buildComparisonRow(key, label)))
+
+    const detailStatRows = computed(() => [
+        ['minutes', 'MIN'],
+        ['points', 'PTS'],
+        ['fgM', 'FGM'],
+        ['fgA', 'FGA'],
+        ['fgMiss', 'FG miss'],
+        ['fgPct', 'FG%'],
+        ['twoM', '2PM'],
+        ['twoA', '2PA'],
+        ['twoPct', '2P%'],
+        ['tpM', '3PM'],
+        ['tpA', '3PA'],
+        ['tpPct', '3P%'],
+        ['ftM', 'FTM'],
+        ['ftA', 'FTA'],
+        ['ftMiss', 'FT miss'],
+        ['ftPct', 'FT%'],
+        ['offensiveRebounds', 'OREB'],
+        ['defensiveRebounds', 'DREB'],
+        ['rebounds', 'TREB'],
+        ['assists', 'AST'],
+        ['steals', 'STL'],
+        ['blocks', 'BLK'],
+        ['turnovers', 'TOV'],
+        ['fouls', 'PF'],
+        ['efgPct', 'eFG%'],
+        ['tsPct', 'TS%'],
+        ['gameScore', 'GmSc']
     ].map(([key, label]) => buildComparisonRow(key, label)))
 
     const statLeaders = [
@@ -230,6 +345,7 @@ export function useTeamStats(recap: Ref<any>) {
         teamStats,
         comparisonRows,
         specialRows,
+        detailStatRows,
         leadPoints,
         leadSummary,
         chartWidth,
