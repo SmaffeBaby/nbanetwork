@@ -80,6 +80,17 @@ export function useGamePlayersStats(recap: Ref<any>) {
     })
 
     const n = (v: any) => Number(v ?? 0)
+    const firstNumber = (source: any, keys: string[]) => {
+        for (const key of keys) {
+            const value = source?.[key]
+
+            if (value !== undefined && value !== null && value !== '') {
+                return n(value)
+            }
+        }
+
+        return 0
+    }
 
     const players = computed<PlayerStats[]>(() => {
         return allRaw.value
@@ -100,8 +111,8 @@ export function useGamePlayersStats(recap: Ref<any>) {
                 const fgMiss = Math.max(fgA - fgM, 0)
                 const ftMiss = Math.max(ftA - ftM, 0)
                 const points = n(s.points ?? s.pts)
-                const offensiveRebounds = n(s.reboundsOffensive ?? s.offensiveRebounds ?? s.oreb)
-                const defensiveRebounds = n(s.reboundsDefensive ?? s.defensiveRebounds ?? s.dreb)
+                const offensiveRebounds = firstNumber(s, ['reboundsOffensive', 'offensiveRebounds', 'OREB', 'oreb', 'offReb', 'offensiveReb'])
+                const defensiveRebounds = firstNumber(s, ['reboundsDefensive', 'defensiveRebounds', 'DREB', 'dreb', 'defReb', 'defensiveReb'])
                 const assists = n(s.assists ?? s.ast)
                 const steals = n(s.steals ?? s.stl)
                 const blocks = n(s.blocks ?? s.blk)

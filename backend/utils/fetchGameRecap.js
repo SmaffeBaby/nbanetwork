@@ -440,13 +440,73 @@ async function fetchLiveOrLegacyGame(gameId) {
             throw new Error('LiveData box score is missing teams')
         }
 
+        let plays = pbpRes.data?.game?.actions || []
+
+        try {
+            const supplement = await fetchLegacySupplement(gameId)
+            applyLegacySupplement(game, supplement)
+
+            if (!plays.length && supplement.plays.length) {
+                plays = supplement.plays
+            }
+        } catch (supplementError) {
+            console.warn(`[game recap] Stats API supplement unavailable for ${gameId}:`, supplementError?.message || supplementError)
+        }
+
         return {
             game,
-            plays: pbpRes.data?.game?.actions || []
+            plays
         }
     } catch (error) {
         console.warn(`[game recap] Falling back to stats.nba.com box score for ${gameId}:`, error?.message || error)
         return fetchLegacyGame(gameId)
+    }
+}
+
+async function fetchLegacySupplement(gameId) {
+    const res = await axios.get(`${PYTHON_API}/game-detail/${gameId}`)
+    const root = res.data || {}
+
+    if (root.error) {
+        throw new Error(root.error)
+    }
+
+    const miscSets = root.misc?.resultSets || []
+    const playByPlaySets = root.playByPlay?.resultSets || []
+    const miscTeamStats = getLegacyMiscTeamStats(miscSets)
+    const playByPlay = rowsToObjects(findResultSet(playByPlaySets, 'PlayByPlay'))
+    const teamStatsById = new Map()
+
+    miscTeamStats.forEach((row) => {
+        const teamId = Number(row.TEAM_ID ?? row.teamId)
+        if (!teamId) return
+
+        teamStatsById.set(teamId, {
+            pointsInThePaint: toNumber(row.PTS_PAINT ?? row.POINTS_IN_PAINT ?? row.pointsPaint),
+            pointsSecondChance: toNumber(row.PTS_2ND_CHANCE ?? row.POINTS_SECOND_CHANCE ?? row.pointsSecondChance),
+            pointsFastBreak: toNumber(row.PTS_FB ?? row.POINTS_FAST_BREAK ?? row.pointsFastBreak)
+        })
+    })
+
+    return {
+        teamStatsById,
+        plays: buildLegacyPlays(playByPlay)
+    }
+}
+
+function applyLegacySupplement(game, supplement) {
+    for (const side of ['homeTeam', 'awayTeam']) {
+        const team = game?.[side]
+        const stats = supplement.teamStatsById.get(Number(team?.teamId))
+
+        if (!stats) continue
+
+        team.statistics = {
+            ...(team.statistics || {}),
+            pointsInThePaint: stats.pointsInThePaint,
+            pointsSecondChance: stats.pointsSecondChance,
+            pointsFastBreak: stats.pointsFastBreak
+        }
     }
 }
 
@@ -460,11 +520,15 @@ async function fetchLegacyGame(gameId) {
 
     const summarySets = root.summary?.resultSets || []
     const boxScoreSets = root.boxscore?.resultSets || []
+    const miscSets = root.misc?.resultSets || []
+    const playByPlaySets = root.playByPlay?.resultSets || []
 
     const gameSummary = rowsToObjects(findResultSet(summarySets, 'GameSummary'))[0] || {}
     const lineScore = rowsToObjects(findResultSet(summarySets, 'LineScore'))
     const playerStats = rowsToObjects(findResultSet(boxScoreSets, 'PlayerStats'))
     const teamStats = rowsToObjects(findResultSet(boxScoreSets, 'TeamStats'))
+    const miscTeamStats = getLegacyMiscTeamStats(miscSets)
+    const playByPlay = rowsToObjects(findResultSet(playByPlaySets, 'PlayByPlay'))
 
     const homeTeamId = Number(gameSummary.HOME_TEAM_ID)
     const awayTeamId = Number(gameSummary.VISITOR_TEAM_ID)
@@ -481,16 +545,18 @@ async function fetchLegacyGame(gameId) {
                 teamId: homeTeamId,
                 lineScore,
                 teamStats,
+                miscTeamStats,
                 playerStats
             }),
             awayTeam: buildLegacyTeam({
                 teamId: awayTeamId,
                 lineScore,
                 teamStats,
+                miscTeamStats,
                 playerStats
             })
         },
-        plays: []
+        plays: buildLegacyPlays(playByPlay)
     }
 }
 
@@ -529,10 +595,28 @@ function parseLegacyGameDate(value) {
     return value
 }
 
-function buildLegacyTeam({ teamId, lineScore, teamStats, playerStats }) {
+function getLegacyMiscTeamStats(resultSets) {
+    const sets = resultSets
+        .map((set) => rowsToObjects(set))
+        .filter((rows) => rows.some((row) => row.TEAM_ID !== undefined || row.teamId !== undefined))
+
+    return sets
+        .flat()
+        .filter((row) => {
+            const playerId = row.PLAYER_ID ?? row.personId
+            return playerId === undefined || playerId === null || playerId === '' || Number(playerId) === 0
+        })
+}
+
+function pickLegacyMiscTeam(miscTeamStats, teamId) {
+    return miscTeamStats.find((row) => Number(row.TEAM_ID ?? row.teamId) === teamId) || {}
+}
+
+function buildLegacyTeam({ teamId, lineScore, teamStats, miscTeamStats, playerStats }) {
     const teamMeta = TEAM_MAP[teamId] || {}
     const line = lineScore.find((row) => Number(row.TEAM_ID) === teamId) || {}
     const stats = teamStats.find((row) => Number(row.TEAM_ID) === teamId) || {}
+    const misc = pickLegacyMiscTeam(miscTeamStats, teamId)
     const abbr = line.TEAM_ABBREVIATION || stats.TEAM_ABBREVIATION || teamMeta.abbr || ''
 
     return {
@@ -544,6 +628,8 @@ function buildLegacyTeam({ teamId, lineScore, teamStats, playerStats }) {
         statistics: {
             points: toNumber(stats.PTS ?? line.PTS),
             reboundsTotal: toNumber(stats.REB),
+            reboundsOffensive: toNumber(stats.OREB),
+            reboundsDefensive: toNumber(stats.DREB),
             assists: toNumber(stats.AST),
             steals: toNumber(stats.STL),
             blocks: toNumber(stats.BLK),
@@ -556,7 +642,10 @@ function buildLegacyTeam({ teamId, lineScore, teamStats, playerStats }) {
             threePointersPercentage: toNumber(stats.FG3_PCT),
             freeThrowsMade: toNumber(stats.FTM),
             freeThrowsAttempted: toNumber(stats.FTA),
-            freeThrowsPercentage: toNumber(stats.FT_PCT)
+            freeThrowsPercentage: toNumber(stats.FT_PCT),
+            pointsInThePaint: toNumber(misc.PTS_PAINT ?? misc.POINTS_IN_PAINT ?? misc.pointsPaint),
+            pointsSecondChance: toNumber(misc.PTS_2ND_CHANCE ?? misc.POINTS_SECOND_CHANCE ?? misc.pointsSecondChance),
+            pointsFastBreak: toNumber(misc.PTS_FB ?? misc.POINTS_FAST_BREAK ?? misc.pointsFastBreak)
         },
         players: playerStats
             .filter((row) => Number(row.TEAM_ID) === teamId)
@@ -581,6 +670,8 @@ function buildLegacyPlayer(row, teamId) {
             points: toNumber(row.PTS),
             assists: toNumber(row.AST),
             reboundsTotal: toNumber(row.REB),
+            reboundsOffensive: toNumber(row.OREB),
+            reboundsDefensive: toNumber(row.DREB),
             steals: toNumber(row.STL),
             blocks: toNumber(row.BLK),
             turnovers: toNumber(row.TO),
@@ -594,6 +685,51 @@ function buildLegacyPlayer(row, teamId) {
             freeThrowsAttempted: toNumber(row.FTA)
         }
     }
+}
+
+function parseLegacyScore(score) {
+    const match = String(score || '').match(/(\d+)\s*-\s*(\d+)/)
+    if (!match) return null
+
+    return {
+        awayScore: toNumber(match[1]),
+        homeScore: toNumber(match[2])
+    }
+}
+
+function buildLegacyPlays(playByPlay) {
+    return playByPlay
+        .map((row, index) => {
+            const score = parseLegacyScore(row.SCORE)
+            const hasV3Score = hasScoreValue(row.scoreHome) && hasScoreValue(row.scoreAway)
+
+            if (!score && !hasV3Score) return null
+
+            const homeScore = toNumber(row.scoreHome ?? score?.homeScore)
+            const awayScore = toNumber(row.scoreAway ?? score?.awayScore)
+
+            if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) return null
+
+            return {
+                actionNumber: row.EVENTNUM ?? row.actionNumber ?? index,
+                period: toNumber(row.PERIOD ?? row.period) || 1,
+                clock: row.clock || legacyClockToIso(row.PCTIMESTRING),
+                scoreHome: homeScore,
+                scoreAway: awayScore
+            }
+        })
+        .filter(Boolean)
+}
+
+function hasScoreValue(value) {
+    return value !== undefined && value !== null && value !== ''
+}
+
+function legacyClockToIso(clock) {
+    const match = String(clock || '').match(/^(\d{1,2}):(\d{2})$/)
+    if (!match) return ''
+
+    return `PT${toNumber(match[1])}M${toNumber(match[2])}S`
 }
 
 function getLegacyPeriods(line) {

@@ -11,7 +11,7 @@ router.get('/game-recap/:gameId', async (req, res) => {
         const periodFilter = parsePeriodFilter(period || quarter)
 
         const data = await fetchWithCache({
-            key: `recap_v7_${gameId}_${periodFilter?.key || 'all'}`,
+            key: `recap_v8_${gameId}_${periodFilter?.key || 'all'}`,
             ttl: 1000 * 60 * 30,
             fetcher: async () => {
                 return await fetchGameRecap(gameId, periodFilter)

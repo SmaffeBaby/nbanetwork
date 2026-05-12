@@ -211,8 +211,12 @@ async function fetchVideosFromSearch(target) {
     const videos = []
 
     for (const query of queries) {
-        const found = await fetchDuckDuckGoVideos(query)
-        videos.push(...found)
+        try {
+            const found = await fetchDuckDuckGoVideos(query)
+            videos.push(...found)
+        } catch (err) {
+            console.warn('[game broadcast] Public VK search failed:', err?.message || err)
+        }
 
         if (videos.length >= 8) break
     }

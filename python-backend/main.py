@@ -11,8 +11,9 @@ from nba_api.stats.endpoints import teamgamelog
 from nba_api.stats.endpoints import scoreboardv2
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from nba_api.stats.endpoints import boxscoresummaryv2, boxscoretraditionalv2
+from nba_api.stats.endpoints import boxscoremiscv3, boxscoresummaryv2, boxscoretraditionalv2
 from nba_api.stats.endpoints import boxscoretraditionalv3
+from nba_api.stats.endpoints import playbyplayv3
 from nba_api.stats.endpoints import leaguegamelog
 
 app = FastAPI()
@@ -547,14 +548,48 @@ def get_game_detail(game_id: str):
         summary_dict = summary.get_dict()
         boxscore_dict = boxscore.get_dict()
 
+        try:
+            misc_dict = data_frames_to_result_sets(
+                boxscoremiscv3.BoxScoreMiscV3(game_id=game_id).get_data_frames(),
+                ["PlayerStats", "TeamStats"]
+            )
+        except Exception as e:
+            print(f"Failed to fetch BoxScoreMiscV3 for {game_id}: {e}")
+            misc_dict = {"resultSets": []}
+
+        try:
+            play_by_play_dict = data_frames_to_result_sets(
+                playbyplayv3.PlayByPlayV3(game_id=game_id).get_data_frames(),
+                ["PlayByPlay", "AvailableVideo"]
+            )
+        except Exception as e:
+            print(f"Failed to fetch PlayByPlayV3 for {game_id}: {e}")
+            play_by_play_dict = {"resultSets": []}
+
         return {
             "game_id": game_id,
             "summary": summary_dict,
-            "boxscore": boxscore_dict
+            "boxscore": boxscore_dict,
+            "misc": misc_dict,
+            "playByPlay": play_by_play_dict
         }
 
     except Exception as e:
         return {"error": str(e)}
+
+
+def data_frames_to_result_sets(data_frames, names):
+    result_sets = []
+
+    for index, frame in enumerate(data_frames):
+        payload = json.loads(frame.to_json(orient="split"))
+        result_sets.append({
+            "name": names[index] if index < len(names) else f"ResultSet{index + 1}",
+            "headers": payload.get("columns", []),
+            "rowSet": payload.get("data", [])
+        })
+
+    return {"resultSets": result_sets}
 
 
 @app.get("/games/by-date/{date}")

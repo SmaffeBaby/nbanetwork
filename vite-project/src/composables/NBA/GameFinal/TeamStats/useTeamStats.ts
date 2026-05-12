@@ -71,8 +71,8 @@ export function useTeamStats(recap: Ref<any>) {
                 minutes: parseMinutes(s.minutes ?? s.minutesCalculated ?? s.min),
                 points: n(s.points ?? s.pts),
                 rebounds: n(s.reboundsTotal ?? s.rebounds ?? s.reb),
-                offensiveRebounds: n(s.reboundsOffensive ?? s.offensiveRebounds ?? s.oreb),
-                defensiveRebounds: n(s.reboundsDefensive ?? s.defensiveRebounds ?? s.dreb),
+                offensiveRebounds: firstStat(s, ['reboundsOffensive', 'offensiveRebounds', 'OREB', 'oreb', 'offReb', 'offensiveReb']),
+                defensiveRebounds: firstStat(s, ['reboundsDefensive', 'defensiveRebounds', 'DREB', 'dreb', 'defReb', 'defensiveReb']),
                 assists: n(s.assists ?? s.ast),
                 steals: n(s.steals ?? s.stl),
                 blocks: n(s.blocks ?? s.blk),
@@ -107,8 +107,8 @@ export function useTeamStats(recap: Ref<any>) {
             const ftA = firstStat(apiSide, ['freeThrowsAttempted', 'ftA', 'fta']) || sum('ftA')
             const twoM = firstStat(apiSide, ['twoPointersMade', 'twoPM', 'fg2m']) || sum('twoM') || Math.max(fgM - tpM, 0)
             const twoA = firstStat(apiSide, ['twoPointersAttempted', 'twoPA', 'fg2a']) || sum('twoA') || Math.max(fgA - tpA, 0)
-            const offensiveRebounds = firstStat(apiSide, ['offensiveRebounds', 'reboundsOffensive', 'oreb']) || sum('offensiveRebounds')
-            const defensiveRebounds = firstStat(apiSide, ['defensiveRebounds', 'reboundsDefensive', 'dreb']) || sum('defensiveRebounds')
+            const offensiveRebounds = firstStat(apiSide, ['offensiveRebounds', 'reboundsOffensive', 'OREB', 'oreb', 'offReb', 'offensiveReb']) || sum('offensiveRebounds')
+            const defensiveRebounds = firstStat(apiSide, ['defensiveRebounds', 'reboundsDefensive', 'DREB', 'dreb', 'defReb', 'defensiveReb']) || sum('defensiveRebounds')
             const rebounds = firstStat(apiSide, ['rebounds', 'reboundsTotal', 'reb']) || offensiveRebounds + defensiveRebounds || sum('rebounds')
             const fgMiss = Math.max(fgA - fgM, 0)
             const ftMiss = Math.max(ftA - ftM, 0)
@@ -157,9 +157,9 @@ export function useTeamStats(recap: Ref<any>) {
                 efgPct,
                 tsPct,
                 gameScore,
-                pointsInThePaint: n(apiSide?.pointsInThePaint),
-                secondChancePoints: n(apiSide?.secondChancePoints),
-                fastBreakPoints: n(apiSide?.fastBreakPoints)
+                pointsInThePaint: firstStat(apiSide, ['pointsInThePaint', 'pointsPaint', 'pitp', 'PTS_PAINT']),
+                secondChancePoints: firstStat(apiSide, ['secondChancePoints', 'pointsSecondChance', 'PTS_2ND_CHANCE']),
+                fastBreakPoints: firstStat(apiSide, ['fastBreakPoints', 'pointsFastBreak', 'PTS_FB'])
             }
         }
 

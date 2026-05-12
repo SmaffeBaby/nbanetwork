@@ -23,7 +23,7 @@ type UsePlayerExcelStatsProps = {
     recap: any
 }
 
-const DETAIL_CACHE_KEY = 'nba-dashboard:player-excel-details:v2'
+const DETAIL_CACHE_KEY = 'nba-dashboard:player-excel-details:v3'
 const MAX_CACHE_ITEMS = 80
 const detailCache = new Map<string, PlayerDetails>()
 
@@ -129,8 +129,7 @@ export const usePlayerExcelStats = (props: UsePlayerExcelStatsProps) => {
                 title: 'Основное',
                 segments: makeSegments([
                     { key: 'minutes', label: 'MIN', value: n(player.minutes), color: '#111827' },
-                    { key: 'points', label: 'PTS', value: n(player.points), color: '#dc2626' },
-                    { key: 'gameScore', label: 'GmSc', value: n(player.gameScore), color: '#7c3aed' }
+                    { key: 'points', label: 'PTS', value: n(player.points), color: '#dc2626' }
                 ])
             },
             {
@@ -178,14 +177,23 @@ export const usePlayerExcelStats = (props: UsePlayerExcelStatsProps) => {
             {
                 key: 'efficiency',
                 title: 'Эффективность',
-                segments: makePercentSegments([
-                    { key: 'fgPct', label: 'FG%', value: n(player.fgPct), color: '#111827' },
-                    { key: 'twoPct', label: '2P%', value: n(player.twoPct), color: '#2563eb' },
-                    { key: 'tpPct', label: '3P%', value: n(player.tpPct), color: '#16a34a' },
-                    { key: 'ftPct', label: 'FT%', value: n(player.ftPct), color: '#f59e0b' },
-                    { key: 'efgPct', label: 'EFG%', value: n(player.efgPct), color: '#7c3aed' },
-                    { key: 'tsPct', label: 'TS%', value: n(player.tsPct), color: '#dc2626' }
-                ])
+                segments: [
+                    ...makePercentSegments([
+                        { key: 'fgPct', label: 'FG%', value: n(player.fgPct), color: '#111827' },
+                        { key: 'twoPct', label: '2P%', value: n(player.twoPct), color: '#2563eb' },
+                        { key: 'tpPct', label: '3P%', value: n(player.tpPct), color: '#16a34a' },
+                        { key: 'ftPct', label: 'FT%', value: n(player.ftPct), color: '#f59e0b' },
+                        { key: 'efgPct', label: 'EFG%', value: n(player.efgPct), color: '#7c3aed' },
+                        { key: 'tsPct', label: 'TS%', value: n(player.tsPct), color: '#dc2626' }
+                    ]),
+                    {
+                        key: 'gameScore',
+                        label: 'GmSc',
+                        value: statValue(player.gameScore),
+                        percent: Math.min(Math.max(n(player.gameScore) / 40 * 100, 0), 100),
+                        color: '#0f172a'
+                    }
+                ]
             }
         ]
     })
