@@ -177,6 +177,56 @@
           </div>
         </article>
       </div>
+
+      <div class="mt-4 border-t border-gray-200 pt-4">
+        <button
+            type="button"
+            data-collapse-toggle="team-detailed-stats"
+            :aria-expanded="isDetailedStatsOpen"
+            aria-controls="team-detailed-stats"
+            @click="isDetailedStatsOpen = !isDetailedStatsOpen"
+            class="inline-flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-left text-sm font-black uppercase text-gray-900 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-100 sm:w-auto"
+        >
+          <span>Детальная статистика</span>
+          <svg
+              class="h-4 w-4 shrink-0 transition-transform"
+              :class="isDetailedStatsOpen ? 'rotate-180' : ''"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 10 6"
+          >
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4" />
+          </svg>
+        </button>
+
+        <div
+            id="team-detailed-stats"
+            v-show="isDetailedStatsOpen"
+            class="mt-4 grid gap-2"
+        >
+          <div
+              v-for="row in detailStatRows"
+              :key="row.key"
+              class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+          >
+            <div class="grid grid-cols-[64px_minmax(0,1fr)_64px] items-center gap-3">
+              <strong class="text-xl font-black leading-none" :style="{ color: awayColor }">
+                {{ formatNumber(row.away) }}
+              </strong>
+              <span class="text-center text-sm font-black text-gray-600">{{ row.label }}</span>
+              <strong class="text-right text-xl font-black leading-none" :style="{ color: homeColor }">
+                {{ formatNumber(row.home) }}
+              </strong>
+            </div>
+
+            <div class="mt-2 flex h-2.5 overflow-hidden rounded-full bg-gray-200">
+              <span :style="{ width: `${row.awayShare}%`, backgroundColor: awayColor }"></span>
+              <span :style="{ width: `${row.homeShare}%`, backgroundColor: homeColor }"></span>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="overflow-hidden rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -302,7 +352,7 @@
 </template>
 
 <script setup lang="ts">
-import { toRef } from 'vue'
+import { ref, toRef } from 'vue'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import { getPlayerImage, handleImageError } from '../../../../utils/playerImage'
 import { useTeamStats } from '../../../../composables/NBA/GameFinal/TeamStats/useTeamStats'
@@ -310,6 +360,8 @@ import { useTeamStats } from '../../../../composables/NBA/GameFinal/TeamStats/us
 const props = defineProps<{
   recap: any
 }>()
+
+const isDetailedStatsOpen = ref(false)
 
 const {
   awayAbbr,
@@ -322,6 +374,7 @@ const {
   teamStats,
   comparisonRows,
   specialRows,
+  detailStatRows,
   leadPoints,
   leadSummary,
   chartWidth,
