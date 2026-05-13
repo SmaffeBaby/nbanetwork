@@ -30,6 +30,7 @@ jobs:
             --exclude 'deploy-artifacts/' \
             --exclude 'node_modules/' \
             --exclude '.env' \
+            --exclude 'backend/headers.conf' \
             --exclude 'supabase/.env' \
             --exclude 'vite-project/.env' \
             --exclude 'supabase/volumes/db/data/' \
