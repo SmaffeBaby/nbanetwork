@@ -105,6 +105,8 @@
       </button>
     </div>
   </template>
+
+  <ProfileLikedArticles v-else-if="activeTab === 'likedArticles'" />
 </template>
 
 <script setup lang="ts">
@@ -113,6 +115,7 @@ import { RouterLink } from 'vue-router'
 import { useProfile } from '../../composables/Profile/useProfile'
 import ProfileFavoriteTeams from './ProfileFavoriteTeams.vue'
 import ProfileSubscriptions from './ProfileSubscriptions.vue'
+import ProfileLikedArticles from './ProfileLikedArticles.vue'
 
 const props = defineProps({
   activeTab: String

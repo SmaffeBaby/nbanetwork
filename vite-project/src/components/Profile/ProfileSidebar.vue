@@ -18,20 +18,28 @@
       >
         Безопасность
       </button>
+
+      <button
+          class="whitespace-nowrap px-4 py-2 rounded-lg transition text-sm md:text-base"
+          :class="activeTab === 'likedArticles' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'"
+          @click="setTab('likedArticles')"
+      >
+        Понравившиеся статьи
+      </button>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 const props = defineProps<{
-  activeTab: 'main' | 'security'
+  activeTab: 'main' | 'likedArticles' | 'security'
 }>()
 
 const emit = defineEmits<{
-  (e: 'changeTab', tab: 'main' | 'security'): void
+  (e: 'changeTab', tab: 'main' | 'likedArticles' | 'security'): void
 }>()
 
-const setTab = (tab: 'main' | 'security') => {
+const setTab = (tab: 'main' | 'likedArticles' | 'security') => {
   emit('changeTab', tab)
 }
 </script>

@@ -22,11 +22,12 @@
 
         <div class="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
           <div class="flex flex-wrap gap-2 border-b border-gray-200 bg-white p-2">
-            <select class="rounded-lg border border-gray-200 px-2 py-2 text-sm font-semibold" @change="runCommand('formatBlock', ($event.target as HTMLSelectElement).value)">
+            <select class="rounded-lg border border-gray-200 px-2 py-2 text-sm font-semibold" @change="handleBlockFormat">
               <option value="p">Абзац</option>
               <option value="h2">Заголовок H2</option>
               <option value="h3">Заголовок H3</option>
               <option value="blockquote">Цитата</option>
+              <option value="sources">Источники</option>
             </select>
             <select class="rounded-lg border border-gray-200 px-2 py-2 text-sm font-semibold" @change="runCommand('fontName', ($event.target as HTMLSelectElement).value)">
               <option value="Inter">Inter</option>
@@ -39,18 +40,30 @@
             <button type="button" class="tool-btn underline" @click="runCommand('underline')">U</button>
             <button type="button" class="tool-btn" @click="runCommand('insertUnorderedList')">•</button>
             <button type="button" class="tool-btn" @click="runCommand('insertOrderedList')">1.</button>
+            <button type="button" class="tool-btn" @click="runCommand('justifyLeft')">Left</button>
+            <button type="button" class="tool-btn" @click="runCommand('justifyCenter')">Center</button>
+            <button type="button" class="tool-btn" @click="runCommand('justifyRight')">Right</button>
+            <label class="tool-btn cursor-pointer">
+              Color
+              <input type="color" class="ml-2 h-5 w-6 align-middle" @input="runCommand('foreColor', ($event.target as HTMLInputElement).value)" />
+            </label>
             <button type="button" class="tool-btn" @click="addLink">Link</button>
+            <button type="button" class="tool-btn" @click="runCommand('unlink')">Unlink</button>
             <button type="button" class="tool-btn" @click="addImageByUrl">Image URL</button>
             <label class="tool-btn cursor-pointer">
               Upload
               <input type="file" accept="image/*" class="hidden" @change="addImageFile" />
             </label>
+            <button type="button" class="tool-btn" :disabled="!selectedImage" @click="moveSelectedImage('up')">Img ↑</button>
+            <button type="button" class="tool-btn" :disabled="!selectedImage" @click="moveSelectedImage('down')">Img ↓</button>
+            <button type="button" class="tool-btn" :disabled="!selectedImage" @click="removeSelectedImage">Img ×</button>
           </div>
 
           <div
             ref="editor"
             class="news-editor news-content min-h-[360px] bg-white p-4 outline-none"
             contenteditable="true"
+            @click="selectEditorImage"
             @input="syncContent"
           />
         </div>
@@ -63,8 +76,18 @@
         </label>
 
         <label class="block space-y-2">
+          <span class="text-sm font-bold text-gray-700">Обложка файлом</span>
+          <input type="file" accept="image/*" class="field bg-white text-sm" @change="addCoverFile" />
+        </label>
+
+        <label class="block space-y-2">
           <span class="text-sm font-bold text-gray-700">ID игр</span>
           <textarea v-model="gameIdsInput" class="field min-h-24" placeholder="0042500224, 0022500001" />
+        </label>
+
+        <label class="block space-y-2">
+          <span class="text-sm font-bold text-gray-700">Команды</span>
+          <textarea v-model="teamAbbrsInput" class="field min-h-20" placeholder="DET, OKC, BOS" />
         </label>
 
         <label class="block space-y-2">
@@ -94,9 +117,8 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
-import { authFetch } from '../../api/authFetch'
-import { makeExcerpt, makeSlug, normalizeGameId, normalizeHashtag, sanitizeNewsHtml, type NewsArticle } from '../../utils/news'
+import type { NewsArticle } from '../../utils/news'
+import { useNewsEditor } from '../../composables/News/useNewsEditor'
 
 const props = defineProps<{
   article: NewsArticle | null
@@ -108,116 +130,29 @@ const emit = defineEmits<{
   (e: 'cancel'): void
 }>()
 
-const editor = ref<HTMLElement | null>(null)
-const title = ref('')
-const contentHtml = ref('')
-const coverImageUrl = ref('')
-const gameIdsInput = ref('')
-const hashtagsInput = ref('')
-const published = ref(true)
-const saving = ref(false)
-const error = ref('')
-
-const resetForm = async () => {
-  title.value = props.article?.title ?? ''
-  contentHtml.value = props.article?.content_html ?? '<p></p>'
-  coverImageUrl.value = props.article?.cover_image_url ?? ''
-  gameIdsInput.value = props.article?.game_ids?.join(', ') ?? ''
-  hashtagsInput.value = props.article?.hashtags?.map(tag => `#${tag}`).join(', ') ?? ''
-  published.value = props.article?.published ?? true
-  error.value = ''
-
-  await nextTick()
-  if (editor.value) editor.value.innerHTML = contentHtml.value
-}
-
-const syncContent = () => {
-  contentHtml.value = editor.value?.innerHTML ?? ''
-}
-
-const runCommand = (command: string, value?: string) => {
-  editor.value?.focus()
-  document.execCommand(command, false, value)
-  syncContent()
-}
-
-const addLink = () => {
-  const url = window.prompt('URL ссылки')
-  if (!url) return
-  runCommand('createLink', url)
-}
-
-const addImageByUrl = () => {
-  const url = window.prompt('URL изображения')
-  if (!url) return
-  runCommand('insertImage', url)
-}
-
-const addImageFile = (event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-
-  const reader = new FileReader()
-  reader.onload = () => {
-    if (typeof reader.result === 'string') {
-      runCommand('insertImage', reader.result)
-    }
-  }
-  reader.readAsDataURL(file)
-}
-
-const save = async () => {
-  if (saving.value) return
-
-  syncContent()
-  const cleanHtml = sanitizeNewsHtml(contentHtml.value)
-  const gameIds = Array.from(new Set(gameIdsInput.value.split(/[\s,;]+/).map(normalizeGameId).filter(Boolean)))
-  const hashtags = Array.from(new Set(hashtagsInput.value.split(/[\s,;]+/).map(normalizeHashtag).filter(Boolean)))
-
-  if (!title.value.trim() || !makeExcerpt(cleanHtml, 1000)) {
-    error.value = 'Нужны заголовок и текст новости.'
-    return
-  }
-
-  saving.value = true
-  error.value = ''
-
-  const payload = {
-    author_id: props.article?.author_id ?? props.authorId,
-    title: title.value.trim(),
-    slug: props.article?.slug ?? makeSlug(title.value),
-    excerpt: makeExcerpt(cleanHtml),
-    content_html: cleanHtml,
-    cover_image_url: coverImageUrl.value.trim() || null,
-    game_ids: gameIds,
-    hashtags,
-    published: published.value
-  }
-
-  try {
-    await authFetch(
-      props.article ? `/api/news-articles/${props.article.id}` : '/api/news-articles',
-      {
-        method: props.article ? 'PATCH' : 'POST',
-        body: JSON.stringify(payload)
-      }
-    )
-
-    emit('saved')
-  } catch (saveError: any) {
-    error.value = saveError?.message || 'Не удалось сохранить новость.'
-  } finally {
-    saving.value = false
-  }
-}
-
-watch(() => props.article, () => {
-  void resetForm()
-})
-
-onMounted(() => {
-  void resetForm()
-})
+const {
+  editor,
+  title,
+  coverImageUrl,
+  gameIdsInput,
+  teamAbbrsInput,
+  hashtagsInput,
+  published,
+  saving,
+  error,
+  selectedImage,
+  syncContent,
+  runCommand,
+  handleBlockFormat,
+  addLink,
+  addImageByUrl,
+  addImageFile,
+  addCoverFile,
+  selectEditorImage,
+  moveSelectedImage,
+  removeSelectedImage,
+  save
+} = useNewsEditor(props, emit)
 </script>
 
 <style scoped>

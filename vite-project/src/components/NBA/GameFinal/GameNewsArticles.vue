@@ -16,7 +16,7 @@
         :key="article.id"
         class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
       >
-        <button type="button" class="block w-full text-left" @click="selectedArticle = article">
+        <RouterLink :to="{ name: 'NewsArticle', params: { slug: article.slug || article.id } }" class="block w-full text-left hover:no-underline">
           <img
             v-if="article.cover_image_url"
             :src="article.cover_image_url"
@@ -39,23 +39,15 @@
               </RouterLink>
             </div>
           </div>
-        </button>
+        </RouterLink>
       </article>
     </div>
-
-    <NewsArticleModal
-      v-if="selectedArticle"
-      :article="selectedArticle"
-      @close="selectedArticle = null"
-      @tag="openTag"
-    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
-import NewsArticleModal from '../../News/NewsArticleModal.vue'
+import { RouterLink } from 'vue-router'
 import { supabase } from '../../../lib/supabase'
 import { formatNewsDate, type NewsArticle } from '../../../utils/news'
 
@@ -63,26 +55,19 @@ const props = defineProps<{
   gameId: string
 }>()
 
-const router = useRouter()
 const articles = ref<NewsArticle[]>([])
-const selectedArticle = ref<NewsArticle | null>(null)
 
 const fetchArticles = async () => {
   if (!props.gameId) return
 
   const { data } = await supabase
     .from('news_articles')
-    .select('*, profiles(first_name, last_name, avatar_img)')
+    .select('*, profiles!news_articles_author_id_fkey(first_name, last_name, avatar_img)')
     .contains('game_ids', [props.gameId])
     .order('created_at', { ascending: false })
     .limit(4)
 
   articles.value = (data ?? []) as NewsArticle[]
-}
-
-const openTag = (tag: string) => {
-  selectedArticle.value = null
-  void router.push({ path: '/news', query: { tag } })
 }
 
 watch(() => props.gameId, () => {

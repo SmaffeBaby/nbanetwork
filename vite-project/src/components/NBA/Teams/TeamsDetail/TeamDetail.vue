@@ -99,6 +99,10 @@
           :season="season"
           :seasonType="seasonType"
       />
+      <TeamArticles
+          v-if="activeTab === 'Статьи'"
+          :teamAbbr="teamAbbr"
+      />
     </div>
 
   </div>
@@ -113,6 +117,7 @@ import TeamGamesTable from './TeamGamesTable.vue'
 import TeamUpcomingGames from './TeamUpcomingGames.vue'
 import TeamStats2 from './TeamStats2.vue'
 import TeamPointsTrendTable from './TeamPointsTrendTable.vue'
+import TeamArticles from './TeamArticles.vue'
 import FavoriteTeamButton from '../../Favorites/FavoriteTeamButton.vue'
 
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
@@ -122,7 +127,7 @@ import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
 const route = useRoute()
 const teamAbbr = route.params.abbr as string
 
-const tabs = ['Будущие игры','Команда', 'История игр', 'Статистика','Форма']
+const tabs = ['Будущие игры','Команда', 'История игр', 'Статистика','Форма', 'Статьи']
 const activeTab = ref('Команда')
 const seasonType = ref<'regular' | 'playoffs'>('regular')
 

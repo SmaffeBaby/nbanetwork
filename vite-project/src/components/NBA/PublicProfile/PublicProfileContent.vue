@@ -66,6 +66,8 @@
 
       <FavoritePlayers :players="profile.favorites_players" @select="goToPlayer" />
 
+      <ProfileLikedArticles :user-id="profile.id" title="Понравившиеся статьи" />
+
       <section class="grid gap-8 lg:grid-cols-2">
         <PublicProfileGameList title="Просмотренные матчи" :games="watchedGames" />
         <PublicProfileGameList title="Избранные матчи" :games="favoriteGames" />
@@ -80,6 +82,7 @@ import FavoritePlayers from './FavoritePlayers.vue'
 import PublicProfileGameList from './PublicProfileGameList.vue'
 import PublicProfileProgressSummary from './PublicProfileProgressSummary.vue'
 import PublicProfileWatchedStats from './PublicProfileWatchedStats.vue'
+import ProfileLikedArticles from '../../Profile/ProfileLikedArticles.vue'
 import { usePublicProfile } from '../../../composables/NBA/PublicProfile/usePublicProfile'
 import { useProfileProgressRules } from '../../../composables/NBA/PublicProfile/useProfileProgressRules'
 import { computed, onMounted } from 'vue'

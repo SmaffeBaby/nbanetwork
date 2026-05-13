@@ -9,7 +9,7 @@ export function useProfile() {
     const router = useRouter()
     const { user, handleLogout } = useAuthPanel()
 
-    const activeTab = ref<'main' | 'security'>('main')
+    const activeTab = ref<'main' | 'likedArticles' | 'security'>('main')
     const isEditing = ref(false)
     const loadingSave = ref(false)
     const loadingAvatar = ref(false)

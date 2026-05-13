@@ -7,6 +7,7 @@ export type NewsArticle = {
   content_html: string
   cover_image_url: string | null
   game_ids: string[]
+  team_abbrs: string[]
   hashtags: string[]
   published: boolean
   created_at: string
@@ -36,6 +37,7 @@ const allowedTags = new Set([
   'LI',
   'OL',
   'P',
+  'SECTION',
   'SPAN',
   'STRONG',
   'U',

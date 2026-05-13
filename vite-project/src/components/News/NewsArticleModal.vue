@@ -36,6 +36,14 @@
           >
             Game {{ gameId }}
           </RouterLink>
+          <RouterLink
+            v-for="teamAbbr in article.team_abbrs"
+            :key="teamAbbr"
+            :to="`/team/${teamAbbr}`"
+            class="rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100 hover:no-underline"
+          >
+            {{ teamAbbr }}
+          </RouterLink>
           <button
             v-for="tag in article.hashtags"
             :key="tag"
@@ -47,17 +55,43 @@
           </button>
         </div>
 
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-black transition"
+          :class="liked ? 'border-red-100 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-700 hover:border-red-200 hover:text-red-700'"
+          @click="toggleLike"
+        >
+          ♥ {{ likesCount }}
+        </button>
+        <RouterLink
+          :to="{ name: 'NewsArticle', params: { slug: article.slug || article.id } }"
+          class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-black text-gray-700 transition hover:border-gray-900 hover:no-underline"
+        >
+          Открыть ссылку
+        </RouterLink>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-black text-gray-700 transition hover:border-gray-900"
+          @click="copyLink"
+        >
+          {{ copied ? 'Ссылка скопирована' : 'Скопировать ссылку' }}
+        </button>
+
         <div class="news-content" v-html="sanitizedHtml" />
+
+        <ArticleComments :article-id="article.id" />
       </article>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { authFetch } from '../../api/authFetch'
 import type { NewsArticle } from '../../utils/news'
 import { formatNewsDate, sanitizeNewsHtml } from '../../utils/news'
+import ArticleComments from './ArticleComments.vue'
 
 const props = defineProps<{
   article: NewsArticle
@@ -69,4 +103,42 @@ defineEmits<{
 }>()
 
 const sanitizedHtml = computed(() => sanitizeNewsHtml(props.article.content_html))
+const articleUrl = computed(() => `${window.location.origin}/news/${props.article.slug || props.article.id}`)
+const likesCount = ref(0)
+const liked = ref(false)
+const copied = ref(false)
+
+const fetchLikes = async () => {
+  try {
+    const data = await authFetch(`/api/news-articles/${props.article.id}/likes`)
+    likesCount.value = data.count ?? 0
+    liked.value = Boolean(data.liked)
+  } catch {
+    likesCount.value = 0
+    liked.value = false
+  }
+}
+
+const toggleLike = async () => {
+  try {
+    await authFetch(`/api/news-articles/${props.article.id}/likes`, {
+      method: liked.value ? 'DELETE' : 'POST'
+    })
+    liked.value = !liked.value
+    likesCount.value += liked.value ? 1 : -1
+  } catch {
+  }
+}
+
+const copyLink = async () => {
+  await navigator.clipboard?.writeText(articleUrl.value)
+  copied.value = true
+  window.setTimeout(() => {
+    copied.value = false
+  }, 1600)
+}
+
+onMounted(() => {
+  void fetchLikes()
+})
 </script>

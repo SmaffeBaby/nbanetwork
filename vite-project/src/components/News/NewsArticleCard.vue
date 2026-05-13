@@ -1,6 +1,30 @@
 <template>
   <article class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-    <button type="button" class="block w-full text-left" @click="$emit('open', article)">
+    <button v-if="!isRevealed" type="button" class="block w-full p-5 text-left" @click="revealArticle">
+      <div class="grid min-h-48 place-items-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-8 text-center">
+        <div class="space-y-4">
+          <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white text-gray-700 shadow-sm">
+            <EyeIcon class="h-7 w-7" />
+          </div>
+          <div class="space-y-1">
+            <p class="text-base font-black text-gray-950">Осторожно, может быть спойлер</p>
+            <p class="text-sm font-semibold text-gray-500">Нажмите, чтобы раскрыть статью</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-4 p-5">
+        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-500">
+          <span>{{ formatNewsDate(article.created_at) }}</span>
+          <span v-if="authorName">• {{ authorName }}</span>
+          <span v-if="article.game_ids.length" class="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700">
+            {{ article.game_ids.length }} game
+          </span>
+        </div>
+      </div>
+    </button>
+
+    <button v-else type="button" class="block w-full text-left" @click="$emit('open', article)">
       <img
         v-if="article.cover_image_url"
         :src="article.cover_image_url"
@@ -60,7 +84,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { EyeIcon } from '@heroicons/vue/24/outline'
 import type { NewsArticle } from '../../utils/news'
 import { formatNewsDate } from '../../utils/news'
 
@@ -79,5 +104,29 @@ defineEmits<{
 const authorName = computed(() => {
   const profile = props.article.profiles
   return `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim()
+})
+
+const STORAGE_KEY = 'revealed_news_article_ids'
+
+const getRevealedIds = () => {
+  try {
+    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    return Array.isArray(value) ? value.map(String) : []
+  } catch {
+    return []
+  }
+}
+
+const isRevealed = ref(getRevealedIds().includes(props.article.id))
+
+const revealArticle = () => {
+  const ids = new Set(getRevealedIds())
+  ids.add(props.article.id)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]))
+  isRevealed.value = true
+}
+
+watch(() => props.article.id, (id) => {
+  isRevealed.value = getRevealedIds().includes(id)
 })
 </script>

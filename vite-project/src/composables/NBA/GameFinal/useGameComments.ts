@@ -20,7 +20,7 @@ export type GameComment = {
     } | null
 }
 
-const MAX_IMAGE_SIZE = 1024 * 1024
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
 type RawGameComment = Omit<GameComment, 'profiles'> & {
     profiles?: GameComment['profiles'] | GameComment['profiles'][]
@@ -173,7 +173,7 @@ export function useGameComments(gameId: Ref<string>) {
         }
 
         if (file.size > MAX_IMAGE_SIZE) {
-            error.value = 'Изображение должно быть меньше 1 МБ'
+            error.value = 'Изображение должно быть меньше 5 МБ'
             input.value = ''
             return
         }

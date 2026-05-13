@@ -23,7 +23,7 @@
         <div class="flex items-center justify-between gap-3">
           <div>
             <h2 class="text-sm font-bold text-gray-900">Уведомления</h2>
-            <p class="text-xs text-gray-500">Комментарии от пользователей, на которых вы подписаны</p>
+            <p class="text-xs text-gray-500">Комментарии и статьи от пользователей, на которых вы подписаны</p>
           </div>
 
           <label class="inline-flex cursor-pointer items-center gap-2">
@@ -55,7 +55,7 @@
         <RouterLink
             v-for="notification in notifications"
             :key="notification.id"
-            :to="`/game/${notification.gameId}`"
+            :to="notification.to"
             class="flex gap-3 rounded-xl p-3 transition hover:bg-gray-50"
             @click="open = false"
         >
@@ -81,7 +81,7 @@
               ></span>
             </div>
             <p class="mt-0.5 text-xs text-gray-600">
-              оставил комментарий {{ formatTime(notification.createdAt) }}
+              {{ notification.message }} {{ formatTime(notification.createdAt) }}
             </p>
             <p class="mt-1 truncate text-xs font-medium text-gray-500">
               {{ notification.gameLabel }}
@@ -126,12 +126,27 @@ type NotificationRow = {
 
 type NotificationItem = {
   id: string
+  type: 'comment' | 'news'
   userName: string
   avatarImg: string | null
-  gameId: string
+  gameId?: string
+  articleId?: string
   gameLabel: string
+  to: string
+  message: string
   createdAt: string
   readAt: string | null
+}
+
+type NewsNotificationRow = {
+  id: string
+  actor_id: string
+  article_id: string
+  comment_id: string | null
+  kind: 'article_published' | 'article_comment'
+  created_at: string
+  read_at: string | null
+  profiles?: NotificationRow['profiles']
 }
 
 const auth = useAuthStore()
@@ -184,6 +199,19 @@ const notificationsQuery = useQuery({
   }
 })
 
+const newsNotificationsQuery = useQuery({
+  queryKey: computed(() => ['profile-news-notifications', userId.value]),
+  enabled: computed(() => Boolean(userId.value)),
+  refetchInterval: 5000,
+  queryFn: async () => {
+    const data = await authFetch('/api/profile-news-notifications')
+    return ((data.notifications ?? []) as NewsNotificationRow[]).map(row => ({
+      ...row,
+      profiles: Array.isArray(row.profiles) ? row.profiles[0] ?? null : row.profiles ?? null
+    }))
+  }
+})
+
 const followsCountQuery = useQuery({
   queryKey: computed(() => ['profile-follows-count', userId.value]),
   enabled: computed(() => Boolean(userId.value)),
@@ -195,26 +223,51 @@ const followsCountQuery = useQuery({
 })
 
 const rows = computed(() => notificationsQuery.data.value ?? [])
+const newsRows = computed(() => newsNotificationsQuery.data.value ?? [])
 const followsCount = computed(() => followsCountQuery.data.value ?? 0)
 const notifications = computed<NotificationItem[]>(() =>
-    rows.value.map(row => {
+    [
+      ...rows.value.map(row => {
       const first = row.profiles?.first_name ?? ''
       const last = row.profiles?.last_name ?? ''
       const userName = `${first} ${last}`.trim() || 'Пользователь'
 
       return {
         id: row.id,
+        type: 'comment' as const,
         userName,
         avatarImg: row.profiles?.avatar_img ?? null,
         gameId: row.game_id,
         gameLabel: gameLabels.value[row.game_id] ?? `Матч ${row.game_id}`,
+        to: `/game/${row.game_id}`,
+        message: 'оставил комментарий',
         createdAt: row.created_at,
         readAt: row.read_at
       }
-    })
+    }),
+      ...newsRows.value.map(row => {
+        const first = row.profiles?.first_name ?? ''
+        const last = row.profiles?.last_name ?? ''
+        const userName = `${first} ${last}`.trim() || 'Пользователь'
+
+        return {
+          id: row.id,
+          type: 'news' as const,
+          userName,
+          avatarImg: row.profiles?.avatar_img ?? null,
+          articleId: row.article_id,
+          gameLabel: row.kind === 'article_comment' ? 'Комментарий к статье' : 'Новая статья скрыта как спойлер',
+          to: '/news',
+          message: row.kind === 'article_comment' ? 'оставил комментарий к статье' : 'опубликовал статью',
+          createdAt: row.created_at,
+          readAt: row.read_at
+        }
+      })
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 )
 const unreadCount = computed(() =>
     rows.value.filter(notification => !notification.read_at).length
+    + newsRows.value.filter(notification => !notification.read_at).length
 )
 
 const toggleOpen = async () => {
@@ -222,6 +275,7 @@ const toggleOpen = async () => {
   if (open.value) {
     await followsCountQuery.refetch()
     await markReadMutation.mutateAsync()
+    await markNewsReadMutation.mutateAsync()
   }
 }
 
@@ -304,8 +358,38 @@ const clearMutation = useMutation({
   }
 })
 
+const markNewsReadMutation = useMutation({
+  mutationFn: async () => {
+    const unreadIds = newsRows.value.filter(notification => !notification.read_at).map(notification => notification.id)
+    if (!userId.value || unreadIds.length === 0) return
+
+    await authFetch('/api/profile-news-notifications/read', {
+      method: 'POST',
+      body: JSON.stringify({ ids: unreadIds })
+    })
+  },
+  onSettled: () => {
+    void newsNotificationsQuery.refetch()
+  }
+})
+
+const clearNewsMutation = useMutation({
+  mutationFn: async (ids: string[]) => {
+    if (!userId.value || ids.length === 0) return
+
+    await authFetch('/api/profile-news-notifications', {
+      method: 'DELETE',
+      body: JSON.stringify({ ids })
+    })
+  },
+  onSettled: () => {
+    void newsNotificationsQuery.refetch()
+  }
+})
+
 const clearNotifications = () => {
   clearMutation.mutate(rows.value.map(notification => notification.id))
+  clearNewsMutation.mutate(newsRows.value.map(notification => notification.id))
 }
 
 const subscribe = () => {
@@ -326,6 +410,18 @@ const subscribe = () => {
             void notificationsQuery.refetch()
           }
       )
+      .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'profile_news_notifications',
+            filter: `recipient_id=eq.${user.value.id}`
+          },
+          () => {
+            void newsNotificationsQuery.refetch()
+          }
+      )
       .subscribe()
 }
 
@@ -342,6 +438,7 @@ watch(
       await unsubscribe()
       await followsCountQuery.refetch()
       await notificationsQuery.refetch()
+      await newsNotificationsQuery.refetch()
       subscribe()
     },
     { immediate: true }
@@ -354,6 +451,7 @@ onMounted(async () => {
   }
 
   await notificationsQuery.refetch()
+  await newsNotificationsQuery.refetch()
   await followsCountQuery.refetch()
   subscribe()
 })

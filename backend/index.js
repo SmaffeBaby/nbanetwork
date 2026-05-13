@@ -25,7 +25,7 @@ const app = express()
 const PORT = process.env.PORT || 3000
 
 app.use(cors())
-app.use(express.json({ limit: '2mb' }))
+app.use(express.json({ limit: '40mb' }))
 
 app.get('/', (req, res) => {
     res.send('Backend работает!')
@@ -53,7 +53,7 @@ app.use('/api', newsRoutes)
 
 app.use((error, req, res, next) => {
     if (error?.type === 'entity.too.large') {
-        return res.status(413).json({ error: 'Изображение слишком большое. Выберите файл меньше 1 МБ.' })
+        return res.status(413).json({ error: 'Изображение слишком большое. Выберите файл меньше 5 МБ.' })
     }
 
     next(error)

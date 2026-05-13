@@ -4,7 +4,7 @@ const { requireUser } = require('../middleware/auth')
 
 const router = express.Router()
 
-const MAX_COMMENT_IMAGE_SIZE = 1024 * 1024 * 1.4
+const MAX_COMMENT_IMAGE_SIZE = 1024 * 1024 * 8
 
 function authorName(profile) {
     const name = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
@@ -100,7 +100,7 @@ router.post('/game-comments', requireUser, async (req, res) => {
         }
 
         if (imageData && String(imageData).length > MAX_COMMENT_IMAGE_SIZE) {
-            return res.status(400).json({ error: 'Image is too large' })
+            return res.status(400).json({ error: 'Image is too large. Choose a file smaller than 5 MB.' })
         }
 
         let replyToIdValue = null

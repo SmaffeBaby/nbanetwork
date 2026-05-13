@@ -116,6 +116,7 @@ create table if not exists public.news_articles (
   content_html text not null default '',
   cover_image_url text,
   game_ids text[] not null default '{}',
+  team_abbrs text[] not null default '{}',
   hashtags text[] not null default '{}',
   published boolean not null default true,
   created_at timestamptz not null default now(),
@@ -130,8 +131,103 @@ on public.news_articles (created_at desc);
 create index if not exists news_articles_game_ids_idx
 on public.news_articles using gin (game_ids);
 
+create index if not exists news_articles_team_abbrs_idx
+on public.news_articles using gin (team_abbrs);
+
 create index if not exists news_articles_hashtags_idx
 on public.news_articles using gin (hashtags);
+
+alter table public.news_articles
+add column if not exists team_abbrs text[] not null default '{}';
+
+create table if not exists public.news_slider_items (
+  id uuid primary key default gen_random_uuid(),
+  image_url text not null,
+  link_url text,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint news_slider_items_image_not_empty check (length(trim(image_url)) > 0)
+);
+
+create index if not exists news_slider_items_created_at_idx
+on public.news_slider_items (created_at desc);
+
+create table if not exists public.news_article_comments (
+  id uuid primary key default gen_random_uuid(),
+  article_id uuid not null references public.news_articles(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  message text not null default '',
+  image_data text,
+  reply_to_id uuid references public.news_article_comments(id) on delete set null,
+  created_at timestamptz not null default now(),
+  constraint news_article_comments_has_content check (
+    length(trim(message)) > 0 or image_data is not null
+  )
+);
+
+create index if not exists news_article_comments_article_id_created_at_idx
+on public.news_article_comments (article_id, created_at);
+
+create index if not exists news_article_comments_reply_to_id_idx
+on public.news_article_comments (reply_to_id);
+
+create table if not exists public.news_article_comment_reads (
+  article_id uuid not null references public.news_articles(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  read_at timestamptz not null default now(),
+  primary key (article_id, user_id)
+);
+
+create table if not exists public.news_article_likes (
+  article_id uuid not null references public.news_articles(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (article_id, user_id)
+);
+
+create index if not exists news_article_likes_user_created_at_idx
+on public.news_article_likes (user_id, created_at desc);
+
+create table if not exists public.profile_news_notifications (
+  id uuid primary key default gen_random_uuid(),
+  recipient_id uuid not null references public.profiles(id) on delete cascade,
+  actor_id uuid not null references public.profiles(id) on delete cascade,
+  article_id uuid not null references public.news_articles(id) on delete cascade,
+  comment_id uuid references public.news_article_comments(id) on delete cascade,
+  kind text not null default 'article_published' check (kind in ('article_published', 'article_comment')),
+  created_at timestamptz not null default now(),
+  read_at timestamptz,
+  constraint profile_news_notifications_recipient_article_kind_key unique (recipient_id, article_id, kind),
+  constraint profile_news_notifications_recipient_comment_kind_key unique (recipient_id, comment_id, kind)
+);
+
+alter table public.profile_news_notifications
+add column if not exists comment_id uuid references public.news_article_comments(id) on delete cascade;
+
+alter table public.profile_news_notifications
+drop constraint if exists profile_news_notifications_kind_check;
+
+alter table public.profile_news_notifications
+add constraint profile_news_notifications_kind_check
+check (kind in ('article_published', 'article_comment'));
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profile_news_notifications_recipient_comment_kind_key'
+      and conrelid = 'public.profile_news_notifications'::regclass
+  ) then
+    alter table public.profile_news_notifications
+    add constraint profile_news_notifications_recipient_comment_kind_key
+    unique (recipient_id, comment_id, kind);
+  end if;
+end $$;
+
+create index if not exists profile_news_notifications_recipient_created_at_idx
+on public.profile_news_notifications (recipient_id, created_at desc);
 
 create or replace function public.cleanup_old_game_comment_data()
 returns void
@@ -227,6 +323,11 @@ create trigger news_articles_set_updated_at
 before update on public.news_articles
 for each row execute function public.set_updated_at();
 
+drop trigger if exists news_slider_items_set_updated_at on public.news_slider_items;
+create trigger news_slider_items_set_updated_at
+before update on public.news_slider_items
+for each row execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.map_points enable row level security;
 alter table public.profile_progress_rules enable row level security;
@@ -236,6 +337,11 @@ alter table public.nba_games_by_date_cache enable row level security;
 alter table public.profile_follows enable row level security;
 alter table public.profile_comment_notifications enable row level security;
 alter table public.news_articles enable row level security;
+alter table public.news_slider_items enable row level security;
+alter table public.news_article_comments enable row level security;
+alter table public.news_article_comment_reads enable row level security;
+alter table public.news_article_likes enable row level security;
+alter table public.profile_news_notifications enable row level security;
 
 drop policy if exists "Profiles are visible to their owners" on public.profiles;
 create policy "Profiles are visible to their owners"
@@ -518,6 +624,120 @@ using (
   )
 );
 
+drop policy if exists "News slider items are visible" on public.news_slider_items;
+create policy "News slider items are visible"
+on public.news_slider_items for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Admins can insert news slider items" on public.news_slider_items;
+create policy "Admins can insert news slider items"
+on public.news_slider_items for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Admins can delete news slider items" on public.news_slider_items;
+create policy "Admins can delete news slider items"
+on public.news_slider_items for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Authenticated users can read news article comments" on public.news_article_comments;
+create policy "Authenticated users can read news article comments"
+on public.news_article_comments for select
+to authenticated
+using (true);
+
+drop policy if exists "Users can insert their own news article comments" on public.news_article_comments;
+create policy "Users can insert their own news article comments"
+on public.news_article_comments for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users and admins can delete news article comments" on public.news_article_comments;
+create policy "Users and admins can delete news article comments"
+on public.news_article_comments for delete
+to authenticated
+using (
+  auth.uid() = user_id
+  or exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Users can read their news article comment reads" on public.news_article_comment_reads;
+create policy "Users can read their news article comment reads"
+on public.news_article_comment_reads for select
+to authenticated
+using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert their news article comment reads" on public.news_article_comment_reads;
+create policy "Users can insert their news article comment reads"
+on public.news_article_comment_reads for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their news article comment reads" on public.news_article_comment_reads;
+create policy "Users can update their news article comment reads"
+on public.news_article_comment_reads for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "News article likes are visible" on public.news_article_likes;
+create policy "News article likes are visible"
+on public.news_article_likes for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Users can like news articles" on public.news_article_likes;
+create policy "Users can like news articles"
+on public.news_article_likes for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users can unlike news articles" on public.news_article_likes;
+create policy "Users can unlike news articles"
+on public.news_article_likes for delete
+to authenticated
+using (auth.uid() = user_id);
+
+drop policy if exists "Users can read their news notifications" on public.profile_news_notifications;
+create policy "Users can read their news notifications"
+on public.profile_news_notifications for select
+to authenticated
+using (auth.uid() = recipient_id);
+
+drop policy if exists "Users can update their news notifications" on public.profile_news_notifications;
+create policy "Users can update their news notifications"
+on public.profile_news_notifications for update
+to authenticated
+using (auth.uid() = recipient_id)
+with check (auth.uid() = recipient_id);
+
+drop policy if exists "Users can delete their news notifications" on public.profile_news_notifications;
+create policy "Users can delete their news notifications"
+on public.profile_news_notifications for delete
+to authenticated
+using (auth.uid() = recipient_id);
+
 drop trigger if exists game_comments_create_profile_notifications on public.game_comments;
 drop function if exists public.create_profile_comment_notifications();
 
@@ -529,6 +749,10 @@ begin
     alter publication supabase_realtime add table public.profile_follows;
     alter publication supabase_realtime add table public.profile_comment_notifications;
     alter publication supabase_realtime add table public.news_articles;
+    alter publication supabase_realtime add table public.news_article_comments;
+    alter publication supabase_realtime add table public.news_article_likes;
+    alter publication supabase_realtime add table public.profile_news_notifications;
+    alter publication supabase_realtime add table public.news_slider_items;
   end if;
 exception
   when duplicate_object then null;

@@ -83,6 +83,10 @@ async function requestJson(path: string, options: RequestInit, token: string | n
     const json = await response.json().catch(() => null)
 
     if (!response.ok) {
+        if (response.status === 413) {
+            throw new Error(json?.error || 'Изображение слишком большое. Выберите файл меньше 5 МБ.')
+        }
+
         throw new Error(json?.error || 'Request failed')
     }
 
