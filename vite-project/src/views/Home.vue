@@ -30,7 +30,7 @@
     <div class="relative z-0 pt-16 px-2 sm:px-6">
       <FavoritePlayersHome />
     </div>
-    <div id="map" class="relative z-0 scroll-mt-28 pt-16 px-2 sm:px-6">
+    <div id="map" class="mb-8 relative z-0 scroll-mt-28 pt-16 px-2 sm:px-6">
       <Map />
     </div>
 
