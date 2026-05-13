@@ -17,6 +17,8 @@ const routes = [
     { path: '/games/:date', name: 'GamesByDate', component: () => import('../views/GamesByDate.vue') },
     { path: '/news', name: 'News', component: () => import('../views/News.vue') },
     { path: '/news/:slug', name: 'NewsArticle', component: () => import('../views/NewsArticle.vue') },
+    { path: '/patch-note', name: 'PatchNote', component: () => import('../views/PatchNote.vue') },
+    { path: '/legal/:slug', name: 'LegalPage', component: () => import('../views/LegalPage.vue') },
     { path: '/player-stats', name: 'PlayerStatsAll', component: PlayerStats },
     { path: '/player-stats/all', name: 'PlayerStatsAllType', component: PlayerStats },
     { path: '/player-stats/playoffs', name: 'PlayerStatsPlayoffs', component: PlayerStats },

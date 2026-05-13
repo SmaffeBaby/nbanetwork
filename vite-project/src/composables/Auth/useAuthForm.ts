@@ -10,6 +10,12 @@ export function useAuthForm() {
     const password = ref('')
     const firstName = ref('')
     const lastName = ref('')
+    const acceptedTerms = ref(false)
+    const acceptedPrivacy = ref(false)
+    const acceptedCookies = ref(false)
+    const acceptedTrademark = ref(false)
+    const acceptedCopyright = ref(false)
+    const acceptedCommunityPolicy = ref(false)
 
     const showForm = ref<'login' | 'register' | ''>('')
 
@@ -18,6 +24,12 @@ export function useAuthForm() {
         password.value = ''
         firstName.value = ''
         lastName.value = ''
+        acceptedTerms.value = false
+        acceptedPrivacy.value = false
+        acceptedCookies.value = false
+        acceptedTrademark.value = false
+        acceptedCopyright.value = false
+        acceptedCommunityPolicy.value = false
     }
 
     const handleLogin = async () => {
@@ -35,11 +47,33 @@ export function useAuthForm() {
 
     const handleRegister = async () => {
         try {
+            const hasAllConsents = [
+                acceptedTerms.value,
+                acceptedPrivacy.value,
+                acceptedCookies.value,
+                acceptedTrademark.value,
+                acceptedCopyright.value,
+                acceptedCommunityPolicy.value
+            ].every(Boolean)
+
+            if (!hasAllConsents) {
+                toast.warning('Для регистрации нужно принять все правила и политики проекта.')
+                return
+            }
+
             await signUp({
                 email: email.value,
                 password: password.value,
                 firstName: firstName.value,
-                lastName: lastName.value
+                lastName: lastName.value,
+                consents: {
+                    terms: acceptedTerms.value,
+                    privacy: acceptedPrivacy.value,
+                    cookies: acceptedCookies.value,
+                    trademark: acceptedTrademark.value,
+                    copyright: acceptedCopyright.value,
+                    community: acceptedCommunityPolicy.value
+                }
             })
 
             toast.success(`Проверьте почту: ${email.value}`)
@@ -61,6 +95,12 @@ export function useAuthForm() {
         password,
         firstName,
         lastName,
+        acceptedTerms,
+        acceptedPrivacy,
+        acceptedCookies,
+        acceptedTrademark,
+        acceptedCopyright,
+        acceptedCommunityPolicy,
         showForm,
         handleLogin,
         handleRegister,

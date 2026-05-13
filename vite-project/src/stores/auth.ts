@@ -566,6 +566,14 @@ export const useAuthStore = defineStore('auth', () => {
         password: string
         firstName: string
         lastName: string
+        consents: {
+            terms: boolean
+            privacy: boolean
+            cookies: boolean
+            trademark: boolean
+            copyright: boolean
+            community: boolean
+        }
     }) => {
         const { data: authData, error } = await supabase.auth.signUp({
             email: data.email,
@@ -575,7 +583,7 @@ export const useAuthStore = defineStore('auth', () => {
         if (!authData.user) throw new Error('No user')
         setAccessToken(authData.session?.access_token)
 
-        await supabase.from('profiles').insert({
+        const { error: profileError } = await supabase.from('profiles').insert({
             id: authData.user.id,
             email: data.email,
             first_name: data.firstName,
@@ -589,8 +597,18 @@ export const useAuthStore = defineStore('auth', () => {
             following_profiles: [],
             notify_followed_comments: false,
             notifications: [],
-            admin: false
+            admin: false,
+            accepted_terms: data.consents.terms,
+            accepted_privacy: data.consents.privacy,
+            accepted_cookies: data.consents.cookies,
+            accepted_trademark: data.consents.trademark,
+            accepted_copyright: data.consents.copyright,
+            accepted_community_policy: data.consents.community,
+            policy_acceptance_version: 1,
+            policy_accepted_at: new Date().toISOString()
         })
+
+        if (profileError) throw profileError
 
         const newUser: AppUser = {
             id: authData.user.id,

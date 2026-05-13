@@ -12,6 +12,14 @@ create table profiles (
   notify_followed_comments boolean not null default false,
   notifications jsonb not null default '[]'::jsonb,
   admin boolean not null default false,
+  accepted_terms boolean not null default false,
+  accepted_privacy boolean not null default false,
+  accepted_cookies boolean not null default false,
+  accepted_trademark boolean not null default false,
+  accepted_copyright boolean not null default false,
+  accepted_community_policy boolean not null default false,
+  policy_acceptance_version integer not null default 1,
+  policy_accepted_at timestamptz,
 
   primary key (id),
   unique(username),
@@ -31,6 +39,46 @@ create policy "Users can insert their own profile."
 create policy "Users can update own profile."
   on profiles for update
   using ( auth.uid() = id );
+
+create table if not exists patch_notes (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid references profiles(id) on delete set null,
+  title text not null default '',
+  body text not null default '',
+  links jsonb not null default '[]'::jsonb,
+  published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint patch_notes_title_not_empty check (length(trim(title)) > 0),
+  constraint patch_notes_body_not_empty check (length(trim(body)) > 0),
+  constraint patch_notes_links_is_array check (jsonb_typeof(links) = 'array')
+);
+
+alter table patch_notes enable row level security;
+
+create policy "Published patch notes are public"
+  on patch_notes for select
+  using (
+    published = true
+    or exists (
+      select 1
+      from profiles
+      where profiles.id = auth.uid()
+        and profiles.admin = true
+    )
+  );
+
+create policy "Admins can insert patch notes"
+  on patch_notes for insert
+  with check (
+    auth.uid() = author_id
+    and exists (
+      select 1
+      from profiles
+      where profiles.id = auth.uid()
+        and profiles.admin = true
+    )
+  );
 
 -- Set up Realtime
 begin;

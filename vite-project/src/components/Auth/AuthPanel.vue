@@ -110,18 +110,43 @@
       <div
           v-if="showForm === 'register'"
           @click.self="showForm = ''"
-          class="fixed inset-0 flex items-center justify-center bg-black/50 z-[9999]"
+          class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
       >
-        <div class="w-80 bg-white rounded-2xl shadow-xl border p-6 space-y-4">
+        <div class="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border bg-white p-6 shadow-xl">
 
           <h2 class="text-2xl font-bold text-center">Регистрация</h2>
 
-          <input v-model="firstName" type="text" placeholder="Имя" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
-          <input v-model="lastName" type="text" placeholder="Фамилия" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
-          <input v-model="email" type="email" placeholder="Email" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
-          <input v-model="password" type="password" placeholder="Пароль" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
+          <div class="mt-4 space-y-4">
+            <input v-model="firstName" type="text" placeholder="Имя" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
+            <input v-model="lastName" type="text" placeholder="Фамилия" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
+            <input v-model="email" type="email" placeholder="Email" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
+            <input v-model="password" type="password" placeholder="Пароль" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
+          </div>
 
-          <div class="flex gap-2">
+          <div class="mt-5 space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-left">
+            <p class="text-sm font-black text-gray-950">Перед регистрацией подтвердите согласие</p>
+            <p class="text-xs leading-5 text-gray-600">
+              NBA MOM держится на уважении к людям и баскетболу: без политической агитации, пропаганды,
+              оскорблений, травли, дискриминации и провокационных материалов. Нарушения в новостях,
+              комментариях и профиле могут привести к удалению контента и бану аккаунта.
+            </p>
+
+            <label v-for="item in consentItems" :key="item.model" class="flex items-start gap-3 text-sm leading-5 text-gray-700">
+              <input
+                  v-model="consentModels[item.model].value"
+                  type="checkbox"
+                  class="mt-1 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+              />
+              <span>
+                {{ item.text }}
+                <RouterLink :to="item.to" target="_blank" class="font-bold text-blue-700 hover:underline">
+                  {{ item.linkText }}
+                </RouterLink>
+              </span>
+            </label>
+          </div>
+
+          <div class="mt-5 flex gap-2">
             <button
                 @click="handleRegister"
                 class="flex-1 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 active:scale-95 transition"
@@ -148,13 +173,24 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useAuthPanel } from '../../composables/Auth/useAuthPanel.ts'
+import {
+  createRegistrationConsentModels,
+  registrationConsentItems
+} from '../../composables/Auth/useRegistrationConsents'
 
 const {
   email,
   password,
   firstName,
   lastName,
+  acceptedTerms,
+  acceptedPrivacy,
+  acceptedCookies,
+  acceptedTrademark,
+  acceptedCopyright,
+  acceptedCommunityPolicy,
   user,
   showForm,
   handleLogin,
@@ -164,6 +200,17 @@ const {
   goToProfile,
   loadingUser
 } = useAuthPanel()
+
+const consentModels = createRegistrationConsentModels({
+  acceptedTerms,
+  acceptedPrivacy,
+  acceptedCookies,
+  acceptedTrademark,
+  acceptedCopyright,
+  acceptedCommunityPolicy
+})
+
+const consentItems = registrationConsentItems
 
 const userInitials = computed(() => {
   const first = user.value?.firstName?.trim().charAt(0) ?? ''
