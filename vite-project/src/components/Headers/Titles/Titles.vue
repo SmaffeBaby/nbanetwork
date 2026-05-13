@@ -65,6 +65,19 @@
           class="w-24 h-24 transition opacity-0 group-hover:opacity-100"
       />
     </RouterLink>
+
+    <RouterLink to="/news" class="group relative">
+      <img
+          :src="route.path.startsWith('/news')
+          ? '/logos/NEWS_2.svg'
+          : '/logos/NEWS_1.svg'"
+          class="w-24 h-24 transition group-hover:opacity-0 absolute"
+      />
+      <img
+          src="/logos/NEWS_2.svg"
+          class="w-24 h-24 transition opacity-0 group-hover:opacity-100"
+      />
+    </RouterLink>
   </nav>
 </template>
 

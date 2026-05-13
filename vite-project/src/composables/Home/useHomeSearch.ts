@@ -4,6 +4,7 @@ import axios from 'axios'
 import {
     ChartBarSquareIcon,
     MapIcon,
+    NewspaperIcon,
     TrophyIcon,
     UserCircleIcon,
     UserGroupIcon
@@ -12,7 +13,7 @@ import { supabase } from '../../lib/supabase'
 import { teamsFullNames } from '../../constants/TeamFullName'
 import { getPlayerImage, handleImageError } from '../../utils/playerImage'
 
-type ResultType = 'team' | 'page' | 'player' | 'profile'
+type ResultType = 'team' | 'page' | 'player' | 'profile' | 'news'
 
 type SearchResult = {
     id: string
@@ -38,15 +39,25 @@ type ProfileRow = {
     avatar_img: string | null
 }
 
+type NewsRow = {
+    id: string
+    title: string
+    excerpt: string | null
+    cover_image_url: string | null
+    hashtags: string[] | null
+}
+
 const teamIcon = markRaw(UserGroupIcon)
 const playerIcon = markRaw(UserCircleIcon)
 const profileIcon = markRaw(UserCircleIcon)
+const newsIcon = markRaw(NewspaperIcon)
 
 const typeLabels: Record<ResultType, string> = {
     team: 'Команда',
     page: 'Раздел',
     player: 'Игрок',
-    profile: 'Профиль'
+    profile: 'Профиль',
+    news: 'Новость'
 }
 
 const cyrillicToLatin: Record<string, string> = {
@@ -119,6 +130,14 @@ const pageResults: SearchResult[] = [
         icon: markRaw(TrophyIcon)
     },
     {
+        id: 'page-news',
+        type: 'page',
+        title: 'Новости',
+        subtitle: 'Статьи, хештеги и материалы к матчам',
+        to: '/news',
+        icon: newsIcon
+    },
+    {
         id: 'page-profile',
         type: 'page',
         title: 'Мой профиль',
@@ -161,9 +180,11 @@ export function useHomeSearch() {
     const players = ref<SearchResult[]>([])
     const allTimePlayers = ref<SearchResult[]>([])
     const profiles = ref<SearchResult[]>([])
+    const news = ref<SearchResult[]>([])
     const playersLoading = ref(false)
     const allTimePlayersLoading = ref(false)
     const profilesLoading = ref(false)
+    const newsLoading = ref(false)
     const playersLoaded = ref(false)
     let profileSearchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -235,12 +256,13 @@ export function useHomeSearch() {
             ...localResults,
             ...playerResults,
             ...allTimePlayers.value,
-            ...profiles.value
+            ...profiles.value,
+            ...news.value
         ]).slice(0, 10)
     })
 
     const isLoadingAny = computed(() =>
-        playersLoading.value || allTimePlayersLoading.value || profilesLoading.value
+        playersLoading.value || allTimePlayersLoading.value || profilesLoading.value || newsLoading.value
     )
 
     const currentSeason = () => {
@@ -363,12 +385,58 @@ export function useHomeSearch() {
         }
     }
 
+    const fetchNews = async (query: string) => {
+        if (query.length < 2) {
+            news.value = []
+            return
+        }
+
+        newsLoading.value = true
+        const normalizedTag = query.trim().replace(/^#/, '').toLowerCase()
+
+        try {
+            const escaped = query.replace(/[%_,]/g, '')
+            let request = supabase
+                .from('news_articles')
+                .select('id, title, excerpt, cover_image_url, hashtags')
+                .limit(5)
+
+            request = query.startsWith('#')
+                ? request.contains('hashtags', [normalizedTag])
+                : request.or(`title.ilike.%${escaped}%,excerpt.ilike.%${escaped}%`)
+
+            const { data, error } = await request
+
+            if (error) {
+                news.value = []
+                return
+            }
+
+            news.value = ((data ?? []) as NewsRow[]).map(item => ({
+                    id: `news-${item.id}`,
+                    type: 'news' as const,
+                    title: item.title,
+                    subtitle: item.excerpt || 'новость NBA Dashboard',
+                    to: query.startsWith('#')
+                        ? `/news?tag=${encodeURIComponent(normalizedTag)}`
+                        : `/news?q=${encodeURIComponent(item.title)}`,
+                    image: item.cover_image_url ?? undefined,
+                    icon: newsIcon
+                }))
+        } catch {
+            news.value = []
+        } finally {
+            newsLoading.value = false
+        }
+    }
+
     const typeBadgeClass = (type: ResultType) => {
         const classes: Record<ResultType, string> = {
             team: 'bg-red-50 text-red-700',
             page: 'bg-blue-50 text-blue-700',
             player: 'bg-emerald-50 text-emerald-700',
-            profile: 'bg-violet-50 text-violet-700'
+            profile: 'bg-violet-50 text-violet-700',
+            news: 'bg-amber-50 text-amber-700'
         }
 
         return classes[type]
@@ -441,6 +509,7 @@ export function useHomeSearch() {
         profileSearchTimer = setTimeout(() => {
             void fetchAllTimePlayers(value.trim())
             void fetchProfiles(value.trim())
+            void fetchNews(value.trim())
         }, 250)
     })
 

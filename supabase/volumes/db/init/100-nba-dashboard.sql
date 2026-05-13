@@ -107,6 +107,32 @@ create table if not exists public.nba_games_by_date_cache (
 create index if not exists nba_games_by_date_cache_fetched_at_idx
 on public.nba_games_by_date_cache (fetched_at);
 
+create table if not exists public.news_articles (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references public.profiles(id) on delete cascade,
+  title text not null default '',
+  slug text not null unique,
+  excerpt text not null default '',
+  content_html text not null default '',
+  cover_image_url text,
+  game_ids text[] not null default '{}',
+  hashtags text[] not null default '{}',
+  published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint news_articles_title_not_empty check (length(trim(title)) > 0),
+  constraint news_articles_content_not_empty check (length(trim(content_html)) > 0)
+);
+
+create index if not exists news_articles_created_at_idx
+on public.news_articles (created_at desc);
+
+create index if not exists news_articles_game_ids_idx
+on public.news_articles using gin (game_ids);
+
+create index if not exists news_articles_hashtags_idx
+on public.news_articles using gin (hashtags);
+
 create or replace function public.cleanup_old_game_comment_data()
 returns void
 language plpgsql
@@ -196,6 +222,11 @@ create trigger nba_games_by_date_cache_set_updated_at
 before update on public.nba_games_by_date_cache
 for each row execute function public.set_updated_at();
 
+drop trigger if exists news_articles_set_updated_at on public.news_articles;
+create trigger news_articles_set_updated_at
+before update on public.news_articles
+for each row execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.map_points enable row level security;
 alter table public.profile_progress_rules enable row level security;
@@ -204,6 +235,7 @@ alter table public.game_comment_reads enable row level security;
 alter table public.nba_games_by_date_cache enable row level security;
 alter table public.profile_follows enable row level security;
 alter table public.profile_comment_notifications enable row level security;
+alter table public.news_articles enable row level security;
 
 drop policy if exists "Profiles are visible to their owners" on public.profiles;
 create policy "Profiles are visible to their owners"
@@ -424,6 +456,68 @@ on public.nba_games_by_date_cache for select
 to anon, authenticated
 using (true);
 
+drop policy if exists "Published news articles are public" on public.news_articles;
+create policy "Published news articles are public"
+on public.news_articles for select
+to anon, authenticated
+using (
+  published = true
+  or exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Admins can insert news articles" on public.news_articles;
+create policy "Admins can insert news articles"
+on public.news_articles for insert
+to authenticated
+with check (
+  auth.uid() = author_id
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Admins can update news articles" on public.news_articles;
+create policy "Admins can update news articles"
+on public.news_articles for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Admins can delete news articles" on public.news_articles;
+create policy "Admins can delete news articles"
+on public.news_articles for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
 drop trigger if exists game_comments_create_profile_notifications on public.game_comments;
 drop function if exists public.create_profile_comment_notifications();
 
@@ -434,6 +528,7 @@ begin
     alter publication supabase_realtime add table public.game_comments;
     alter publication supabase_realtime add table public.profile_follows;
     alter publication supabase_realtime add table public.profile_comment_notifications;
+    alter publication supabase_realtime add table public.news_articles;
   end if;
 exception
   when duplicate_object then null;

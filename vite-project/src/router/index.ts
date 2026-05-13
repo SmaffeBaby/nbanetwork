@@ -15,6 +15,7 @@ const routes = [
     { path: '/teams', component: Teams },
     { path: '/games', redirect: () => `/games/${getTodayDateKey()}` },
     { path: '/games/:date', name: 'GamesByDate', component: () => import('../views/GamesByDate.vue') },
+    { path: '/news', name: 'News', component: () => import('../views/News.vue') },
     { path: '/player-stats', name: 'PlayerStatsAll', component: PlayerStats },
     { path: '/player-stats/all', name: 'PlayerStatsAllType', component: PlayerStats },
     { path: '/player-stats/playoffs', name: 'PlayerStatsPlayoffs', component: PlayerStats },

@@ -89,6 +89,20 @@
           />
         </RouterLink>
 
+        <RouterLink
+            to="/news"
+            @click="isOpen = false"
+            class="flex items-center gap-3"
+        >
+          <img
+              :src="route.path.startsWith('/news')
+              ? '/logos/NEWS_2.svg'
+              : '/logos/NEWS_1.svg'"
+              class="w-44 h-44"
+              alt="News"
+          />
+        </RouterLink>
+
         <AuthPanel />
       </div>
     </div>

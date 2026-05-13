@@ -23,6 +23,8 @@
 
     <TabsContent :comments-unread-count="commentsUnreadCount">
       <template #overview>
+        <GameNewsArticles :game-id="gameId" />
+
         <GameRecapCard
             v-if="recap"
             :recap="recap"
@@ -77,6 +79,7 @@ import TabsContent from './TabsContent.vue'
 import TeamStats from './TeamStats/TeamStats.vue'
 import GameBroadcastCard from './GameBroadcastCard.vue'
 import GameComments from './GameComments.vue'
+import GameNewsArticles from './GameNewsArticles.vue'
 import { useGameCommentsUnread } from '../../../composables/NBA/GameFinal/useGameComments'
 
 const filters = ref({
