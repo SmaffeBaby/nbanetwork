@@ -21,7 +21,7 @@ services:
       - ./vite-project/.env
       - ./supabase/.env
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       - NODE_ENV=production
       - SUPABASE_URL=http://kong:8000
@@ -34,4 +34,4 @@ services:
       context: ./python-backend        # папка с Python backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"

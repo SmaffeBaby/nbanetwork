@@ -1,0 +1,45 @@
+name: Deploy production
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/production_key
+          chmod 600 ~/.ssh/production_key
+          ssh-keyscan -p "${{ secrets.PROD_SSH_PORT || 22 }}" -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync project
+        run: |
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude 'deploy-artifacts/' \
+            --exclude 'node_modules/' \
+            --exclude '.env' \
+            --exclude 'supabase/.env' \
+            --exclude 'vite-project/.env' \
+            --exclude 'supabase/volumes/db/data/' \
+            --exclude 'supabase/volumes/storage/' \
+            -e "ssh -i ~/.ssh/production_key -p ${{ secrets.PROD_SSH_PORT || 22 }}" \
+            ./ "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}:/opt/nba-dashboard/"
+
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/production_key \
+            -p "${{ secrets.PROD_SSH_PORT || 22 }}" \
+            "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
+            'APP_DIR=/opt/nba-dashboard /opt/nba-dashboard/scripts/deploy-production.sh'
