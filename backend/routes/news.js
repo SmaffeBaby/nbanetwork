@@ -31,6 +31,13 @@ function normalizeOptionalUrl(value) {
     return ''
 }
 
+function normalizePositiveInteger(value, fallback = null) {
+    if (value === undefined || value === null || value === '') return fallback
+    const number = Number(value)
+    if (!Number.isInteger(number) || number < 1) return null
+    return number
+}
+
 function makeSlug(title) {
     const normalized = normalizeText(title)
         .toLowerCase()
@@ -105,8 +112,44 @@ function normalizeComment(row) {
 function normalizeSliderItem(row) {
     return {
         ...row,
+        mobile_image_url: row.mobile_image_url || null,
+        sort_order: row.sort_order || 1,
         profiles: Array.isArray(row.profiles) ? row.profiles[0] ?? null : row.profiles ?? null
     }
+}
+
+async function reorderSliderItems(admin, targetId, requestedOrder) {
+    const { data, error } = await admin
+        .from('news_slider_items')
+        .select('id, sort_order, created_at')
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    const rows = data || []
+    const target = rows.find(item => item.id === targetId)
+    if (!target) return null
+
+    const nextOrder = Math.min(Math.max(requestedOrder, 1), rows.length)
+    const reordered = rows.filter(item => item.id !== targetId)
+    reordered.splice(nextOrder - 1, 0, target)
+
+    const updates = await Promise.all(
+        reordered.map((item, index) => {
+            const sortOrder = index + 1
+            if (item.sort_order === sortOrder) return null
+            return admin
+                .from('news_slider_items')
+                .update({ sort_order: sortOrder })
+                .eq('id', item.id)
+        }).filter(Boolean)
+    )
+
+    const failedUpdate = updates.find(result => result?.error)
+    if (failedUpdate?.error) throw failedUpdate.error
+
+    return nextOrder
 }
 
 async function fetchLikedArticles(userId) {
@@ -251,7 +294,9 @@ router.get('/news-slider', async (_req, res) => {
             .select(`
                 id,
                 image_url,
+                mobile_image_url,
                 link_url,
+                sort_order,
                 created_by,
                 created_at,
                 updated_at,
@@ -261,6 +306,7 @@ router.get('/news-slider', async (_req, res) => {
                     avatar_img
                 )
             `)
+            .order('sort_order', { ascending: true })
             .order('created_at', { ascending: false })
             .limit(12)
 
@@ -280,13 +326,19 @@ router.post('/news-slider', requireUser, async (req, res) => {
         if (!admin) return
 
         const imageUrl = normalizeText(req.body?.image_url)
+        const mobileImageUrl = normalizeText(req.body?.mobile_image_url) || null
         const linkUrl = normalizeOptionalUrl(req.body?.link_url)
+        const sortOrder = normalizePositiveInteger(req.body?.sort_order, 1)
 
         if (!imageUrl) {
             return res.status(400).json({ error: 'Image is required' })
         }
 
-        if (imageUrl.length > MAX_SLIDER_IMAGE_SIZE) {
+        if (!sortOrder) {
+            return res.status(400).json({ error: 'Sort order must be a positive integer' })
+        }
+
+        if (imageUrl.length > MAX_SLIDER_IMAGE_SIZE || (mobileImageUrl && mobileImageUrl.length > MAX_SLIDER_IMAGE_SIZE)) {
             return res.status(400).json({ error: 'Image is too large. Choose a file smaller than 5 MB.' })
         }
 
@@ -298,17 +350,75 @@ router.post('/news-slider', requireUser, async (req, res) => {
             .from('news_slider_items')
             .insert({
                 image_url: imageUrl,
+                mobile_image_url: mobileImageUrl,
                 link_url: linkUrl,
+                sort_order: sortOrder,
                 created_by: req.user.id
             })
-            .select('id, image_url, link_url, created_by, created_at, updated_at')
+            .select('id, image_url, mobile_image_url, link_url, sort_order, created_by, created_at, updated_at')
             .single()
 
         if (error) {
             return res.status(500).json({ error: error.message })
         }
 
-        res.status(201).json({ slide: data })
+        await reorderSliderItems(admin, data.id, sortOrder)
+
+        res.status(201).json({ slide: { ...data, sort_order: sortOrder } })
+    } catch (error) {
+        res.status(500).json({ error: error.message || 'News slider service is unavailable' })
+    }
+})
+
+router.patch('/news-slider/:id', requireUser, async (req, res) => {
+    try {
+        const admin = await requireAdmin(req, res)
+        if (!admin) return
+
+        const imageUrl = normalizeText(req.body?.image_url)
+        const mobileImageUrl = normalizeText(req.body?.mobile_image_url) || null
+        const linkUrl = normalizeOptionalUrl(req.body?.link_url)
+        const sortOrder = normalizePositiveInteger(req.body?.sort_order, null)
+
+        if (!imageUrl) {
+            return res.status(400).json({ error: 'Image is required' })
+        }
+
+        if (sortOrder === null && req.body?.sort_order !== undefined) {
+            return res.status(400).json({ error: 'Sort order must be a positive integer' })
+        }
+
+        if (imageUrl.length > MAX_SLIDER_IMAGE_SIZE || (mobileImageUrl && mobileImageUrl.length > MAX_SLIDER_IMAGE_SIZE)) {
+            return res.status(400).json({ error: 'Image is too large. Choose a file smaller than 5 MB.' })
+        }
+
+        if (linkUrl === '') {
+            return res.status(400).json({ error: 'Link URL is invalid' })
+        }
+
+        const { data, error } = await admin
+            .from('news_slider_items')
+            .update({
+                image_url: imageUrl,
+                mobile_image_url: mobileImageUrl,
+                link_url: linkUrl,
+                ...(sortOrder ? { sort_order: sortOrder } : {})
+            })
+            .eq('id', req.params.id)
+            .select('id, image_url, mobile_image_url, link_url, sort_order, created_by, created_at, updated_at')
+            .maybeSingle()
+
+        if (error) {
+            return res.status(500).json({ error: error.message })
+        }
+
+        if (!data) {
+            return res.status(404).json({ error: 'Slide not found' })
+        }
+
+        const nextSortOrder = sortOrder ? await reorderSliderItems(admin, data.id, sortOrder) : data.sort_order
+
+        res.json({ slide: { ...data, sort_order: nextSortOrder || data.sort_order } })
     } catch (error) {
         res.status(500).json({ error: error.message || 'News slider service is unavailable' })
     }

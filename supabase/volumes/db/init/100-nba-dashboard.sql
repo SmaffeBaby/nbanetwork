@@ -175,15 +175,33 @@ add column if not exists team_abbrs text[] not null default '{}';
 create table if not exists public.news_slider_items (
   id uuid primary key default gen_random_uuid(),
   image_url text not null,
+  mobile_image_url text,
   link_url text,
+  sort_order integer not null default 1,
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint news_slider_items_image_not_empty check (length(trim(image_url)) > 0)
+  constraint news_slider_items_image_not_empty check (length(trim(image_url)) > 0),
+  constraint news_slider_items_sort_order_positive check (sort_order > 0)
 );
+
+alter table public.news_slider_items
+add column if not exists mobile_image_url text;
+
+alter table public.news_slider_items
+add column if not exists sort_order integer not null default 1;
+
+alter table public.news_slider_items
+drop constraint if exists news_slider_items_sort_order_positive;
+
+alter table public.news_slider_items
+add constraint news_slider_items_sort_order_positive check (sort_order > 0);
 
 create index if not exists news_slider_items_created_at_idx
 on public.news_slider_items (created_at desc);
+
+create index if not exists news_slider_items_sort_order_idx
+on public.news_slider_items (sort_order asc, created_at desc);
 
 create table if not exists public.patch_notes (
   id uuid primary key default gen_random_uuid(),
@@ -703,6 +721,27 @@ create policy "Admins can delete news slider items"
 on public.news_slider_items for delete
 to authenticated
 using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Admins can update news slider items" on public.news_slider_items;
+create policy "Admins can update news slider items"
+on public.news_slider_items for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+)
+with check (
   exists (
     select 1
     from public.profiles

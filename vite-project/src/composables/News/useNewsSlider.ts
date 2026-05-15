@@ -5,10 +5,15 @@ import { useAuthStore } from '../../stores/auth'
 export type NewsSlide = {
   id: string
   image_url: string
+  mobile_image_url: string | null
   link_url: string | null
+  sort_order: number
 }
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+const MIN_SLIDE_INTERVAL = 9000
+const EXTRA_INTERVAL_PER_SLIDE = 500
+const MAX_SLIDE_INTERVAL = 14000
 
 const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader()
@@ -24,8 +29,11 @@ export function useNewsSlider() {
   const loading = ref(false)
   const saving = ref(false)
   const showForm = ref(false)
+  const editingSlide = ref<NewsSlide | null>(null)
   const imageData = ref('')
+  const mobileImageData = ref('')
   const linkUrl = ref('')
+  const sortOrder = ref(1)
   const formError = ref('')
   let timer: number | null = null
 
@@ -43,7 +51,7 @@ export function useNewsSlider() {
     }
   }
 
-  const attachImage = async (event: Event) => {
+  const attachImage = async (event: Event, target: 'desktop' | 'mobile') => {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
     if (!file) return
@@ -61,8 +69,47 @@ export function useNewsSlider() {
     }
 
     formError.value = ''
-    imageData.value = await fileToDataUrl(file)
+    const dataUrl = await fileToDataUrl(file)
+    if (target === 'desktop') {
+      imageData.value = dataUrl
+    } else {
+      mobileImageData.value = dataUrl
+    }
     input.value = ''
+  }
+
+  const resetForm = () => {
+    imageData.value = ''
+    mobileImageData.value = ''
+    linkUrl.value = ''
+    sortOrder.value = 1
+    formError.value = ''
+    editingSlide.value = null
+  }
+
+  const startCreate = () => {
+    if (showForm.value && !editingSlide.value) {
+      showForm.value = false
+      return
+    }
+
+    resetForm()
+    showForm.value = true
+  }
+
+  const startEdit = (slide: NewsSlide) => {
+    editingSlide.value = slide
+    imageData.value = slide.image_url
+    mobileImageData.value = slide.mobile_image_url ?? ''
+    linkUrl.value = slide.link_url ?? ''
+    sortOrder.value = slide.sort_order ?? 1
+    formError.value = ''
+    showForm.value = true
+  }
+
+  const cancelForm = () => {
+    resetForm()
+    showForm.value = false
   }
 
   const saveSlide = async () => {
@@ -71,15 +118,17 @@ export function useNewsSlider() {
     formError.value = ''
 
     try {
-      await authFetch('/api/news-slider', {
-        method: 'POST',
+      const slide = editingSlide.value
+      await authFetch(slide ? `/api/news-slider/${slide.id}` : '/api/news-slider', {
+        method: slide ? 'PATCH' : 'POST',
         body: JSON.stringify({
           image_url: imageData.value,
-          link_url: linkUrl.value.trim() || null
+          mobile_image_url: mobileImageData.value || null,
+          link_url: linkUrl.value.trim() || null,
+          sort_order: Math.max(1, Math.trunc(Number(sortOrder.value) || 1))
         })
       })
-      imageData.value = ''
-      linkUrl.value = ''
+      resetForm()
       showForm.value = false
       await fetchSlides()
     } catch (error: any) {
@@ -107,7 +156,27 @@ export function useNewsSlider() {
   const startTimer = () => {
     if (timer) window.clearInterval(timer)
     if (slides.value.length < 2) return
-    timer = window.setInterval(nextSlide, 6000)
+    const interval = Math.min(
+      MAX_SLIDE_INTERVAL,
+      MIN_SLIDE_INTERVAL + Math.max(slides.value.length - 1, 0) * EXTRA_INTERVAL_PER_SLIDE
+    )
+    timer = window.setInterval(nextSlide, interval)
+  }
+
+  const goToSlide = (index: number) => {
+    if (!slides.value[index]) return
+    activeIndex.value = index
+    startTimer()
+  }
+
+  const nextSlideManually = () => {
+    nextSlide()
+    startTimer()
+  }
+
+  const prevSlideManually = () => {
+    prevSlide()
+    startTimer()
   }
 
   watch(() => slides.value.length, startTimer)
@@ -128,15 +197,22 @@ export function useNewsSlider() {
     loading,
     saving,
     showForm,
+    editingSlide,
     imageData,
+    mobileImageData,
     linkUrl,
+    sortOrder,
     formError,
     isAdmin,
     activeSlide,
     attachImage,
+    startCreate,
+    startEdit,
+    cancelForm,
     saveSlide,
     deleteSlide,
-    nextSlide,
-    prevSlide
+    goToSlide,
+    nextSlide: nextSlideManually,
+    prevSlide: prevSlideManually
   }
 }
