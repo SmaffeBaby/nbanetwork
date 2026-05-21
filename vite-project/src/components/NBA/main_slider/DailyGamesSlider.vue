@@ -1,7 +1,20 @@
 <template>
   <div class="relative">
+    <div
+        v-if="isCompactMobileList"
+        class="flex flex-col gap-4 py-4"
+    >
+      <div
+          v-for="game in gamesList"
+          :key="game.id"
+          class="match-card w-full p-4 bg-white rounded-xl transform scale-100 transition-transform duration-300"
+      >
+        <MatchCardContent :game="game" :countdowns="countdowns" :formatGameTime="formatGameTime" />
+      </div>
+    </div>
+
     <Swiper
-        v-if="isMobile"
+        v-else-if="isMobile"
         :modules="[Navigation]"
         direction="vertical"
         :slides-per-view="3"
@@ -41,11 +54,13 @@
       </SwiperSlide>
     </Swiper>
 
-    <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-transparent to-transparent"></div>
-    <div class="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-transparent to-transparent"></div>
+    <template v-if="!isCompactMobileList">
+      <div class="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-transparent to-transparent"></div>
+      <div class="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-transparent to-transparent"></div>
+    </template>
 
     <div
-        v-if="isMobile && !atEnd"
+        v-if="isMobile && !isCompactMobileList && !atEnd"
         class="absolute bottom-4 left-1/2 -translate-x-1/2 text-gray-500 text-sm animate-bounce z-10"
     >
       ⬆️ ещё игры
@@ -53,7 +68,7 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Navigation } from 'swiper/modules'
 import 'swiper/css'
@@ -72,6 +87,7 @@ const { countdowns } = useCountdowns(props.gamesList)
 
 const isMobile = ref(false)
 const atEnd = ref(false)
+const isCompactMobileList = computed(() => isMobile.value && props.gamesList.length <= 3)
 
 const checkScreen = () => {
   isMobile.value = window.innerWidth < 640
