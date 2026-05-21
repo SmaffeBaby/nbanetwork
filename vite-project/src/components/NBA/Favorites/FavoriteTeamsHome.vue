@@ -15,7 +15,7 @@
 
     <div
         v-if="favoriteTeams.length"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        class="grid max-h-[22rem] grid-cols-1 gap-4 overflow-y-auto pr-1 sm:max-h-none sm:grid-cols-2 sm:overflow-visible sm:pr-0 lg:grid-cols-3"
     >
       <button
           v-for="team in favoriteTeams"
