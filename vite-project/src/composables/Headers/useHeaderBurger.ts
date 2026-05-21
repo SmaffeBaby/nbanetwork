@@ -2,11 +2,10 @@ import { computed, h, onBeforeUnmount, ref, watch } from 'vue'
 import { type RouteLocationRaw, useRoute } from 'vue-router'
 import { getTodayDateKey } from '../NBA/games/useGamesByDate'
 import { useAuthPanel } from '../Auth/useAuthPanel'
-import {
-  createRegistrationConsentModels,
-  registrationConsentItems
-} from '../Auth/useRegistrationConsents'
 import { useAppFooter } from '../Layout/useAppFooter'
+import { useHeader } from './useHeader'
+
+type MobileMenuKey = 'season' | 'teams' | 'more'
 
 type NavLink = {
   label: string
@@ -20,49 +19,43 @@ export function useHeaderBurger() {
   const route = useRoute()
   const gamesPath = computed(() => `/games/${getTodayDateKey()}`)
   const { githubUrl, telegramUrl } = useAppFooter()
+  const mobileMenus = ref<Record<MobileMenuKey, boolean>>({
+    season: false,
+    teams: false,
+    more: false
+  })
+
+  const {
+    categoryLinks,
+    conferenceTeams,
+    ChevronDownIcon,
+    featuredLinks,
+    gamesLink,
+    moreIsActive,
+    newsLink,
+    playersLink,
+    seasonIsActive,
+    seasonLinks,
+    teamsIsActive
+  } = useHeader()
 
   const {
     email,
     password,
     firstName,
     lastName,
-    acceptedTerms,
-    acceptedPrivacy,
-    acceptedCookies,
-    acceptedTrademark,
-    acceptedCopyright,
-    acceptedCommunityPolicy,
+    consentItems,
+    consentModels,
     user,
     showForm,
     handleLogin,
     handleRegister,
     handleLogout,
     sendPasswordReset,
-    loadingUser
+    loadingUser,
+    userInitials,
+    userName
   } = useAuthPanel()
-
-  const consentModels = createRegistrationConsentModels({
-    acceptedTerms,
-    acceptedPrivacy,
-    acceptedCookies,
-    acceptedTrademark,
-    acceptedCopyright,
-    acceptedCommunityPolicy
-  })
-
-  const userInitials = computed(() => {
-    const first = user.value?.firstName?.trim().charAt(0) ?? ''
-    const last = user.value?.lastName?.trim().charAt(0) ?? ''
-    const initials = `${first}${last}`.trim()
-
-    return initials || 'U'
-  })
-
-  const userName = computed(() => {
-    const fullName = `${user.value?.firstName ?? ''} ${user.value?.lastName ?? ''}`.trim()
-
-    return fullName || user.value?.email || 'Пользователь'
-  })
 
   const primaryLinks = computed<NavLink[]>(() => [
     {
@@ -109,6 +102,22 @@ export function useHeaderBurger() {
 
   function closeDrawer() {
     isOpen.value = false
+    closeMobileMenus()
+  }
+
+  function closeMobileMenus() {
+    mobileMenus.value = {
+      season: false,
+      teams: false,
+      more: false
+    }
+  }
+
+  function toggleMobileMenu(menu: MobileMenuKey) {
+    mobileMenus.value = {
+      ...mobileMenus.value,
+      [menu]: !mobileMenus.value[menu]
+    }
   }
 
   async function loginFromDrawer() {
@@ -144,20 +153,19 @@ export function useHeaderBurger() {
   })
 
   return {
-    acceptedCommunityPolicy,
-    acceptedCookies,
-    acceptedCopyright,
-    acceptedPrivacy,
-    acceptedTerms,
-    acceptedTrademark,
     BagIcon,
     CalendarIcon,
+    categoryLinks,
+    ChevronDownIcon,
     closeDrawer,
-    consentItems: registrationConsentItems,
+    consentItems,
     consentModels,
+    conferenceTeams,
     DashboardIcon,
     email,
+    featuredLinks,
     firstName,
+    gamesLink,
     gamesPath,
     githubUrl,
     InboxIcon,
@@ -166,14 +174,24 @@ export function useHeaderBurger() {
     loadingUser,
     loginFromDrawer,
     logoutFromDrawer,
+    mobileMenus,
+    moreIsActive,
+    newsLink,
     password,
+    playersLink,
+    PlayoffsIcon,
     primaryLinks,
     registerFromDrawer,
     route,
     sendPasswordReset,
+    seasonIsActive,
+    seasonLinks,
     showForm,
     SparklesIcon,
     telegramUrl,
+    teamsIsActive,
+    TeamsIcon,
+    toggleMobileMenu,
     user,
     userInitials,
     userName,

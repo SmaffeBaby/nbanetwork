@@ -1,5 +1,5 @@
 <template>
-  <div class="sm:hidden fixed top-4 right-4 z-50">
+  <div class="fixed right-4 top-4 z-50 min-[1180px]:hidden">
     <button
         class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/50 bg-white/70 text-slate-900 shadow-lg shadow-slate-900/10 backdrop-blur-xl transition hover:bg-white/85 focus:outline-none focus:ring-4 focus:ring-blue-100"
         type="button"
@@ -17,7 +17,7 @@
   <Transition name="drawer-fade">
     <div
         v-if="isOpen"
-        class="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-sm sm:hidden"
+        class="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-sm min-[1180px]:hidden"
         aria-hidden="true"
         @click="closeDrawer"
     />
@@ -25,7 +25,7 @@
 
   <aside
       id="drawer-navigation"
-      class="drawer-gradient fixed left-0 top-0 z-50 h-screen w-80 max-w-[86vw] overflow-y-auto border-e border-white/45 p-4 text-left shadow-2xl shadow-slate-950/20 backdrop-blur-2xl transition-transform duration-300 sm:hidden"
+      class="drawer-gradient fixed left-0 top-0 z-50 h-screen w-80 max-w-[86vw] overflow-y-auto border-e border-white/45 p-4 text-left shadow-2xl shadow-slate-950/20 backdrop-blur-2xl transition-transform duration-300 min-[1180px]:hidden"
       :class="isOpen ? 'translate-x-0' : '-translate-x-full'"
       tabindex="-1"
       aria-labelledby="drawer-navigation-label"
@@ -91,43 +91,152 @@
 
     <nav class="py-5">
       <ul class="space-y-2 font-medium">
-        <li v-for="item in primaryLinks" :key="item.label">
+        <li>
           <RouterLink
-              :to="item.to"
+              :to="newsLink.to"
               class="group flex items-center rounded-lg px-2 py-2 text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
-              :class="{ 'bg-white/70 text-blue-700 shadow-sm': item.isActive }"
+              :class="{ 'bg-white/70 text-blue-700 shadow-sm': newsLink.isActive }"
               @click="closeDrawer"
           >
-            <component :is="item.icon" class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
-            <span class="ms-3">{{ item.label }}</span>
+            <InboxIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
+            <span class="ms-3">{{ newsLink.label }}</span>
           </RouterLink>
         </li>
 
         <li>
           <RouterLink
-              :to="gamesPath"
+              :to="gamesLink.to"
               class="group flex items-center rounded-lg px-2 py-2 text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
-              :class="{ 'bg-white/70 text-blue-700 shadow-sm': route.path.startsWith('/games') }"
+              :class="{ 'bg-white/70 text-blue-700 shadow-sm': gamesLink.isActive }"
               @click="closeDrawer"
           >
             <CalendarIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
-            <span class="ms-3">Игры</span>
+            <span class="ms-3">{{ gamesLink.label }}</span>
           </RouterLink>
+        </li>
+
+        <li>
+          <button
+              type="button"
+              class="group flex w-full items-center rounded-lg px-2 py-2 text-left text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+              :class="{ 'bg-white/70 text-blue-700 shadow-sm': seasonIsActive }"
+              @click="toggleMobileMenu('season')"
+          >
+            <PlayoffsIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
+            <span class="ms-3 flex-1">Сезон</span>
+            <ChevronDownIcon class="h-4 w-4 transition" :class="{ 'rotate-180': mobileMenus.season }" />
+          </button>
+
+          <div v-if="mobileMenus.season" class="mt-2 space-y-1 rounded-xl border border-white/60 bg-white/45 p-2 shadow-sm backdrop-blur-xl">
+            <RouterLink
+                v-for="item in seasonLinks"
+                :key="item.label"
+                :to="item.to"
+                class="flex items-start gap-3 rounded-lg px-2 py-2 text-slate-700 transition hover:bg-white/70 hover:text-blue-700"
+                :class="{ 'bg-white/70 text-blue-700': item.isActive }"
+                @click="closeDrawer"
+            >
+              <component :is="item.icon" class="mt-0.5 h-5 w-5 shrink-0" />
+              <span class="min-w-0">
+                <span class="block text-sm font-bold leading-5">{{ item.label }}</span>
+                <span class="block text-xs font-medium leading-4 text-slate-500">{{ item.description }}</span>
+              </span>
+            </RouterLink>
+          </div>
+        </li>
+
+        <li>
+          <button
+              type="button"
+              class="group flex w-full items-center rounded-lg px-2 py-2 text-left text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+              :class="{ 'bg-white/70 text-blue-700 shadow-sm': teamsIsActive }"
+              @click="toggleMobileMenu('teams')"
+          >
+            <TeamsIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
+            <span class="ms-3 flex-1">Команды</span>
+            <ChevronDownIcon class="h-4 w-4 transition" :class="{ 'rotate-180': mobileMenus.teams }" />
+          </button>
+
+          <div v-if="mobileMenus.teams" class="mt-2 space-y-3 rounded-xl border border-white/60 bg-white/45 p-3 shadow-sm backdrop-blur-xl">
+            <div v-for="conference in conferenceTeams" :key="conference.title">
+              <p class="px-1 text-xs font-black uppercase tracking-wide text-slate-500">{{ conference.title }}</p>
+              <div class="mt-2 grid gap-1">
+                <RouterLink
+                    v-for="team in conference.teams"
+                    :key="team.abbr"
+                    :to="`/team/${team.abbr}`"
+                    class="flex min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-slate-700 transition hover:bg-white/70 hover:text-blue-700"
+                    @click="closeDrawer"
+                >
+                  <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-100">
+                    <img :src="team.logo" :alt="team.name" class="h-[18px] w-[18px] object-contain" loading="lazy" />
+                  </span>
+                  <span class="truncate text-xs font-bold">{{ team.name }}</span>
+                </RouterLink>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <li>
+          <RouterLink
+              :to="playersLink.to"
+              class="group flex items-center rounded-lg px-2 py-2 text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+              :class="{ 'bg-white/70 text-blue-700 shadow-sm': playersLink.isActive }"
+              @click="closeDrawer"
+          >
+            <BagIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
+            <span class="ms-3">{{ playersLink.label }}</span>
+          </RouterLink>
+        </li>
+
+        <li>
+          <button
+              type="button"
+              class="group flex w-full items-center rounded-lg px-2 py-2 text-left text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+              :class="{ 'bg-white/70 text-blue-700 shadow-sm': moreIsActive }"
+              @click="toggleMobileMenu('more')"
+          >
+            <SparklesIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
+            <span class="ms-3 flex-1">Ещё</span>
+            <ChevronDownIcon class="h-4 w-4 transition" :class="{ 'rotate-180': mobileMenus.more }" />
+          </button>
+
+          <div v-if="mobileMenus.more" class="mt-2 space-y-3 rounded-xl border border-white/60 bg-white/45 p-3 shadow-sm backdrop-blur-xl">
+            <div class="grid gap-1">
+              <RouterLink
+                  v-for="item in featuredLinks"
+                  :key="item.label"
+                  :to="item.to"
+                  class="flex items-start gap-3 rounded-lg px-2 py-2 text-slate-700 transition hover:bg-white/70 hover:text-blue-700"
+                  :class="{ 'bg-white/70 text-blue-700': item.isActive }"
+                  @click="closeDrawer"
+              >
+                <component :is="item.icon" class="mt-0.5 h-5 w-5 shrink-0" />
+                <span class="min-w-0">
+                  <span class="block text-sm font-bold leading-5">{{ item.label }}</span>
+                  <span class="block text-xs font-medium leading-4 text-slate-500">{{ item.description }}</span>
+                </span>
+              </RouterLink>
+            </div>
+
+            <div class="border-t border-white/55 pt-3">
+              <RouterLink
+                  v-for="item in categoryLinks"
+                  :key="item.label"
+                  :to="item.to"
+                  class="block rounded-lg px-2 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-white/70 hover:text-blue-700"
+                  @click="closeDrawer"
+              >
+                {{ item.label }}
+              </RouterLink>
+            </div>
+          </div>
         </li>
       </ul>
     </nav>
 
     <div class="mt-auto border-t border-white/45 pt-4">
-      <RouterLink
-          to="/patch-note"
-          class="group flex items-center rounded-lg px-2 py-2 text-slate-700 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
-          :class="{ 'bg-white/70 text-blue-700 shadow-sm': route.path === '/patch-note' }"
-          @click="closeDrawer"
-      >
-        <SparklesIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
-        <span class="ms-3 flex-1 whitespace-nowrap">Обновления</span>
-      </RouterLink>
-
       <div class="mt-4 flex items-center gap-4 px-2">
         <a
             :href="githubUrl"
@@ -237,28 +346,42 @@ import NotificationsBell from './NotificationsBell.vue'
 import { useHeaderBurger } from '../../composables/Headers/useHeaderBurger'
 
 const {
+  BagIcon,
   CalendarIcon,
+  categoryLinks,
+  ChevronDownIcon,
   closeDrawer,
   consentItems,
   consentModels,
+  conferenceTeams,
   email,
+  featuredLinks,
   firstName,
-  gamesPath,
+  gamesLink,
   githubUrl,
+  InboxIcon,
   isOpen,
   lastName,
   loadingUser,
   loginFromDrawer,
   logoutFromDrawer,
+  mobileMenus,
+  moreIsActive,
+  newsLink,
   openDrawer,
   password,
-  primaryLinks,
+  playersLink,
+  PlayoffsIcon,
   registerFromDrawer,
-  route,
   sendPasswordReset,
+  seasonIsActive,
+  seasonLinks,
   showForm,
   SparklesIcon,
   telegramUrl,
+  teamsIsActive,
+  TeamsIcon,
+  toggleMobileMenu,
   user,
   userInitials,
   userName

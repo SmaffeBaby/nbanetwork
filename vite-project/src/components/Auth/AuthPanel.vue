@@ -1,29 +1,29 @@
 <template>
-  <div class="flex items-center justify-center min-h-[52px]">
+  <div class="flex min-h-[48px] items-center justify-center">
 
     <div
         v-if="user"
-        class="flex items-center gap-3 w-56 rounded-xl p-3 bg-white shadow-md border cursor-pointer hover:shadow-lg transition"
+        class="flex h-[48px] w-[224px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-2.5 py-2 shadow-sm transition hover:border-blue-100 hover:bg-slate-50 hover:shadow-md"
         @click="goToProfile"
     >
       <img
           v-if="user.avatarImg"
           :src="user.avatarImg"
           alt="User avatar"
-          class="w-10 h-10 rounded-full object-cover"
+          class="h-9 w-9 shrink-0 rounded-full object-cover"
       />
       <div
           v-else
-          class="relative inline-flex items-center justify-center w-10 h-10 overflow-hidden bg-gray-100 rounded-full shrink-0"
+          class="relative inline-flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-600 via-indigo-500 to-sky-400"
       >
-        <span class="font-medium text-gray-600">{{ userInitials }}</span>
+        <span class="text-sm font-black text-white">{{ userInitials }}</span>
       </div>
 
-      <div class="min-w-0 text-left">
-        <p class="text-sm font-bold text-black truncate">
+      <div class="min-w-0 flex-1 text-left">
+        <p class="truncate text-sm font-extrabold leading-5 text-slate-950">
           {{ user.firstName }} {{ user.lastName }}
         </p>
-        <p class="text-xs text-gray-500 truncate">{{ user.email }}</p>
+        <p class="truncate text-xs font-medium leading-4 text-slate-500">{{ user.email }}</p>
       </div>
 
       <button
@@ -40,13 +40,21 @@
 
     <template v-else>
 
-    <button
-        v-if="showForm === ''"
-        @click="showForm = 'login'"
-        class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 active:scale-95 transition"
-    >
-      Войти
-    </button>
+    <div v-if="showForm === ''" class="flex items-center gap-3">
+      <button
+          @click="showForm = 'login'"
+          class="inline-flex h-[48px] items-center justify-center rounded-lg px-[8px] text-[16px] font-bold text-slate-800 transition hover:text-blue-700 active:scale-95 2xl:px-[12px]"
+      >
+        Войти
+      </button>
+
+      <button
+          @click="showForm = 'register'"
+          class="inline-flex h-[48px] items-center justify-center rounded-lg bg-blue-700 px-[16px] text-[16px] font-extrabold text-white shadow-sm transition hover:bg-blue-800 active:scale-95 2xl:px-[24px]"
+      >
+        Регистрация
+      </button>
+    </div>
 
     <Teleport to="body">
       <div
@@ -172,25 +180,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthPanel } from '../../composables/Auth/useAuthPanel.ts'
-import {
-  createRegistrationConsentModels,
-  registrationConsentItems
-} from '../../composables/Auth/useRegistrationConsents'
 
 const {
   email,
   password,
   firstName,
   lastName,
-  acceptedTerms,
-  acceptedPrivacy,
-  acceptedCookies,
-  acceptedTrademark,
-  acceptedCopyright,
-  acceptedCommunityPolicy,
+  consentItems,
+  consentModels,
   user,
   showForm,
   handleLogin,
@@ -198,25 +197,7 @@ const {
   handleLogout,
   sendPasswordReset,
   goToProfile,
-  loadingUser
+  loadingUser,
+  userInitials
 } = useAuthPanel()
-
-const consentModels = createRegistrationConsentModels({
-  acceptedTerms,
-  acceptedPrivacy,
-  acceptedCookies,
-  acceptedTrademark,
-  acceptedCopyright,
-  acceptedCommunityPolicy
-})
-
-const consentItems = registrationConsentItems
-
-const userInitials = computed(() => {
-  const first = user.value?.firstName?.trim().charAt(0) ?? ''
-  const last = user.value?.lastName?.trim().charAt(0) ?? ''
-  const initials = `${first}${last}`.trim()
-
-  return initials || 'U'
-})
 </script>
