@@ -32,11 +32,10 @@
   >
     <div class="relative mt-6 flex min-h-20 items-center border-b border-white/45 pb-4">
       <RouterLink to="/" class="flex min-w-0 items-center" @click="closeDrawer">
-        <img
+        <NbaMomLogo
             id="drawer-navigation-label"
-            src="/logos/logo-nba-mom.svg"
-            class="h-auto w-[220px] max-w-[calc(100%-4.25rem)] object-contain object-left"
             alt="NBA MOM Logo"
+            class="h-auto w-[220px] max-w-[calc(100%-4.25rem)]"
         />
       </RouterLink>
 
@@ -343,6 +342,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import NotificationsBell from './NotificationsBell.vue'
+import NbaMomLogo from '../Logo/NbaMomLogo.vue'
 import { useHeaderBurger } from '../../composables/Headers/useHeaderBurger'
 
 const {

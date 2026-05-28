@@ -4,7 +4,7 @@
       <div class="gap-10 md:flex md:justify-between">
         <div class="mb-8 max-w-sm md:mb-0">
           <RouterLink to="/" class="inline-flex items-center">
-            <img src="/logos/logo-nba-mom.svg" class="me-3 h-10 w-auto object-contain" alt="NBA MOM Logo" />
+            <NbaMomLogo class="me-3 h-10 w-[73px]" alt="NBA MOM Logo" />
           </RouterLink>
         </div>
 
@@ -95,6 +95,7 @@
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import NbaMomLogo from '../Logo/NbaMomLogo.vue'
 import { useAppFooter } from '../../composables/Layout/useAppFooter'
 
 const {
