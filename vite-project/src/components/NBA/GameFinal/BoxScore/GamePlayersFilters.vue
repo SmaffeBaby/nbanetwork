@@ -1,13 +1,13 @@
 <template>
-  <div class="flex flex-wrap gap-3 items-center">
+  <div class="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
 
     <input
         v-model="model.search"
         placeholder="Имя или позиция.."
-        class="px-3 py-2 border rounded-lg text-sm w-52"
+        class="w-full rounded-lg border px-3 py-2 text-sm sm:w-52"
     />
 
-    <select v-model="model.period" class="px-3 py-2 border rounded-lg text-sm">
+    <select v-model="model.period" class="w-full rounded-lg border px-3 py-2 text-sm sm:w-auto">
       <option :value="null">Весь матч</option>
       <option value="firstHalf">1-я половина</option>
       <option value="secondHalf">2-я половина</option>

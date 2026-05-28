@@ -1,8 +1,8 @@
 <template>
-  <div class="pt-28 px-8">
+  <div class="px-3 pt-24 sm:px-6 lg:px-8 lg:pt-28">
     <Header />
 
-    <div class="pt-16 px-6">
+    <div class="mx-auto w-full max-w-6xl pt-6 text-left sm:pt-10 lg:pt-16">
       <GameFinal />
     </div>
   </div>

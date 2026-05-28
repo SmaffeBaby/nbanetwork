@@ -1,8 +1,8 @@
 <template>
-  <div class="mx-auto grid max-w-6xl gap-5">
-    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+  <div class="mx-auto grid max-w-6xl gap-5 text-left">
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
       <div class="mb-4 border-b border-gray-200 pb-3">
-        <h2 class="text-2xl font-black uppercase leading-none tracking-normal text-gray-950 sm:text-3xl">
+        <h2 class="text-xl font-black uppercase leading-none tracking-normal text-gray-950 sm:text-3xl">
           Высшие показатели
         </h2>
       </div>
@@ -11,7 +11,7 @@
         <article
             v-for="row in leaderRows"
             :key="row.key"
-            class="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm"
+            class="rounded-lg border border-gray-200 bg-gray-50 p-3 shadow-sm sm:p-4"
         >
           <div class="mb-3 flex items-center justify-between gap-3">
             <span class="rounded-md bg-gray-900 px-2.5 py-1 text-xs font-black text-white">
@@ -28,7 +28,7 @@
                 :key="leader.key"
                 class="rounded-lg border border-gray-200 bg-white p-3"
             >
-              <div class="grid grid-cols-[46px_minmax(0,1fr)_auto] items-center gap-3">
+              <div class="grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[46px_minmax(0,1fr)_auto] sm:gap-3">
                 <router-link
                     :to="{ name: 'PlayerPage', params: { name: encodeURIComponent(leader.player.name) } }"
                     class="rounded-full transition hover:scale-105"
@@ -55,7 +55,7 @@
                   </div>
                 </div>
 
-                <div class="text-3xl font-black leading-none" :style="{ color: leader.color }">
+                <div class="text-2xl font-black leading-none sm:text-3xl" :style="{ color: leader.color }">
                   {{ formatNumber(leader.value) }}
                 </div>
               </div>
@@ -76,17 +76,17 @@
       </div>
     </section>
 
-    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
       <div class="mb-4 border-b border-gray-200 pb-3">
-        <h2 class="text-2xl font-black uppercase leading-none tracking-normal text-gray-950 sm:text-3xl">
+        <h2 class="text-xl font-black uppercase leading-none tracking-normal text-gray-950 sm:text-3xl">
           Командная статистика
         </h2>
       </div>
 
-      <div class="mb-4 grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+      <div class="mb-4 grid items-center gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-4">
         <router-link
             :to="{ name: 'TeamDetail', params: { abbr: awayAbbr } }"
-            class="flex min-w-0 items-center justify-center gap-3 rounded-lg transition hover:bg-gray-50 md:justify-start"
+            class="flex min-w-0 items-center justify-center gap-2 rounded-lg transition hover:bg-gray-50 md:justify-start"
         >
           <img :src="getTeamLogo(awayAbbr)" class="h-10 w-10" alt="" />
           <div class="min-w-0">
@@ -95,19 +95,19 @@
           </div>
         </router-link>
 
-        <div class="flex items-center justify-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2">
-          <strong class="text-3xl font-black leading-none" :style="{ color: awayColor }">
+        <div class="flex items-center justify-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+          <strong class="text-2xl font-black leading-none sm:text-3xl" :style="{ color: awayColor }">
             {{ teamStats.away.points }}
           </strong>
           <span class="text-xs font-black uppercase text-gray-500">vs</span>
-          <strong class="text-3xl font-black leading-none" :style="{ color: homeColor }">
+          <strong class="text-2xl font-black leading-none sm:text-3xl" :style="{ color: homeColor }">
             {{ teamStats.home.points }}
           </strong>
         </div>
 
         <router-link
             :to="{ name: 'TeamDetail', params: { abbr: homeAbbr } }"
-            class="flex min-w-0 items-center justify-center gap-3 rounded-lg text-center transition hover:bg-gray-50 md:justify-end md:text-right"
+            class="flex min-w-0 items-center justify-center gap-2 rounded-lg text-center transition hover:bg-gray-50 md:justify-end md:text-right"
         >
           <div class="min-w-0">
             <span class="block text-xs font-black" :style="{ color: homeColor }">{{ homeAbbr }}</span>
@@ -123,12 +123,12 @@
             :key="row.key"
             class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
         >
-          <div class="grid grid-cols-[64px_minmax(0,1fr)_64px] items-center gap-3">
-            <strong class="text-xl font-black leading-none" :style="{ color: awayColor }">
+          <div class="grid grid-cols-[52px_minmax(0,1fr)_52px] items-center gap-2 sm:grid-cols-[64px_minmax(0,1fr)_64px] sm:gap-3">
+            <strong class="text-lg font-black leading-none sm:text-xl" :style="{ color: awayColor }">
               {{ formatNumber(row.away) }}
             </strong>
-            <span class="text-center text-sm font-black text-gray-600">{{ row.label }}</span>
-            <strong class="text-right text-xl font-black leading-none" :style="{ color: homeColor }">
+            <span class="text-center text-xs font-black text-gray-600 sm:text-sm">{{ row.label }}</span>
+            <strong class="text-right text-lg font-black leading-none sm:text-xl" :style="{ color: homeColor }">
               {{ formatNumber(row.home) }}
             </strong>
           </div>
@@ -157,7 +157,7 @@
               >
                 {{ awayAbbr }}
               </router-link>
-              <strong class="block text-3xl font-black leading-none text-gray-950">{{ formatNumber(row.away) }}</strong>
+              <strong class="block text-2xl font-black leading-none text-gray-950 sm:text-3xl">{{ formatNumber(row.away) }}</strong>
             </div>
             <div class="text-right">
               <router-link
@@ -167,7 +167,7 @@
               >
                 {{ homeAbbr }}
               </router-link>
-              <strong class="block text-3xl font-black leading-none text-gray-950">{{ formatNumber(row.home) }}</strong>
+              <strong class="block text-2xl font-black leading-none text-gray-950 sm:text-3xl">{{ formatNumber(row.home) }}</strong>
             </div>
           </div>
 
@@ -210,12 +210,12 @@
               :key="row.key"
               class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
           >
-            <div class="grid grid-cols-[64px_minmax(0,1fr)_64px] items-center gap-3">
-              <strong class="text-xl font-black leading-none" :style="{ color: awayColor }">
+            <div class="grid grid-cols-[52px_minmax(0,1fr)_52px] items-center gap-2 sm:grid-cols-[64px_minmax(0,1fr)_64px] sm:gap-3">
+              <strong class="text-lg font-black leading-none sm:text-xl" :style="{ color: awayColor }">
                 {{ formatNumber(row.away) }}
               </strong>
-              <span class="text-center text-sm font-black text-gray-600">{{ row.label }}</span>
-              <strong class="text-right text-xl font-black leading-none" :style="{ color: homeColor }">
+              <span class="text-center text-xs font-black text-gray-600 sm:text-sm">{{ row.label }}</span>
+              <strong class="text-right text-lg font-black leading-none sm:text-xl" :style="{ color: homeColor }">
                 {{ formatNumber(row.home) }}
               </strong>
             </div>
@@ -229,16 +229,16 @@
       </div>
     </section>
 
-    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
       <div class="mb-4 border-b border-gray-200 pb-3">
-        <h2 class="text-2xl font-black uppercase leading-none tracking-normal text-gray-950 sm:text-3xl">
+        <h2 class="text-xl font-black uppercase leading-none tracking-normal text-gray-950 sm:text-3xl">
           Динамика игры
         </h2>
       </div>
 
-      <div v-if="leadPoints.length" class="overflow-x-auto">
+      <div v-if="leadPoints.length" class="overflow-x-auto pb-1">
         <svg
-            class="block min-w-[780px] w-full"
+            class="block min-w-[560px] w-full sm:min-w-[780px]"
             :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
             role="img"
             aria-label="Lead tracker"
@@ -297,10 +297,10 @@
               :fill="bar.color"
           />
 
-          <text :x="chartPad.left + 18" :y="chartPad.top + 28" class="fill-gray-950 text-xl font-medium">
+          <text :x="chartPad.left + 18" :y="chartPad.top + 28" class="fill-gray-950 text-base font-medium sm:text-xl">
             {{ awayAbbr }}
           </text>
-          <text :x="chartPad.left + 18" :y="chartHeight - chartPad.bottom - 14" class="fill-gray-950 text-xl font-medium">
+          <text :x="chartPad.left + 18" :y="chartHeight - chartPad.bottom - 14" class="fill-gray-950 text-base font-medium sm:text-xl">
             {{ homeAbbr }}
           </text>
           <text
@@ -315,30 +315,30 @@
         </svg>
 
         <div class="mx-auto mt-4 max-w-md">
-          <div class="grid grid-cols-[24px_48px_minmax(0,1fr)_48px_24px] items-center justify-items-center gap-3 border-b border-gray-200 pb-2">
+          <div class="grid grid-cols-[22px_42px_minmax(0,1fr)_42px_22px] items-center justify-items-center gap-2 border-b border-gray-200 pb-2 sm:grid-cols-[24px_48px_minmax(0,1fr)_48px_24px] sm:gap-3">
             <router-link :to="{ name: 'TeamDetail', params: { abbr: awayAbbr } }" class="transition hover:scale-110">
               <img :src="getTeamLogo(awayAbbr)" class="h-6 w-6" alt="" />
             </router-link>
-            <strong class="text-4xl font-black leading-none text-gray-950">{{ leadSummary.awayLead }}</strong>
-            <span class="text-center text-2xl font-black leading-none text-gray-950">Biggest Lead</span>
-            <strong class="text-4xl font-black leading-none text-gray-950">{{ leadSummary.homeLead }}</strong>
+            <strong class="text-3xl font-black leading-none text-gray-950 sm:text-4xl">{{ leadSummary.awayLead }}</strong>
+            <span class="text-center text-base font-black leading-none text-gray-950 sm:text-2xl">Biggest Lead</span>
+            <strong class="text-3xl font-black leading-none text-gray-950 sm:text-4xl">{{ leadSummary.homeLead }}</strong>
             <router-link :to="{ name: 'TeamDetail', params: { abbr: homeAbbr } }" class="transition hover:scale-110">
               <img :src="getTeamLogo(homeAbbr)" class="h-6 w-6" alt="" />
             </router-link>
           </div>
 
-          <div class="grid gap-3 pt-3 text-center sm:grid-cols-3">
-            <div class="flex items-center justify-center gap-2">
+          <div class="grid gap-2 pt-3 text-center sm:grid-cols-3 sm:gap-3">
+            <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 sm:justify-center sm:bg-transparent sm:px-0 sm:py-0">
               <span class="text-xs font-extrabold uppercase leading-tight text-gray-950">Times tied</span>
-              <strong class="text-3xl font-black leading-none text-gray-950">{{ leadSummary.timesTied }}</strong>
+              <strong class="text-2xl font-black leading-none text-gray-950 sm:text-3xl">{{ leadSummary.timesTied }}</strong>
             </div>
-            <div class="flex items-center justify-center gap-2">
+            <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 sm:justify-center sm:bg-transparent sm:px-0 sm:py-0">
               <span class="text-xs font-extrabold uppercase leading-tight text-gray-950">Longest run</span>
-              <strong class="text-3xl font-black leading-none text-gray-950">{{ leadSummary.longestRun }}</strong>
+              <strong class="text-2xl font-black leading-none text-gray-950 sm:text-3xl">{{ leadSummary.longestRun }}</strong>
             </div>
-            <div class="flex items-center justify-center gap-2">
+            <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 sm:justify-center sm:bg-transparent sm:px-0 sm:py-0">
               <span class="text-xs font-extrabold uppercase leading-tight text-gray-950">Lead changes</span>
-              <strong class="text-3xl font-black leading-none text-gray-950">{{ leadSummary.leadChanges }}</strong>
+              <strong class="text-2xl font-black leading-none text-gray-950 sm:text-3xl">{{ leadSummary.leadChanges }}</strong>
             </div>
           </div>
         </div>

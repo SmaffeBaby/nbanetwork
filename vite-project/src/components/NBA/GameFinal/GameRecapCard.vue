@@ -1,7 +1,7 @@
 <template>
   <div
       v-if="recap"
-      class="p-6 rounded-2xl shadow-md bg-white border border-gray-100"
+      class="rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-md sm:p-6"
   >
     <article v-if="apRecap" class="space-y-5">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
@@ -61,7 +61,7 @@
       />
 
       <div class="space-y-3">
-        <h2 class="text-2xl font-bold leading-tight text-gray-950">
+        <h2 class="text-xl font-bold leading-tight text-gray-950 sm:text-2xl">
           {{ displayApRecap.title || recap.title }}
         </h2>
 
@@ -80,7 +80,7 @@
         {{ translationError || 'Переводим статью...' }}
       </div>
 
-      <div class="space-y-4 text-[15px] leading-7 text-gray-800">
+      <div class="space-y-4 text-left text-[15px] leading-7 text-gray-800">
         <p
             v-for="(paragraph, i) in displayApRecap.paragraphs || []"
             :key="i"
@@ -98,7 +98,7 @@
         </span>
 
         <span
-            v-for="(q, i) in recap.quarters || []"
+            v-for="(q, i) in displayQuarters"
             :key="i"
             class="rounded-lg bg-gray-50 px-3 py-1 text-xs text-gray-600"
         >
@@ -152,7 +152,7 @@
 
       <div
           v-if="recap.mvp"
-          class="bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex items-center gap-4"
+          class="flex items-center gap-3 rounded-xl border border-yellow-200 bg-yellow-50 p-3 sm:gap-4 sm:p-4"
       >
         <div class="w-12 h-12 shrink-0">
           <img
@@ -213,7 +213,7 @@
 
       <div class="flex flex-wrap gap-2">
         <div
-            v-for="(q, i) in recap.quarters || []"
+            v-for="(q, i) in displayQuarters"
             :key="i"
             class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-lg"
         >
@@ -237,6 +237,32 @@ const selectedLanguage = ref<'en' | 'ru'>('en')
 const translatedApRecap = ref<any>(null)
 const translationLoading = ref(false)
 const translationError = ref('')
+
+const normalizeQuarterLabel = (index: number) => {
+  if (index < 4) return `Q${index + 1}`
+  return index === 4 ? 'OT' : `${index - 3}OT`
+}
+
+const displayQuarters = computed(() => {
+  const quarters = Array.isArray(props.recap?.quarters) ? props.recap.quarters : []
+
+  return quarters
+      .map((quarter: string, index: number) => {
+        const raw = String(quarter || '').trim()
+        const score = raw.match(/(-?\d+)\s*-\s*(-?\d+)/)
+        const awayScore = Number(score?.[1] ?? 0)
+        const homeScore = Number(score?.[2] ?? 0)
+
+        if (index >= 4 && awayScore === 0 && homeScore === 0) {
+          return null
+        }
+
+        return score
+            ? `${normalizeQuarterLabel(index)}: ${awayScore}-${homeScore}`
+            : raw
+      })
+      .filter(Boolean)
+})
 
 const displayApRecap = computed(() => {
   if (selectedLanguage.value !== 'ru' || !translatedApRecap.value) {

@@ -1,7 +1,7 @@
 <template>
   <div>
 
-    <div class="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-start">
+    <div class="mb-4 grid grid-cols-1 gap-3 sm:flex sm:items-center sm:justify-start">
       <slot name="controls" />
 
       <Categories
@@ -53,11 +53,11 @@
       <transition name="fade">
         <div
             v-if="isLocked"
-            class="absolute inset-0 flex items-center justify-center backdrop-blur-sm"
+            class="absolute inset-0 flex items-start justify-center bg-white/20 px-3 py-3 backdrop-blur-sm sm:bg-transparent sm:px-0 sm:py-6"
         >
           <button
               @click="reveal"
-              class="flex items-center gap-2 px-5 py-3 bg-black/90 text-white rounded-xl shadow-lg
+              class="flex min-h-14 w-full max-w-sm items-center justify-center gap-2 rounded-xl bg-black/90 px-5 py-3 text-sm font-semibold text-white shadow-lg sm:w-auto
                    hover:scale-105 active:scale-95 transition-all duration-200"
           >
             <EyeIcon class="w-5 h-5" />

@@ -1008,9 +1008,20 @@ function getQuarterBreakdown(game) {
         const home = game.homeTeam?.periods || []
         const away = game.awayTeam?.periods || []
 
-        return home.map((_, i) =>
-            `Q${i + 1}: ${away[i]?.score || 0}-${home[i]?.score || 0}`
-        )
+        return home
+            .map((period, i) => {
+                const awayScore = Number(away[i]?.score || 0)
+                const homeScore = Number(period?.score || 0)
+
+                if (i >= 4 && awayScore === 0 && homeScore === 0) {
+                    return null
+                }
+
+                const label = i < 4 ? `Q${i + 1}` : i === 4 ? 'OT' : `${i - 3}OT`
+
+                return `${label}: ${awayScore}-${homeScore}`
+            })
+            .filter(Boolean)
     } catch {
         return []
     }

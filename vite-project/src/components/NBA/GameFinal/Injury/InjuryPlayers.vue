@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-4 text-left sm:space-y-6">
 
     <div
         v-if="!enriched.length"
@@ -8,23 +8,23 @@
       Нет травмированных игроков
     </div>
 
-    <div class="grid grid-cols-2 gap-4 text-xs text-gray-400">
-      <div class="text-left font-medium">
+    <div class="grid grid-cols-1 gap-2 text-xs text-gray-500 sm:grid-cols-2 sm:gap-4 sm:text-gray-400">
+      <div class="font-semibold sm:text-left">
         {{ awayAbbr }}
       </div>
-      <div class="text-right font-medium">
+      <div class="hidden text-right font-semibold sm:block">
         {{ homeAbbr }}
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
       <div class="space-y-3">
 
         <div
             v-for="p in awayPlayers"
             :key="p.PLAYER_ID"
-            class="flex items-center gap-3 p-3 rounded-xl
+            class="flex min-w-0 items-center gap-2 rounded-xl p-3 sm:gap-3
                    bg-white/70 backdrop-blur-md
                    border border-white/30
                    shadow-sm hover:shadow-md transition"
@@ -32,7 +32,7 @@
 
           <img
               :src="getTeamLogo(p.TEAM_ABBR)"
-              class="w-8 h-8 object-contain"
+              class="h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8"
           />
 
           <img
@@ -42,10 +42,10 @@
               })"
               :data-player-id="p.PLAYER_ID"
               @error="handleImageError"
-              class="w-10 h-10 rounded-lg object-cover bg-gray-100"
+              class="h-10 w-10 shrink-0 rounded-lg bg-gray-100 object-cover"
           />
 
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1">
             <router-link
                 :to="{ name: 'PlayerPage', params: { name: p.name } }"
                 class="block text-sm font-semibold truncate text-gray-900 hover:underline"
@@ -70,17 +70,20 @@
       </div>
 
       <div class="space-y-3">
+        <div v-if="homePlayers.length" class="text-xs font-semibold text-gray-500 sm:hidden">
+          {{ homeAbbr }}
+        </div>
 
         <div
             v-for="p in homePlayers"
             :key="p.PLAYER_ID"
-            class="flex items-center justify-end gap-3 p-3 rounded-xl
+            class="flex min-w-0 items-center justify-start gap-2 rounded-xl p-3 sm:justify-end sm:gap-3
                    bg-white/70 backdrop-blur-md
                    border border-white/30
                    shadow-sm hover:shadow-md transition"
         >
 
-          <div class="min-w-0 text-right">
+          <div class="order-3 min-w-0 flex-1 text-left sm:order-none sm:text-right">
             <router-link
                 :to="{ name: 'PlayerPage', params: { name: p.name } }"
                 class="block text-sm font-semibold truncate text-gray-900 hover:underline"
@@ -108,12 +111,12 @@
               })"
               :data-player-id="p.PLAYER_ID"
               @error="handleImageError"
-              class="w-10 h-10 rounded-lg object-cover bg-gray-100"
+              class="order-2 h-10 w-10 shrink-0 rounded-lg bg-gray-100 object-cover sm:order-none"
           />
 
           <img
               :src="getTeamLogo(p.TEAM_ABBR)"
-              class="w-8 h-8 object-contain"
+              class="order-1 h-7 w-7 shrink-0 object-contain sm:order-none sm:h-8 sm:w-8"
           />
 
         </div>

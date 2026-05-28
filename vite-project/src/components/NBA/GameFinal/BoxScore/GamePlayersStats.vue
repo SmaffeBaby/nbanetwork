@@ -58,12 +58,17 @@ const { recap } = useGameFinal(filters)
 const { players } = useGamePlayersStats(recap)
 
 const hasKnownOvertime = ref(false)
-const hasOvertime = computed(() => hasKnownOvertime.value || (recap.value?.meta?.quarters || []).length > 4)
+const hasRealOvertime = (quarters: string[] = []) =>
+    quarters.slice(4).some((quarter) => {
+      const score = String(quarter || '').match(/(-?\d+)\s*-\s*(-?\d+)/)
+      return Boolean(score && (Number(score[1]) !== 0 || Number(score[2]) !== 0))
+    })
+const hasOvertime = computed(() => hasKnownOvertime.value || hasRealOvertime(recap.value?.meta?.quarters || []))
 
 watch(
     () => recap.value?.meta?.quarters,
     (quarters) => {
-      if ((quarters || []).length > 4) {
+      if (hasRealOvertime(quarters || [])) {
         hasKnownOvertime.value = true
       }
     },

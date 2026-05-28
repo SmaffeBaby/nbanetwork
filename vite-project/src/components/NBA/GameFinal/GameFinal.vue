@@ -11,7 +11,7 @@
       <template #controls>
         <button
             @click="$router.back()"
-            class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl
+            class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 py-2 sm:w-auto
                    bg-white/10 backdrop-blur-md text-black text-sm font-medium
                    border border-white/20 shadow-sm
                    hover:bg-white/20 hover:shadow-md hover:-translate-y-0.5
@@ -61,7 +61,7 @@
       </template>
 
       <template #data>
-        <div v-if="game" class="p-4 border rounded text-xs overflow-auto bg-gray-50">
+        <div v-if="game" class="max-w-full overflow-auto rounded-lg border bg-gray-50 p-3 text-left text-[11px] sm:p-4 sm:text-xs">
           <pre>{{ game }}</pre>
         </div>
       </template>

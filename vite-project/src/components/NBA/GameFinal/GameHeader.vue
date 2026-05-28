@@ -11,10 +11,10 @@
 
     <div
         v-else
-        class="relative p-4 rounded-2xl bg-white shadow-md flex flex-col gap-3 active:scale-[0.98] transition"
+        class="relative rounded-2xl bg-white p-4 shadow-md transition active:scale-[0.98] sm:p-5"
     >
 
-      <div class="flex justify-between items-center text-xs text-gray-500">
+      <div class="mb-3 flex items-center justify-between text-xs text-gray-500">
 
         <div class="flex items-center gap-2 uppercase tracking-wide">
 
@@ -40,32 +40,26 @@
 
       </div>
 
-      <div class="flex items-center justify-between">
+      <div class="grid grid-cols-[minmax(0,1fr)_minmax(104px,auto)_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(160px,auto)_minmax(0,1fr)] sm:gap-4">
 
-        <div class="flex flex-col items-center w-1/3">
+        <div class="flex min-w-0 flex-col items-center">
           <div class="relative">
             <img
                 :src="getTeamLogo(game?.away?.abbr)"
-                class="w-12 h-12 cursor-pointer transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110"
+                class="h-14 w-14 cursor-pointer object-contain transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110 sm:h-12 sm:w-12"
                 @click="goTeam(game?.away?.abbr)"
             />
-            <FavoriteTeamButton
-                v-if="game?.away?.abbr"
-                :teamAbbr="game.away.abbr"
-                size="sm"
-                class="absolute -right-4 -top-3"
-            />
           </div>
-          <div class="text-xs mt-1 text-center font-medium">
+          <div class="mt-2 max-w-[92px] text-center text-xs font-medium leading-tight text-gray-700 sm:max-w-40 sm:text-sm">
             {{ game?.away?.name }}
           </div>
         </div>
 
-        <div class="text-center">
+        <div class="min-w-0 text-center">
           <transition name="fade-scale" mode="out-in">
             <div
                 :key="gameId + (isVisible ? '-visible' : '-hidden')"
-                class="text-2xl sm:text-3xl font-bold"
+                class="text-2xl font-bold leading-none text-gray-700 sm:text-3xl"
             >
               <template v-if="isVisible && game?.home?.score != null">
                 {{ game.away.score }}
@@ -79,9 +73,9 @@
             </div>
           </transition>
 
-          <div class="mt-2 flex justify-center items-center gap-2">
+          <div class="mt-3 flex min-w-0 items-center justify-center gap-1.5">
 
-            <div class="px-3 py-1 rounded-lg bg-gray-50 border border-gray-200 text-[11px] text-gray-600 font-medium">
+            <div class="min-w-0 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-center text-[11px] font-medium leading-5 text-gray-600 sm:px-3">
               {{ game?.dateMSK }}
             </div>
 
@@ -97,25 +91,19 @@
 
           <GameUserActions
               :game="game"
-              class="mt-3"
+              class="mx-auto mt-3 max-w-[160px] sm:max-w-none"
           />
         </div>
 
-        <div class="flex flex-col items-center w-1/3">
+        <div class="flex min-w-0 flex-col items-center">
           <div class="relative">
             <img
                 :src="getTeamLogo(game?.home?.abbr)"
-                class="w-12 h-12 cursor-pointer transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110"
+                class="h-14 w-14 cursor-pointer object-contain transition-all duration-300 ease-out hover:scale-125 hover:rotate-3 hover:drop-shadow-xl active:scale-110 sm:h-12 sm:w-12"
                 @click="goTeam(game?.home?.abbr)"
             />
-            <FavoriteTeamButton
-                v-if="game?.home?.abbr"
-                :teamAbbr="game.home.abbr"
-                size="sm"
-                class="absolute -right-4 -top-3"
-            />
           </div>
-          <div class="text-xs mt-1 text-center font-medium">
+          <div class="mt-2 max-w-[92px] text-center text-xs font-medium leading-tight text-gray-700 sm:max-w-40 sm:text-sm">
             {{ game?.home?.name }}
           </div>
         </div>
@@ -134,7 +122,6 @@ import { getTeamLogo } from '../../../utils/getTeamLogo'
 import { EyeIcon, EyeSlashIcon, LinkIcon } from '@heroicons/vue/24/outline'
 import { useGameHeader } from '../../../composables/NBA/GameFinal/useGameHeader'
 import { useToast } from 'vue-toastification'
-import FavoriteTeamButton from '../Favorites/FavoriteTeamButton.vue'
 import GameUserActions from '../Favorites/GameUserActions.vue'
 
 const toast = useToast()

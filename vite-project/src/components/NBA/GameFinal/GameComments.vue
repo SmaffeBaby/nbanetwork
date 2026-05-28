@@ -1,6 +1,6 @@
 <template>
-  <section class="overflow-hidden rounded-lg border border-gray-200 bg-white">
-    <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+  <section class="overflow-hidden rounded-lg border border-gray-200 bg-white text-left">
+    <div class="flex items-center justify-between border-b border-gray-200 px-3 py-3 sm:px-4">
       <div>
         <h2 class="text-base font-semibold text-gray-900">Комментарии</h2>
         <p class="text-xs text-gray-500">Обсуждение этой игры</p>
@@ -14,7 +14,7 @@
       </span>
     </div>
 
-    <div class="h-[420px] overflow-y-auto bg-gray-50 p-4">
+    <div class="h-[60vh] min-h-[360px] overflow-y-auto bg-gray-50 p-3 sm:h-[420px] sm:p-4">
       <div v-if="!user" class="flex h-full items-center justify-center text-sm text-gray-500">
         Войдите, чтобы читать и отправлять комментарии.
       </div>
@@ -32,7 +32,7 @@
             v-for="comment in comments"
             :key="comment.id"
             :id="`comment-${comment.id}`"
-            class="group flex w-full items-start gap-2.5"
+            class="group flex w-full items-start gap-2"
             :class="isOwnComment(comment) ? 'justify-end' : 'justify-start'"
         >
           <RouterLink
@@ -57,16 +57,16 @@
           </RouterLink>
 
           <div
-              class="flex w-fit max-w-[min(82%,32rem)] flex-col gap-1"
+              class="flex w-fit max-w-[min(86%,32rem)] flex-col gap-1 sm:max-w-[min(82%,32rem)]"
               :class="isOwnComment(comment) ? 'items-end' : 'items-start'"
           >
             <div
-                class="flex items-center gap-2"
+                class="flex max-w-full items-center gap-2"
                 :class="isOwnComment(comment) ? 'justify-end' : ''"
             >
               <RouterLink
                   :to="{ name: 'PublicProfile', params: { id: comment.user_id } }"
-                  class="truncate text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline"
+                  class="min-w-0 truncate text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline"
               >
                 {{ getAuthorName(comment) }}
               </RouterLink>
@@ -76,7 +76,7 @@
             </div>
 
             <div
-                class="leading-1.5 flex w-fit max-w-full flex-col rounded-e-xl rounded-es-xl border-gray-200 p-4"
+                class="leading-1.5 flex w-fit max-w-full flex-col rounded-e-xl rounded-es-xl border-gray-200 p-3 sm:p-4"
                 :class="isOwnComment(comment)
                   ? 'rounded-s-xl rounded-ee-xl rounded-es-none bg-blue-700 text-white'
                   : 'bg-white text-gray-900 shadow-sm'"
@@ -137,7 +137,7 @@
       </div>
     </div>
 
-    <div class="border-t border-gray-200 bg-white p-4">
+    <div class="border-t border-gray-200 bg-white p-3 sm:p-4">
       <p v-if="error" class="mb-2 text-sm text-red-600">{{ error }}</p>
 
       <div
@@ -179,7 +179,7 @@
         </button>
       </div>
 
-      <div class="flex items-end gap-2">
+      <div class="grid grid-cols-[40px_minmax(0,1fr)] items-end gap-2 sm:flex">
         <label
             class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"
             title="Прикрепить изображение"
@@ -200,7 +200,7 @@
             v-model="message"
             rows="2"
             :disabled="!user || sending"
-            class="block flex-1 resize-none rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+            class="block min-w-0 flex-1 resize-none rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder="Напишите комментарий..."
             @focus="markAsRead"
         />
@@ -209,7 +209,7 @@
             type="button"
             :disabled="!canSend || sending"
             @click="sendComment"
-            class="inline-flex h-10 items-center justify-center rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+            class="col-span-2 inline-flex h-10 w-full items-center justify-center rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-1 sm:w-auto"
         >
           {{ sending ? '...' : 'Отправить' }}
         </button>

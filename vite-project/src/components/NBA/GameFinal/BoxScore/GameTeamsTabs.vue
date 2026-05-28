@@ -1,10 +1,10 @@
 <template>
-  <div class="flex gap-2 border-b">
+  <div class="flex gap-2 overflow-x-auto border-b">
     <button
         v-for="t in teams"
         :key="t.abbr"
         @click="$emit('update:activeTeam', t.abbr)"
-        class="flex items-center gap-2 px-4 py-2 text-sm"
+        class="flex shrink-0 items-center gap-2 px-4 py-2 text-sm"
         :class="activeTeam === t.abbr
         ? 'border-b-2 border-black font-semibold'
         : 'text-gray-500'"
