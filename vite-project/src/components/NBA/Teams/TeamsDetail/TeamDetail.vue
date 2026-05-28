@@ -12,19 +12,27 @@
       </div>
     </div>
 
-    <button
-        @click="$router.back()"
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl
-             bg-white/10 backdrop-blur-md text-black text-sm font-medium
-             border border-white/20 shadow-sm
-             hover:bg-white/20 hover:shadow-md hover:-translate-y-0.5
-             active:scale-95 transition-all duration-200"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-      </svg>
-      Back
-    </button>
+    <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-start">
+      <button
+          @click="$router.back()"
+          class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl
+               bg-white/10 backdrop-blur-md text-black text-sm font-medium
+               border border-white/20 shadow-sm
+               hover:bg-white/20 hover:shadow-md hover:-translate-y-0.5
+               active:scale-95 transition-all duration-200"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back
+      </button>
+
+      <Categories
+          v-model="activeTab"
+          :options="tabOptions"
+          placeholder="Раздел команды"
+      />
+    </div>
 
     <div class="flex justify-center mt-4">
       <select v-model="season" class="p-2 border rounded">
@@ -53,22 +61,6 @@
       >
         Playoffs
       </button>
-    </div>
-
-    <div class="mt-6 border-b border-gray-300">
-      <nav class="-mb-px flex space-x-4">
-        <button
-            v-for="tab in tabs"
-            :key="tab"
-            @click="activeTab = tab"
-            class="px-3 py-2 font-medium text-sm rounded-t-lg"
-            :class="activeTab === tab
-            ? 'border-b-2 border-blue-500 text-blue-600'
-            : 'text-gray-500 hover:text-gray-700'"
-        >
-          {{ tab }}
-        </button>
-      </nav>
     </div>
 
     <div class="mt-4">
@@ -119,16 +111,27 @@ import TeamStats2 from './TeamStats2.vue'
 import TeamPointsTrendTable from './TeamPointsTrendTable.vue'
 import TeamArticles from './TeamArticles.vue'
 import FavoriteTeamButton from '../../Favorites/FavoriteTeamButton.vue'
+import Categories from '../../../Categories/Categories.vue'
 
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import { generateNbaSeasons } from '../../../../utils/generateNbaSeasons'
 import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
+import type { CategoryOption } from '../../../../types/categories'
 
 const route = useRoute()
 const teamAbbr = route.params.abbr as string
 
-const tabs = ['Будущие игры','Команда', 'История игр', 'Статистика','Форма', 'Статьи']
-const activeTab = ref('Команда')
+type TeamTab = 'Будущие игры' | 'Команда' | 'История игр' | 'Статистика' | 'Форма' | 'Статьи'
+
+const tabOptions: CategoryOption<TeamTab>[] = [
+  { value: 'Будущие игры', label: 'Будущие игры' },
+  { value: 'Команда', label: 'Команда' },
+  { value: 'История игр', label: 'История игр' },
+  { value: 'Статистика', label: 'Статистика' },
+  { value: 'Форма', label: 'Форма' },
+  { value: 'Статьи', label: 'Статьи', dividerBefore: true }
+]
+const activeTab = ref<TeamTab>('Команда')
 const seasonType = ref<'regular' | 'playoffs'>('regular')
 
 const teamId = computed(() => TEAM_ID_MAP[teamAbbr])

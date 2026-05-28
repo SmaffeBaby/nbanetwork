@@ -1,82 +1,14 @@
 <template>
   <div>
 
-    <div class="flex gap-2 border-b mb-4">
-      <button
-          class="px-4 py-2 text-sm transition"
-          :class="activeTab === 'overview'
-          ? 'border-b-2 border-black font-semibold'
-          : 'text-gray-500 hover:text-black'"
-          @click="activeTab = 'overview'"
-      >
-        Обзор
-      </button>
+    <div class="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-start">
+      <slot name="controls" />
 
-      <button
-          class="px-4 py-2 text-sm transition"
-          :class="activeTab === 'players'
-          ? 'border-b-2 border-black font-semibold'
-          : 'text-gray-500 hover:text-black'"
-          @click="activeTab = 'players'"
-      >
-        Статистика игроков
-      </button>
-
-      <button
-          class="px-4 py-2 text-sm transition"
-          :class="activeTab === 'teamStats'
-          ? 'border-b-2 border-black font-semibold'
-          : 'text-gray-500 hover:text-black'"
-          @click="activeTab = 'teamStats'"
-      >
-        Командная статистика
-      </button>
-
-      <button
-          class="px-4 py-2 text-sm transition"
-          :class="activeTab === 'injury'
-          ? 'border-b-2 border-black font-semibold'
-          : 'text-gray-500 hover:text-black'"
-          @click="activeTab = 'injury'"
-      >
-        Травмы
-      </button>
-
-      <button
-          class="px-4 py-2 text-sm transition"
-          :class="activeTab === 'broadcasts'
-          ? 'border-b-2 border-black font-semibold'
-          : 'text-gray-500 hover:text-black'"
-          @click="activeTab = 'broadcasts'"
-      >
-        Трансляции
-      </button>
-
-      <button
-          class="relative px-4 py-2 text-sm transition"
-          :class="activeTab === 'comments'
-          ? 'border-b-2 border-black font-semibold'
-          : 'text-gray-500 hover:text-black'"
-          @click="activeTab = 'comments'"
-      >
-        Комментарии
-        <span
-            v-if="normalizedCommentsUnreadCount > 0"
-            class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-5 h-5 px-1 text-xs font-bold text-white bg-red-500 rounded-full"
-        >
-          {{ normalizedCommentsUnreadCount }}
-        </span>
-      </button>
-
-      <button
-          class="px-4 py-2 text-sm transition"
-          :class="activeTab === 'data'
-          ? 'border-b-2 border-black font-semibold'
-          : 'text-gray-500 hover:text-black'"
-          @click="activeTab = 'data'"
-      >
-        Данные
-      </button>
+      <Categories
+        v-model="activeTab"
+        :options="tabOptions"
+        placeholder="Раздел игры"
+      />
     </div>
 
     <div class="relative">
@@ -141,6 +73,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { EyeIcon } from '@heroicons/vue/24/outline'
+import Categories from '../../Categories/Categories.vue'
+import type { CategoryOption } from '../../../types/categories'
 
 type Tab = 'overview' | 'players' | 'teamStats' | 'injury' | 'broadcasts' | 'comments' | 'data'
 
@@ -151,6 +85,20 @@ const props = defineProps<{
 const activeTab = ref<Tab>('overview')
 const revealed = ref(false)
 const normalizedCommentsUnreadCount = computed(() => props.commentsUnreadCount ?? 0)
+const tabOptions = computed<CategoryOption<Tab>[]>(() => [
+  { value: 'overview', label: 'Обзор' },
+  { value: 'players', label: 'Статистика игроков' },
+  { value: 'teamStats', label: 'Командная статистика' },
+  { value: 'injury', label: 'Травмы' },
+  { value: 'broadcasts', label: 'Трансляции' },
+  {
+    value: 'comments',
+    label: 'Комментарии',
+    badge: normalizedCommentsUnreadCount.value || undefined,
+    dividerBefore: true
+  },
+  { value: 'data', label: 'Данные' }
+])
 
 const reveal = () => {
   revealed.value = true
