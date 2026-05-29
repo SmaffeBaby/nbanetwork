@@ -5,27 +5,27 @@
 
   <div v-else-if="stats" class="space-y-6">
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
       <StatCard title="Победы" :value="stats.WINS" />
       <StatCard title="Поражения" :value="stats.LOSSES" />
       <StatCard title="Win %" :value="(stats.WinPCT * 100).toFixed(1) + '%'" />
       <StatCard title="Место" :value="stats.PlayoffRank" />
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
       <StatCard title="Очки за игру" :value="stats.PointsPG" />
       <StatCard title="Пропущено" :value="stats.OppPointsPG" />
       <StatCard title="Разница" :value="stats.DiffPointsPG" />
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
       <StatCard title="Дома" :value="stats.HOME" />
       <StatCard title="В гостях" :value="stats.ROAD" />
       <StatCard title="Последние 10" :value="stats.L10" />
     </div>
 
-    <div class="bg-white p-4 rounded-xl shadow">
-      <div class="h-64">
+    <div class="bg-white p-3 rounded-xl shadow sm:p-4">
+      <div class="h-56 sm:h-64">
         <canvas ref="chartRef"></canvas>
       </div>
     </div>
@@ -82,7 +82,28 @@ const renderChart = () => {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            boxWidth: 28
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            maxRotation: 0,
+            minRotation: 0
+          }
+        },
+        y: {
+          ticks: {
+            precision: 0,
+            maxTicksLimit: 5
+          }
+        }
+      }
     }
   })
 }

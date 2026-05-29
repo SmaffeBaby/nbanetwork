@@ -125,12 +125,33 @@ export function useTeamsPointsTrendTable(
                 },
                 plugins: {
                     legend: {
-                        display: true
+                        display: true,
+                        labels: {
+                            boxWidth: 28
+                        }
                     }
                 },
                 scales: {
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                            callback(value, index, ticks) {
+                                const maxLabels = window.innerWidth < 640 ? 4 : 8
+                                const step = Math.max(1, Math.ceil(ticks.length / maxLabels))
+
+                                if (index % step !== 0) return ''
+                                return this.getLabelForValue(Number(value))
+                            },
+                            maxRotation: 0,
+                            minRotation: 0
+                        }
+                    },
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0,
+                            maxTicksLimit: 5
+                        }
                     }
                 }
             }

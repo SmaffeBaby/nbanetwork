@@ -1,6 +1,48 @@
 <template>
-  <div class="overflow-x-auto">
-    <table class="min-w-full text-sm">
+  <div class="space-y-3">
+    <div class="space-y-3 md:hidden">
+      <button
+          v-for="p in sortedPlayers.slice(0, 100)"
+          :key="p.PLAYER_ID"
+          type="button"
+          class="w-full rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]"
+          @click="goToPlayer(p)"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <div class="group/player flex min-w-0 items-center gap-3">
+            <img
+                :src="getImage(p)"
+                :data-player-id="p.PLAYER_ID"
+                class="h-11 w-11 shrink-0 rounded-full object-cover"
+                @error="handleImageErr"
+            />
+            <div class="min-w-0">
+              <div class="truncate font-semibold text-gray-900">{{ p.PLAYER_NAME }}</div>
+              <div class="text-xs text-gray-500">{{ p.TEAM_ABBREVIATION }}</div>
+            </div>
+            <FavoritePlayerButton
+                :player="p"
+                size="sm"
+                class="shrink-0"
+            />
+          </div>
+        </div>
+
+        <div class="mt-3 grid grid-cols-3 gap-2">
+          <div
+              v-for="item in mobileStats(p)"
+              :key="item.label"
+              class="rounded-lg bg-gray-50 px-2 py-1.5 text-center"
+          >
+            <div class="text-[10px] font-semibold uppercase text-gray-400">{{ item.label }}</div>
+            <div class="text-sm font-semibold text-gray-900">{{ item.value }}</div>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    <div class="hidden overflow-x-auto rounded-xl border md:block">
+    <table class="min-w-[760px] w-full text-sm">
       <thead class="bg-gray-900 text-white">
       <tr>
         <th class="p-2 text-left">Player</th>
@@ -58,6 +100,7 @@
       </tr>
       </tbody>
     </table>
+    </div>
   </div>
 </template>
 
@@ -95,4 +138,13 @@ const goToPlayer = (p: PlayerStats) => {
 
 const getImage = getPlayerImage
 const handleImageErr = handleImageError
+
+const mobileStats = (p: PlayerStats) => [
+  { label: 'MIN', value: p.MIN },
+  { label: 'PTS', value: p.PTS },
+  { label: 'REB', value: p.REB },
+  { label: 'AST', value: p.AST },
+  { label: 'STL', value: p.STL },
+  { label: 'BLK', value: p.BLK },
+]
 </script>

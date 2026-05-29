@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-4">
 
-    <div class="flex items-center gap-4">
+    <div class="flex flex-wrap items-center gap-3">
 
-      <select v-model="filter" class="px-3 py-2 rounded-lg border text-sm">
+      <select v-model="filter" class="min-w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
         <option value="ALL">Все игры</option>
         <option value="W">Победы</option>
         <option value="L">Поражения</option>
@@ -13,7 +13,7 @@
         Всего: {{ sortedGames.length }}
       </div>
 
-      <label class="flex items-center cursor-pointer ml-auto">
+      <label class="ml-0 flex cursor-pointer items-center sm:ml-auto">
         <input type="checkbox" class="sr-only" v-model="hideScoresModel" />
 
         <div
@@ -33,7 +33,71 @@
 
     </div>
 
-    <div class="overflow-x-auto border rounded-xl">
+    <div class="space-y-3 md:hidden">
+      <button
+          v-for="game in sortedGames"
+          :key="game.Game_ID"
+          type="button"
+          class="w-full rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]"
+          @click="goToGame(game.Game_ID)"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <img
+                  :src="getTeamLogo(parseMatchup(game.MATCHUP).away)"
+                  class="h-7 w-7 shrink-0 object-contain"
+                  alt=""
+              />
+
+              <span class="font-semibold text-gray-900">
+                {{ parseMatchup(game.MATCHUP).away }}
+              </span>
+
+              <span class="text-xs text-gray-400">
+                {{ parseMatchup(game.MATCHUP).isAway ? '@' : 'vs' }}
+              </span>
+
+              <span class="font-semibold text-gray-900">
+                {{ parseMatchup(game.MATCHUP).home }}
+              </span>
+
+              <img
+                  :src="getTeamLogo(parseMatchup(game.MATCHUP).home)"
+                  class="h-7 w-7 shrink-0 object-contain"
+                  alt=""
+              />
+            </div>
+
+            <div class="mt-2 text-xs text-gray-500">
+              {{ game.GAME_DATE }} ·
+              {{ game.SEASON_TYPE === 'Playoffs' ? game.PLAYOFF_ROUND || 'Playoffs' : 'Regular Season' }}
+            </div>
+          </div>
+
+          <span
+              v-if="!hideScoresModel"
+              class="shrink-0 rounded-full px-2 py-1 text-xs font-bold"
+              :class="game.WL === 'W' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'"
+          >
+            {{ game.WL }}
+          </span>
+        </div>
+
+        <div v-if="!hideScoresModel" class="mt-3 grid grid-cols-3 gap-2">
+          <div
+              v-for="item in mobileStats(game)"
+              :key="item.label"
+              class="rounded-lg bg-gray-50 px-2 py-1.5 text-center"
+          >
+            <div class="text-[10px] font-semibold uppercase text-gray-400">{{ item.label }}</div>
+            <div class="text-sm font-semibold text-gray-900">{{ item.value }}</div>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    <div class="hidden overflow-x-auto rounded-xl border md:block">
       <table class="min-w-[1200px] w-full text-sm">
 
         <thead class="bg-gray-100 text-gray-600 text-xs uppercase">
@@ -68,6 +132,7 @@
               <img
                   :src="getTeamLogo(parseMatchup(game.MATCHUP).away)"
                   class="w-7 h-7"
+                  alt=""
               />
 
               <div class="flex flex-col leading-tight">
@@ -92,6 +157,7 @@
               <img
                   :src="getTeamLogo(parseMatchup(game.MATCHUP).home)"
                   class="w-7 h-7"
+                  alt=""
               />
 
             </div>
@@ -168,4 +234,13 @@ const goToGame = (gameId: string | number) => {
   if (!gameId) return
   router.push(`/game/${gameId}`)
 }
+
+const mobileStats = (game: any) => [
+  { label: 'PTS', value: game.PTS },
+  { label: 'REB', value: game.REB },
+  { label: 'AST', value: game.AST },
+  { label: 'STL', value: game.STL },
+  { label: 'BLK', value: game.BLK },
+  { label: 'TOV', value: game.TOV },
+]
 </script>

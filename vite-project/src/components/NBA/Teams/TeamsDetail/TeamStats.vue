@@ -1,13 +1,14 @@
 <template>
   <div class="space-y-6">
     <div
+        v-if="!loading"
         class="relative mb-6"
         @mouseenter="pause"
         @mouseleave="start"
         @touchstart="onTouchStart"
         @touchend="onTouchEnd"
     >
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Transition name="fade" mode="out-in">
           <div :key="currentSlide">
             <StatLeaders
@@ -24,6 +25,7 @@
                 :title="stats[nextIndex].title"
                 :stat="stats[nextIndex].stat"
                 :players="players"
+                class="hidden md:block"
             />
           </div>
         </Transition>
@@ -31,14 +33,14 @@
 
       <button
           @click="prev"
-          class="absolute top-1/2 left-0 -translate-y-1/2 bg-white/70 hover:bg-white px-3 py-2 rounded-r-xl shadow"
+          class="absolute top-1/2 left-0 -translate-y-1/2 bg-white/70 hover:bg-white px-3 py-2 rounded-r-xl shadow md:-left-3"
       >
         ‹
       </button>
 
       <button
           @click="next"
-          class="absolute top-1/2 right-0 -translate-y-1/2 bg-white/70 hover:bg-white px-3 py-2 rounded-l-xl shadow"
+          class="absolute top-1/2 right-0 -translate-y-1/2 bg-white/70 hover:bg-white px-3 py-2 rounded-l-xl shadow md:-right-3"
       >
         ›
       </button>
@@ -57,10 +59,10 @@
     <input
         v-model="search"
         placeholder="Search player..."
-        class="p-2 border rounded w-full mb-4"
+        class="mb-4 w-full rounded-xl border border-gray-200 bg-white p-3 text-sm shadow-sm"
     />
 
-    <div v-if="loading" class="text-center">Loading...</div>
+    <div v-if="loading" class="rounded-2xl bg-white p-8 text-center text-gray-500 shadow-sm">Loading...</div>
 
     <PlayerTable
         v-else

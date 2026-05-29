@@ -1,7 +1,7 @@
 <template>
-  <div class="pt-28 px-8">
+  <div class="pt-24 px-3 sm:pt-28 sm:px-8">
     <Header />
-    <div class="pt-16 px-6">
+    <div class="pt-12 sm:pt-16 sm:px-6">
       <TeamDetailComponent />
     </div>
   </div>

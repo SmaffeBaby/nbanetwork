@@ -5,8 +5,8 @@
       Динамика очков: Общее / Дома / Выезд
     </div>
 
-    <div class="bg-white p-4 rounded-xl shadow">
-      <div class="h-72 relative">
+    <div class="bg-white p-3 rounded-xl shadow sm:p-4">
+      <div class="h-60 relative sm:h-72">
         <canvas ref="chartRef" class="w-full h-full"></canvas>
       </div>
     </div>
