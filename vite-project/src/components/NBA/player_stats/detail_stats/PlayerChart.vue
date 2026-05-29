@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="player-chart">
     <canvas v-if="!loading" ref="canvas"></canvas>
     <div v-else class="text-center text-gray-500">Loading chart...</div>
   </div>
@@ -40,10 +40,44 @@ function renderChart() {
     data: chartData.value,
     options: {
       responsive: true,
-      plugins: { legend: { display: true } },
+      maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            boxWidth: 34,
+            padding: 12
+          }
+        }
+      },
       scales: {
-        x: { display: true },
-        y: { beginAtZero: true }
+        x: {
+          display: true,
+          ticks: {
+            autoSkip: false,
+            callback(value, index, ticks) {
+              const maxLabels = window.innerWidth < 640 ? 3 : 6
+              const step = Math.max(1, Math.ceil(ticks.length / maxLabels))
+
+              if (index % step !== 0) return ''
+              return this.getLabelForValue(Number(value))
+            },
+            maxRotation: 0,
+            minRotation: 0
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0,
+            maxTicksLimit: 5
+          }
+        }
       }
     }
   })
@@ -59,3 +93,22 @@ watch(
     { deep: true }
 )
 </script>
+
+<style scoped>
+.player-chart {
+  height: 260px;
+  min-width: 0;
+  position: relative;
+  width: 100%;
+}
+
+.player-chart canvas {
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .player-chart {
+    height: 230px;
+  }
+}
+</style>

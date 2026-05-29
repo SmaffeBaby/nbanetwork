@@ -1,35 +1,35 @@
 <template>
-  <div class="p-4 space-y-6">
+  <div class="mx-auto w-full max-w-5xl space-y-5 px-0 pb-6 text-left sm:space-y-6 sm:p-4">
 
-    <div v-if="player" class="space-y-4">
+    <div v-if="player" class="min-w-0 space-y-4">
 
       <div
-          class="p-6 rounded-2xl flex items-center gap-6 text-white shadow-md relative overflow-hidden"
+          class="p-4 sm:p-6 rounded-2xl flex items-center gap-4 sm:gap-6 text-white shadow-md relative overflow-hidden"
           :style="cardStyle"
       >
         <img
             :src="getPlayerImage(player)"
             :data-player-id="player.PLAYER_ID"
-            class="w-24 h-24 rounded-xl object-cover bg-gray-800 border border-gray-700 z-10 relative"
+            class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover bg-gray-800 border border-gray-700 z-10 relative shrink-0"
             @error="handleImageError"
         />
 
-        <div class="flex flex-col gap-2 z-10 relative">
-          <div class="group/player flex items-center gap-2">
-            <h1 class="text-2xl font-bold drop-shadow-md" style="color: white">
+        <div class="flex min-w-0 flex-1 flex-col gap-2 z-10 relative">
+          <div class="group/player flex min-w-0 items-center gap-2">
+            <h1 class="player-name m-0 min-w-0 break-words font-bold leading-tight drop-shadow-md" style="color: white">
               {{ player.PLAYER_NAME }}
             </h1>
             <FavoritePlayerButton
                 :player="player"
                 size="md"
-                class="md:opacity-0 md:group-hover/player:opacity-100"
+                class="shrink-0 md:opacity-0 md:group-hover/player:opacity-100"
             />
           </div>
 
           <div
               v-if="hasTeam"
               @click="goToTeam"
-              class="flex items-center gap-2 px-3 py-1 rounded-full font-semibold text-white
+              class="flex max-w-full items-center gap-2 px-3 py-1 rounded-full font-semibold text-white
          cursor-pointer select-none
          transition-all duration-200
          hover:scale-105 hover:shadow-md active:scale-95"
@@ -41,12 +41,12 @@
                 class="w-6 h-6 rounded-full object-cover bg-white/20"
             />
 
-            <span>{{ teamFullName }}</span>
+            <span class="truncate">{{ teamFullName }}</span>
           </div>
         </div>
       </div>
 
-      <div class="flex items-center gap-3 p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3 p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-sm">
 
         <button
             @click="$router.back()"
@@ -149,7 +149,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
         <StatBox
             v-for="statKey in ['PTS','REB','AST','STL','BLK','TOV']"
             :key="seasonTypeFilter + team + filteredGames.length"
@@ -171,7 +171,7 @@
         />
       </div>
 
-      <div class="mt-2">
+      <div class="mt-2 text-center sm:text-left">
         <button
             @click="showTeams = !showTeams"
             class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
@@ -204,7 +204,7 @@
         </transition>
       </div>
 
-      <div v-if="filteredGames.length" class="bg-white p-4 rounded-2xl shadow">
+      <div v-if="filteredGames.length" class="bg-white p-3 rounded-2xl shadow sm:p-4">
         <PlayerRecentGames :games="filteredGames" :team="team" v-model:seasonTypeFilter="seasonTypeFilter" />
       </div>
 
@@ -309,3 +309,17 @@ const { filteredGames, seasonTypeFilter } =
 const { teamFullName, teamStyle, cardStyle, hasTeam } =
     usePlayerPage(player)
 </script>
+
+<style scoped>
+.player-name {
+  font-size: clamp(1.45rem, 8vw, 2rem);
+  line-height: 1.05;
+  max-width: 100%;
+}
+
+@media (min-width: 640px) {
+  .player-name {
+    font-size: 2.25rem;
+  }
+}
+</style>
