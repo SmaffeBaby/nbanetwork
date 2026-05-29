@@ -1,5 +1,5 @@
 <template>
-  <div ref="rootRef" class="relative w-full max-w-[220px]">
+  <div ref="rootRef" class="relative w-full sm:max-w-[220px]">
     <div class="relative">
       <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3">
         <svg
@@ -32,7 +32,7 @@
 
     <div
         v-if="isOpen"
-        class="absolute left-0 z-50 mt-2 w-[280px] rounded-2xl border border-gray-200 bg-white p-4 shadow-lg"
+        class="absolute left-0 z-50 mt-2 w-[min(280px,calc(100vw-32px))] rounded-2xl border border-gray-200 bg-white p-4 shadow-lg"
     >
       <div class="mb-4 flex items-center justify-between">
         <button

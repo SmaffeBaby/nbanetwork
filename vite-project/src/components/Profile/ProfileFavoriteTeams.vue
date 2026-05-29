@@ -2,15 +2,15 @@
   <section class="space-y-3">
     <div>
       <h2 class="text-lg font-bold text-gray-900">Любимые команды</h2>
-      <p class="text-sm text-gray-500">Выберите команды, которые хотите видеть на главной.</p>
+      <p class="text-sm leading-5 text-gray-500">Выберите команды, которые хотите видеть на главной.</p>
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
       <button
           v-for="team in teams"
           :key="team.abbr"
           type="button"
-          class="relative rounded-xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-md"
+          class="relative rounded-xl border p-2 text-left transition hover:-translate-y-0.5 hover:shadow-md sm:p-3"
           :class="team.isFavorite ? 'border-rose-300 bg-rose-50 shadow-sm' : 'border-gray-200 bg-white'"
           @click="toggle(team.abbr)"
       >
@@ -23,8 +23,8 @@
             class="absolute right-2 top-2 h-5 w-5 text-gray-300"
         />
 
-        <img :src="team.logo" :alt="team.name" class="h-14 w-14 object-contain" />
-        <div class="mt-2 pr-5 text-sm font-semibold text-gray-900">
+        <img :src="team.logo" :alt="team.name" class="h-12 w-12 object-contain sm:h-14 sm:w-14" />
+        <div class="mt-2 pr-5 text-xs font-semibold leading-tight text-gray-900 sm:text-sm">
           {{ team.name }}
         </div>
       </button>

@@ -8,25 +8,25 @@
       {{ error }}
     </div>
 
-    <div v-else-if="profile" class="mx-auto max-w-6xl space-y-10">
-      <section class="flex flex-col gap-5 rounded-2xl bg-white p-6 shadow-md md:flex-row md:items-center md:justify-between">
-        <div class="flex flex-col gap-5 md:flex-row md:items-center">
+    <div v-else-if="profile" class="mx-auto max-w-6xl space-y-5 sm:space-y-8 md:space-y-10">
+      <section class="flex flex-col gap-4 rounded-2xl bg-white p-4 text-center shadow-md sm:p-6 md:flex-row md:items-center md:justify-between md:text-left">
+        <div class="flex flex-col items-center gap-4 md:flex-row md:items-center md:gap-5">
           <img
               v-if="profile.avatar_img"
               :src="profile.avatar_img"
               alt="User avatar"
-              class="h-28 w-28 rounded-full object-cover ring-4 ring-gray-100"
+              class="h-24 w-24 rounded-full object-cover ring-4 ring-gray-100 sm:h-28 sm:w-28"
           >
 
           <div
               v-else
-              class="inline-flex h-28 w-28 items-center justify-center rounded-full bg-gray-100 ring-4 ring-gray-100"
+              class="inline-flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 ring-4 ring-gray-100 sm:h-28 sm:w-28"
           >
-            <span class="text-3xl font-bold text-gray-600">{{ initials }}</span>
+            <span class="text-2xl font-bold text-gray-600 sm:text-3xl">{{ initials }}</span>
           </div>
 
           <div class="min-w-0">
-            <h1 class="text-3xl font-black text-gray-900">
+            <h1 class="m-0 break-words text-2xl font-black leading-tight text-gray-900 sm:text-3xl">
               {{ fullName }}
             </h1>
             <p class="mt-1 text-sm font-medium text-gray-500">
@@ -38,7 +38,7 @@
         <button
             v-if="canFollow"
             type="button"
-            class="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-95"
+            class="inline-flex w-full items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-95 sm:w-auto"
             :class="isFollowing ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-blue-600 text-white hover:bg-blue-700'"
             @click="toggleFollow"
         >
@@ -66,9 +66,9 @@
 
       <FavoritePlayers :players="profile.favorites_players" @select="goToPlayer" />
 
-      <ProfileLikedArticles :user-id="profile.id" title="Понравившиеся статьи" />
+      <ProfileLikedArticles :user-id="profile.id" title="Избранные статьи" />
 
-      <section class="grid gap-8 lg:grid-cols-2">
+      <section class="grid gap-5 lg:grid-cols-2 lg:gap-8">
         <PublicProfileGameList title="Просмотренные матчи" :games="watchedGames" />
         <PublicProfileGameList title="Избранные матчи" :games="favoriteGames" />
       </section>

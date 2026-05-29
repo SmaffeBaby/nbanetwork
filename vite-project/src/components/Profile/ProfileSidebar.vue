@@ -1,10 +1,10 @@
 <template>
-  <aside class="md:w-64 w-full bg-white border-b md:border-b-0 md:border-r p-2 md:p-4">
-    <div class="flex md:flex-col gap-2 overflow-x-auto">
+  <aside class="w-full rounded-2xl bg-white p-2 shadow-sm md:w-64 md:rounded-none md:border-r md:p-4 md:shadow-none">
+    <div class="flex gap-2 overflow-x-auto md:flex-col md:overflow-visible">
       <h2 class="hidden md:block text-lg font-semibold mb-2">Настройки</h2>
 
       <button
-          class="whitespace-nowrap px-4 py-2 rounded-lg transition text-sm md:text-base"
+          class="min-w-fit whitespace-nowrap rounded-lg px-4 py-2 text-sm transition md:text-base"
           :class="activeTab === 'main' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'"
           @click="setTab('main')"
       >
@@ -12,7 +12,7 @@
       </button>
 
       <button
-          class="whitespace-nowrap px-4 py-2 rounded-lg transition opacity-50 cursor-not-allowed text-sm md:text-base"
+          class="min-w-fit whitespace-nowrap rounded-lg px-4 py-2 text-sm opacity-50 transition cursor-not-allowed md:text-base"
           :class="activeTab === 'security' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'"
           @click="setTab('security')"
       >
@@ -20,7 +20,7 @@
       </button>
 
       <button
-          class="whitespace-nowrap px-4 py-2 rounded-lg transition text-sm md:text-base"
+          class="min-w-fit whitespace-nowrap rounded-lg px-4 py-2 text-sm transition md:text-base"
           :class="activeTab === 'likedArticles' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'"
           @click="setTab('likedArticles')"
       >

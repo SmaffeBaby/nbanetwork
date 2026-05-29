@@ -1,8 +1,8 @@
 <template>
-  <section class="space-y-5 rounded-2xl bg-white p-6 shadow-md">
+  <section class="space-y-4 rounded-2xl bg-white p-4 shadow-md sm:space-y-5 sm:p-6">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
-        <h2 class="text-2xl font-black text-gray-900">Статистика просмотров</h2>
+        <h2 class="text-xl font-black text-gray-900 sm:text-2xl">Статистика просмотров</h2>
         <p class="mt-1 text-sm font-medium text-gray-500">
           {{ filteredGames.length }} из {{ games.length }} просмотренных матчей
         </p>
@@ -35,12 +35,12 @@
           </select>
         </label>
 
-        <div class="inline-flex rounded-xl bg-gray-100 p-1">
+        <div class="grid grid-cols-2 rounded-xl bg-gray-100 p-1 sm:inline-flex">
           <button
               v-for="tab in tabs"
               :key="tab.value"
               type="button"
-              class="rounded-lg px-4 py-2 text-sm font-bold transition"
+              class="rounded-lg px-3 py-2 text-sm font-bold transition sm:px-4"
               :class="activeTab === tab.value ? 'bg-white text-gray-950 shadow-sm' : 'text-gray-500 hover:text-gray-800'"
               @click="activeTab = tab.value"
           >
@@ -50,9 +50,9 @@
       </div>
     </div>
 
-    <div v-if="games.length" class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_240px]">
-      <div class="min-h-[300px]">
-        <canvas ref="canvas" class="h-[300px] w-full"></canvas>
+    <div v-if="games.length" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px] lg:gap-5">
+      <div class="min-h-[230px] sm:min-h-[300px]">
+        <canvas ref="canvas" class="h-[230px] w-full sm:h-[300px]"></canvas>
       </div>
 
       <aside class="space-y-3">

@@ -1,17 +1,17 @@
 <template>
-  <div class="pt-28 px-8">
+  <div class="pt-24 px-3 sm:pt-28 sm:px-8">
     <Header />
 
-    <div class="pt-16 px-6">
-      <div class="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+    <div class="pt-12 sm:pt-16 sm:px-6">
+      <div class="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-3 bg-gray-50 md:flex-row md:gap-0">
 
         <ProfileSidebar
             :activeTab="activeTab"
             @changeTab="(tab) => activeTab = tab"
         />
 
-        <div class="flex-1 flex justify-center py-6 md:py-10 px-3 md:px-6">
-          <div class="w-full max-w-2xl bg-white rounded-2xl shadow-md md:shadow-lg p-4 md:p-8 space-y-6">
+        <div class="flex flex-1 justify-center md:px-6 md:py-10">
+          <div class="w-full max-w-2xl rounded-2xl bg-white p-4 shadow-md md:p-8 md:shadow-lg">
 
             <ProfileMain :activeTab="activeTab" />
 

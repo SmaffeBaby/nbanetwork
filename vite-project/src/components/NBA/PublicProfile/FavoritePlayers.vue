@@ -1,6 +1,6 @@
 <template>
   <section class="space-y-4">
-    <h2 class="text-2xl font-black text-gray-900">Любимые игроки</h2>
+    <h2 class="text-xl font-black text-gray-900 sm:text-2xl">Любимые игроки</h2>
 
     <div
         v-if="favoritePlayers.length"
@@ -10,7 +10,7 @@
           v-for="player in favoritePlayers"
           :key="player.id"
           type="button"
-          class="group relative overflow-hidden rounded-2xl p-5 text-left text-white shadow-xl transition hover:-translate-y-1 hover:shadow-2xl"
+          class="group relative overflow-hidden rounded-2xl p-4 text-left text-white shadow-xl transition hover:-translate-y-1 hover:shadow-2xl sm:p-5"
           :style="{ backgroundColor: player.bgColor }"
           @click="emit('select', player.name)"
       >
@@ -28,7 +28,7 @@
               :src="getPlayerImage({ PLAYER_ID: player.id })"
               :data-player-id="player.id"
               :alt="player.name"
-              class="h-20 w-20 rounded-2xl border border-white/20 bg-black/20 object-cover drop-shadow-2xl transition group-hover:scale-110"
+              class="h-16 w-16 rounded-2xl border border-white/20 bg-black/20 object-cover drop-shadow-2xl transition group-hover:scale-110 sm:h-20 sm:w-20"
               @error="handleImageError"
           >
 
@@ -36,7 +36,7 @@
             <div class="text-sm font-semibold text-white/70">
               {{ player.teamAbbr || 'NBA' }}
             </div>
-            <div class="text-xl font-black leading-tight">
+            <div class="text-lg font-black leading-tight sm:text-xl">
               {{ player.name }}
             </div>
           </div>

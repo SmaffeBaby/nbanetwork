@@ -1,8 +1,8 @@
 <template>
-  <div class="rounded-xl bg-gray-50 p-4">
+  <div class="rounded-xl bg-gray-50 p-3 sm:p-4">
     <div class="flex items-start gap-3">
       <div
-          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-sm"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-sm sm:h-12 sm:w-12"
           :style="{ borderColor: progressColor }"
       >
         <img
@@ -17,7 +17,7 @@
       <div class="min-w-0 flex-1">
         <div class="text-xs font-semibold uppercase text-gray-500">{{ title }}</div>
         <div class="mt-1 flex flex-wrap items-center gap-2">
-          <div class="truncate text-base font-black text-gray-900">
+          <div class="min-w-0 break-words text-sm font-black text-gray-900 sm:text-base">
             {{ rule?.title || 'Прогресс не настроен' }}
           </div>
           <span class="rounded-full bg-white px-2 py-1 text-xs font-black text-gray-700 shadow-sm">

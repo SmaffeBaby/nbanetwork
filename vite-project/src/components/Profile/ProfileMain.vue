@@ -1,13 +1,13 @@
 <template>
   <template v-if="activeTab === 'main'">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <h1 class="text-xl md:text-2xl font-bold">Основные</h1>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <h1 class="m-0 text-xl font-bold md:text-2xl">Основные</h1>
 
       <div class="flex flex-col gap-2 sm:flex-row">
         <RouterLink
             v-if="user"
             :to="{ name: 'PublicProfile', params: { id: user.id } }"
-            class="text-heading bg-gradient-to-r from-teal-200 to-lime-200 hover:bg-gradient-to-l hover:from-teal-200 hover:to-lime-200 focus:ring-4 focus:outline-none focus:ring-lime-200 dark:focus:ring-teal-700 font-medium rounded-base text-sm px-4 py-2.5 text-center leading-5"
+            class="rounded-xl bg-gradient-to-r from-teal-200 to-lime-200 px-4 py-2.5 text-center text-sm font-medium leading-5 text-heading hover:bg-gradient-to-l hover:from-teal-200 hover:to-lime-200 focus:outline-none focus:ring-4 focus:ring-lime-200 dark:focus:ring-teal-700"
         >
           Посмотреть профиль
         </RouterLink>
@@ -23,29 +23,29 @@
 
     <div class="space-y-4 md:space-y-5">
 
-      <div>
+      <div class="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:border-0 sm:bg-transparent sm:p-0">
         <label class="text-sm text-gray-500">Аватарка</label>
-        <div class="mt-2 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div class="mt-2 flex flex-col items-center gap-4 sm:flex-row sm:items-center">
           <img
               v-if="user?.avatarImg"
               :src="user.avatarImg"
               alt="User avatar"
-              class="w-24 h-24 rounded-full object-cover ring-2 ring-gray-200"
+              class="h-24 w-24 rounded-full object-cover ring-2 ring-gray-200"
           />
           <div
               v-else
-              class="relative inline-flex items-center justify-center w-24 h-24 overflow-hidden bg-gray-100 rounded-full ring-2 ring-gray-200"
+              class="relative inline-flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gray-100 ring-2 ring-gray-200"
           >
             <span class="font-medium text-2xl text-gray-600">{{ userInitials }}</span>
           </div>
 
-          <div class="flex-1">
+          <div class="w-full flex-1">
             <input
                 type="file"
                 accept="image/*"
                 :disabled="loadingAvatar"
                 @change="uploadAvatar"
-                class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                class="block w-full cursor-pointer rounded-lg border border-gray-300 bg-white text-sm text-gray-900 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:bg-gray-50"
             />
             <p class="mt-1 text-xs text-gray-500">
               {{ loadingAvatar ? 'Загрузка...' : 'PNG, JPG или WEBP до 1 МБ' }}
@@ -59,7 +59,7 @@
         <input
             :value="user?.email"
             disabled
-            class="w-full mt-1 px-3 py-2 border rounded-lg bg-gray-100 text-sm md:text-base"
+            class="mt-1 w-full rounded-lg border bg-gray-100 px-3 py-2 text-sm md:text-base"
         />
       </div>
 
@@ -68,7 +68,7 @@
         <input
             v-model="form.firstName"
             :disabled="!isEditing"
-            class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm md:text-base"
+            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 md:text-base"
         />
       </div>
 
@@ -77,7 +77,7 @@
         <input
             v-model="form.lastName"
             :disabled="!isEditing"
-            class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm md:text-base"
+            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 md:text-base"
         />
       </div>
 
@@ -110,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useProfile } from '../../composables/Profile/useProfile'
 import ProfileFavoriteTeams from './ProfileFavoriteTeams.vue'
@@ -132,7 +132,7 @@ const {
   logoutAndRedirect
 } = useProfile()
 
-const { activeTab } = props
+const activeTab = toRef(props, 'activeTab')
 
 const userInitials = computed(() => {
   const first = user.value?.firstName?.trim().charAt(0) ?? ''

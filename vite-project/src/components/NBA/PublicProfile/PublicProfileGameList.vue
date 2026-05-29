@@ -2,7 +2,7 @@
   <section class="space-y-4">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h2 class="text-2xl font-black text-gray-900">
+        <h2 class="text-xl font-black text-gray-900 sm:text-2xl">
           {{ title }}
         </h2>
 
@@ -35,7 +35,7 @@
         <button
             v-if="selectedDate || selectedTeam !== 'all'"
             type="button"
-            class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 active:scale-95"
+            class="w-full rounded-xl bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 active:scale-95 sm:w-auto"
             @click="resetFilters"
         >
           Сбросить
@@ -47,7 +47,7 @@
       <div
           v-for="game in visibleGames"
           :key="game.id"
-          class="relative rounded-2xl bg-white p-4 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg"
+          class="relative rounded-2xl bg-white p-3 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg sm:p-4"
       >
         <button
             type="button"
@@ -59,41 +59,41 @@
           <EyeIcon v-else class="h-4 w-4" />
         </button>
 
-        <RouterLink :to="`/game/${game.id}`" class="block pr-8">
+        <RouterLink :to="`/game/${game.id}`" class="block pr-7 sm:pr-8">
           <div class="mb-3 text-xs font-medium text-gray-500">
             {{ game.date || 'Дата матча' }}
           </div>
 
-          <div class="flex items-center justify-between gap-3">
+          <div class="grid grid-cols-[minmax(0,1fr)_28px_minmax(0,1fr)] items-center gap-2 sm:gap-3">
             <div class="flex min-w-0 items-center gap-2">
               <img
                   :src="getTeamLogo(game.awayAbbr)"
                   :alt="game.awayAbbr"
-                  class="h-9 w-9 object-contain"
+                  class="h-8 w-8 shrink-0 object-contain sm:h-9 sm:w-9"
               >
 
               <div class="min-w-0">
-                <div class="truncate text-sm font-semibold text-gray-900">
+                <div class="truncate text-xs font-semibold text-gray-900 sm:text-sm">
                   {{ game.awayName || game.awayAbbr }}
                 </div>
 
-                <div class="text-lg font-black text-gray-900">
+                <div class="text-base font-black text-gray-900 sm:text-lg">
                   {{ score(game, 'away') }}
                 </div>
               </div>
             </div>
 
-            <div class="text-xs font-bold text-gray-400">
+            <div class="text-center text-xs font-bold text-gray-400">
               VS
             </div>
 
             <div class="flex min-w-0 items-center justify-end gap-2 text-right">
               <div class="min-w-0">
-                <div class="truncate text-sm font-semibold text-gray-900">
+                <div class="truncate text-xs font-semibold text-gray-900 sm:text-sm">
                   {{ game.homeName || game.homeAbbr }}
                 </div>
 
-                <div class="text-lg font-black text-gray-900">
+                <div class="text-base font-black text-gray-900 sm:text-lg">
                   {{ score(game, 'home') }}
                 </div>
               </div>
@@ -101,7 +101,7 @@
               <img
                   :src="getTeamLogo(game.homeAbbr)"
                   :alt="game.homeAbbr"
-                  class="h-9 w-9 object-contain"
+                  class="h-8 w-8 shrink-0 object-contain sm:h-9 sm:w-9"
               >
             </div>
           </div>
@@ -120,7 +120,7 @@
       <button
           type="button"
           :disabled="page === 1"
-          class="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          class="flex-1 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
           @click="previousPage"
       >
         Назад
@@ -129,7 +129,7 @@
       <button
           type="button"
           :disabled="page === totalPages"
-          class="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          class="flex-1 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
           @click="nextPage"
       >
         Дальше
