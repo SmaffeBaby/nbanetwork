@@ -17,11 +17,12 @@
             @error="handleImageError"
         />
         <span>{{ p.PLAYER_NAME }}</span>
-        <FavoritePlayerButton
-            :player="p"
-            size="sm"
-            class="md:opacity-0 md:group-hover/player:opacity-100"
-        />
+        <span class="hidden md:inline-flex md:opacity-0 md:group-hover/player:opacity-100">
+          <FavoritePlayerButton
+              :player="p"
+              size="sm"
+          />
+        </span>
       </div>
 
       <span class="font-bold">{{ p[stat] }}</span>

@@ -1,18 +1,19 @@
 <template>
-  <div class="p-4 space-y-8">
+  <div class="mx-auto w-full max-w-6xl space-y-5 pb-6 text-left sm:space-y-8 sm:p-4">
 
     <div class="flex justify-center mb-4">
       <img
           src="/logos/PLAYERS_STATS.svg"
           alt="NBA Regular Season"
-          class="w-40 md:w-60 object-contain"
+          class="w-32 object-contain sm:w-40 md:w-60"
       />
     </div>
 
-    <div class="flex justify-center mt-2">
+    <div class="rounded-2xl bg-white p-3 shadow-sm sm:p-4">
+    <div class="flex justify-center">
       <select
           v-model="season"
-          class="p-2 border rounded"
+          class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium shadow-sm sm:w-auto"
       >
         <option
             v-for="s in seasons"
@@ -24,25 +25,26 @@
       </select>
     </div>
 
-    <div class="flex gap-2 bg-gray-200 p-1 rounded-lg">
+    <div class="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
       <button
           @click="switchMode('regular')"
-          class="px-4 py-1 rounded transition"
-          :class="mode === 'regular' ? 'bg-white shadow' : 'opacity-60'"
+          class="rounded-lg px-4 py-2 text-sm font-medium transition"
+          :class="mode === 'regular' ? 'bg-white shadow text-gray-950' : 'text-gray-500'"
       >
         Regular
       </button>
 
       <button
           @click="switchMode('playoffs')"
-          class="px-4 py-1 rounded transition"
-          :class="mode === 'playoffs' ? 'bg-white shadow' : 'opacity-60'"
+          class="rounded-lg px-4 py-2 text-sm font-medium transition"
+          :class="mode === 'playoffs' ? 'bg-white shadow text-gray-950' : 'text-gray-500'"
       >
         Playoffs
       </button>
     </div>
+    </div>
 
-    <div class="grid md:grid-cols-2 gap-6">
+    <div class="grid gap-4 md:grid-cols-2 md:gap-6">
       <StatLeaders title="Points Per Game" stat="PTS" :players="players" />
       <StatLeaders title="Rebounds Per Game" stat="REB" :players="players" />
       <StatLeaders title="Assists Per Game" stat="AST" :players="players" />
@@ -54,14 +56,14 @@
       <input
           v-model="search"
           placeholder="Search player..."
-          class="p-2 border rounded w-full"
+          class="w-full rounded-xl border border-gray-200 bg-white p-3 text-sm shadow-sm"
       />
     </div>
 
-    <div class="mt-3">
+    <div class="mt-3 text-center sm:text-left">
       <button
           @click="showTeams = !showTeams"
-          class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+          class="rounded-xl bg-gray-200 px-4 py-2 text-sm font-medium transition hover:bg-gray-300"
       >
         Выбрать команду
       </button>
@@ -69,24 +71,24 @@
       <transition name="slide-fade">
         <div
             v-if="showTeams"
-            class="flex flex-wrap bg-gray-100  items-center gap-3 mt-3 overflow-x-auto p-2 bg-transparent rounded-md"
+            class="mt-3 flex flex-wrap items-center justify-center gap-3 rounded-xl bg-white p-2 shadow-sm sm:justify-start"
         >
 
           <img
               :src="getTeamLogo('ALL_TEAMS')"
               alt="All Teams"
-              class="cursor-pointer transition-opacity duration-200 w-20 h-20"
+              class="h-14 w-14 cursor-pointer transition-opacity duration-200 sm:h-20 sm:w-20"
               :class="team !== '' ? 'opacity-70' : 'opacity-100'"
               @click="team = ''"
           />
 
-          <div class="flex flex-wrap items-center gap-2 ml-2">
+          <div class="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <img
                 v-for="t in teams"
                 :key="t"
                 :src="getTeamLogo(t)"
                 :alt="t"
-                class="w-10 h-10 cursor-pointer rounded transition-opacity duration-200"
+                class="h-9 w-9 cursor-pointer rounded transition-opacity duration-200 sm:h-10 sm:w-10"
                 :class="team === '' ? 'opacity-100' : (team === t ? 'opacity-100' : 'opacity-40')"
                 @click="team = t"
             />
@@ -97,8 +99,43 @@
 
     <div v-if="loading" class="text-center">Loading...</div>
 
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
+    <div v-else class="space-y-3 md:hidden">
+      <button
+          v-for="p in sortedPlayers.slice(0, 100)"
+          :key="p.PLAYER_ID"
+          type="button"
+          class="w-full rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]"
+          @click="handleClick(p)"
+      >
+        <div class="flex min-w-0 items-center gap-3">
+          <img
+              :src="getImage(p)"
+              :data-player-id="p.PLAYER_ID"
+              class="h-11 w-11 shrink-0 rounded-full object-cover"
+              @error="handleImageErr"
+          />
+
+          <div class="min-w-0">
+            <div class="truncate font-semibold text-gray-900">{{ p.PLAYER_NAME }}</div>
+            <div class="text-xs text-gray-500">{{ p.TEAM_ABBREVIATION }}</div>
+          </div>
+        </div>
+
+        <div class="mt-3 grid grid-cols-3 gap-2">
+          <div
+              v-for="item in mobileStats(p)"
+              :key="item.label"
+              class="rounded-lg bg-gray-50 px-2 py-1.5 text-center"
+          >
+            <div class="text-[10px] font-semibold uppercase text-gray-400">{{ item.label }}</div>
+            <div class="text-sm font-semibold text-gray-900">{{ item.value }}</div>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    <div v-if="!loading" class="hidden overflow-x-auto rounded-xl border md:block">
+      <table class="min-w-[760px] w-full text-sm">
 
         <thead class="bg-gray-900 text-white">
         <tr>
@@ -138,11 +175,12 @@
                   @error="handleImageErr"
               />
               <span>{{ p.PLAYER_NAME }}</span>
-              <FavoritePlayerButton
-                  :player="p"
-                  size="sm"
-                  class="md:opacity-0 md:group-hover/player:opacity-100"
-              />
+              <span class="hidden md:inline-flex md:opacity-0 md:group-hover/player:opacity-100">
+                <FavoritePlayerButton
+                    :player="p"
+                    size="sm"
+                />
+              </span>
             </div>
           </td>
 
@@ -240,6 +278,15 @@ const handleClick = (p: Player) => navigateToPlayer(router, p.PLAYER_NAME)
 
 const getImage = getPlayerImage
 const handleImageErr = handleImageError
+
+const mobileStats = (p: Player) => [
+  { label: 'PTS', value: p.PTS },
+  { label: 'REB', value: p.REB },
+  { label: 'AST', value: p.AST },
+  { label: 'STL', value: p.STL },
+  { label: 'BLK', value: p.BLK },
+  { label: 'TOV', value: p.TOV },
+]
 </script>
 
 <style scoped>
