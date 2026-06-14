@@ -27,6 +27,7 @@ NBA_CDN_HEADERS = {
     "Referer": "https://www.nba.com",
 }
 STATIC_SCOREBOARD_CACHE = {}
+SCHEDULE_GAME_CACHE = None
 CYRILLIC_TO_LATIN = str.maketrans({
     "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
     "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
@@ -85,6 +86,148 @@ def get_current_nba_season():
         return f"{year}-{str(year + 1)[-2:]}"
     else:
         return f"{year - 1}-{str(year)[-2:]}"
+
+def parse_utc_datetime(value):
+    if not value:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+def get_msk_date(value, fallback_date=None):
+    parsed = parse_utc_datetime(value)
+    if parsed:
+        return parsed.astimezone(MSK_TZ).date()
+
+    if fallback_date:
+        return fallback_date
+
+    return None
+
+def normalize_scheduled_game(game, fallback_date=None):
+    if not game:
+        return None
+
+    game_id = game.get("gameId")
+    home = game.get("homeTeam", {}) or {}
+    away = game.get("awayTeam", {}) or {}
+
+    if not game_id or not home.get("teamId") or not away.get("teamId"):
+        return None
+
+    game_time_utc = (
+        game.get("gameTimeUTC")
+        or game.get("gameDateTimeUTC")
+        or game.get("gameDateUTC")
+    )
+    game_msk_date = get_msk_date(game_time_utc, fallback_date)
+    game_date_est = (
+        game.get("gameDateEst")
+        or game.get("gameDate")
+        or game.get("gameDateUTC")
+        or (fallback_date.isoformat() if fallback_date else "")
+    )
+
+    return {
+        "GAME_ID": game_id,
+        "GAME_DATE_EST": game_date_est,
+        "GAME_DATE_MSK": game_msk_date.isoformat() if game_msk_date else str(game_date_est)[:10],
+        "GAME_TIME_UTC": game_time_utc,
+        "HOME_TEAM_ID": home.get("teamId"),
+        "VISITOR_TEAM_ID": away.get("teamId"),
+        "HOME_TEAM_ABBREVIATION": home.get("teamTricode") or home.get("teamAbbreviation"),
+        "VISITOR_TEAM_ABBREVIATION": away.get("teamTricode") or away.get("teamAbbreviation"),
+        "HOME_TEAM_SCORE": home.get("score"),
+        "VISITOR_TEAM_SCORE": away.get("score"),
+        "GAME_STATUS": game.get("gameStatusText") or game.get("gameStatusTextLong") or game.get("gameStatus") or "TBD",
+    }
+
+def fetch_static_scoreboard(nba_date):
+    cached = STATIC_SCOREBOARD_CACHE.get(nba_date)
+    if cached is not None:
+        return cached
+
+    date_key = nba_date.strftime("%Y%m%d")
+    url = f"https://cdn.nba.com/static/json/staticData/scores/scores_{date_key}.json"
+    request = Request(url, headers=NBA_CDN_HEADERS)
+
+    with urlopen(request, timeout=10) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+
+    games = payload.get("scoreboard", {}).get("games", [])
+    games_by_id = {
+        game.get("gameId"): game
+        for game in games
+        if game.get("gameId")
+    }
+    STATIC_SCOREBOARD_CACHE[nba_date] = games_by_id
+
+    return games_by_id
+
+def fetch_schedule_games_by_id():
+    global SCHEDULE_GAME_CACHE
+
+    if SCHEDULE_GAME_CACHE is not None:
+        return SCHEDULE_GAME_CACHE
+
+    games_by_id = {}
+
+    for url in SCHEDULE_URLS:
+        try:
+            request = Request(url, headers=NBA_CDN_HEADERS)
+
+            with urlopen(request, timeout=10) as response:
+                schedule = json.loads(response.read().decode("utf-8"))
+
+            for game_date_entry in schedule.get("leagueSchedule", {}).get("gameDates", []):
+                fallback_date = None
+                raw_date = game_date_entry.get("gameDate")
+
+                if raw_date:
+                    try:
+                        fallback_date = datetime.fromisoformat(str(raw_date)[:10]).date()
+                    except ValueError:
+                        fallback_date = None
+
+                for game in game_date_entry.get("games", []):
+                    normalized = normalize_scheduled_game(game, fallback_date)
+                    if normalized:
+                        games_by_id[normalized["GAME_ID"]] = normalized
+
+            if games_by_id:
+                SCHEDULE_GAME_CACHE = games_by_id
+                return games_by_id
+        except Exception as e:
+            print(f"Failed to fetch NBA schedule from {url}: {e}")
+
+    SCHEDULE_GAME_CACHE = games_by_id
+    return games_by_id
+
+def find_scheduled_game(game_id):
+    try:
+        scheduled = fetch_schedule_games_by_id().get(game_id)
+        if scheduled:
+            return scheduled
+    except Exception as e:
+        print(f"Failed to find NBA schedule game {game_id}: {e}")
+
+    today = datetime.now(MSK_TZ).date()
+
+    for offset in range(-3, 15):
+        nba_date = today + timedelta(days=offset)
+
+        try:
+            static_game = fetch_static_scoreboard(nba_date).get(game_id)
+            normalized = normalize_scheduled_game(static_game, nba_date)
+            if normalized:
+                return normalized
+        except Exception as e:
+            print(f"Failed to fetch NBA static scoreboard for {nba_date}: {e}")
+
+    return None
 
 @app.get("/current-season")
 def current_season():
@@ -541,6 +684,8 @@ def get_team_upcoming_games(team_id: int):
 
 @app.get("/game-detail/{game_id}")
 def get_game_detail(game_id: str):
+    metadata = find_scheduled_game(game_id)
+
     try:
         summary = boxscoresummaryv2.BoxScoreSummaryV2(game_id=game_id)
         boxscore = boxscoretraditionalv2.BoxScoreTraditionalV2(game_id=game_id)
@@ -568,6 +713,7 @@ def get_game_detail(game_id: str):
 
         return {
             "game_id": game_id,
+            "metadata": metadata,
             "summary": summary_dict,
             "boxscore": boxscore_dict,
             "misc": misc_dict,
@@ -575,6 +721,16 @@ def get_game_detail(game_id: str):
         }
 
     except Exception as e:
+        if metadata:
+            return {
+                "game_id": game_id,
+                "metadata": metadata,
+                "summary": {"resultSets": []},
+                "boxscore": {"resultSets": []},
+                "misc": {"resultSets": []},
+                "playByPlay": {"resultSets": []}
+            }
+
         return {"error": str(e)}
 
 
@@ -605,28 +761,6 @@ def get_games_by_date(date: str):
         target_msk_date,
         target_msk_date + timedelta(days=1),
     ]
-
-    def fetch_static_scoreboard(nba_date):
-        cached = STATIC_SCOREBOARD_CACHE.get(nba_date)
-        if cached is not None:
-            return cached
-
-        date_key = nba_date.strftime("%Y%m%d")
-        url = f"https://cdn.nba.com/static/json/staticData/scores/scores_{date_key}.json"
-        request = Request(url, headers=NBA_CDN_HEADERS)
-
-        with urlopen(request, timeout=10) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-
-        games = payload.get("scoreboard", {}).get("games", [])
-        games_by_id = {
-            game.get("gameId"): game
-            for game in games
-            if game.get("gameId")
-        }
-        STATIC_SCOREBOARD_CACHE[nba_date] = games_by_id
-
-        return games_by_id
 
     def get_static_scoreboard(nba_date):
         return fetch_static_scoreboard(nba_date)
@@ -695,27 +829,10 @@ def get_games_by_date(date: str):
                             if game_date_msk != target_msk_date.isoformat():
                                 continue
 
-                        home = game.get("homeTeam", {})
-                        away = game.get("awayTeam", {})
-
-                        games_by_id[gid] = {
-                            "GAME_ID": gid,
-
-                            "GAME_DATE_EST": game.get("gameDateEst") or game.get("gameDate") or f"{target_msk_date.isoformat()}T00:00:00",
-                            "GAME_DATE_MSK": game_date_msk,
-                            "GAME_TIME_UTC": game_time_utc,
-
-                            "HOME_TEAM_ID": home.get("teamId"),
-                            "VISITOR_TEAM_ID": away.get("teamId"),
-
-                            "HOME_TEAM_ABBREVIATION": home.get("teamTricode") or home.get("teamAbbreviation"),
-                            "VISITOR_TEAM_ABBREVIATION": away.get("teamTricode") or away.get("teamAbbreviation"),
-
-                            "HOME_TEAM_SCORE": home.get("score"),
-                            "VISITOR_TEAM_SCORE": away.get("score"),
-
-                            "GAME_STATUS": game.get("gameStatusText") or game.get("gameStatusTextLong") or "TBD"
-                        }
+                        normalized = normalize_scheduled_game(game, target_msk_date)
+                        if normalized:
+                            normalized["GAME_DATE_MSK"] = game_date_msk
+                            games_by_id[gid] = normalized
 
                 if games_by_id:
                     return True
@@ -755,27 +872,10 @@ def get_games_by_date(date: str):
                     if game_date_msk != target_msk_date.isoformat():
                         continue
 
-                home = game.get("homeTeam", {})
-                away = game.get("awayTeam", {})
-
-                games_by_id[gid] = {
-                    "GAME_ID": gid,
-
-                    "GAME_DATE_EST": game.get("gameDateEst") or game.get("gameDateUTC") or f"{nba_date.isoformat()}T00:00:00",
-                    "GAME_DATE_MSK": game_date_msk,
-                    "GAME_TIME_UTC": game_time_utc,
-
-                    "HOME_TEAM_ID": home.get("teamId"),
-                    "VISITOR_TEAM_ID": away.get("teamId"),
-
-                    "HOME_TEAM_ABBREVIATION": home.get("teamTricode") or home.get("teamAbbreviation"),
-                    "VISITOR_TEAM_ABBREVIATION": away.get("teamTricode") or away.get("teamAbbreviation"),
-
-                    "HOME_TEAM_SCORE": home.get("score"),
-                    "VISITOR_TEAM_SCORE": away.get("score"),
-
-                    "GAME_STATUS": game.get("gameStatusText") or game.get("gameStatus") or ""
-                }
+                normalized = normalize_scheduled_game(game, nba_date)
+                if normalized:
+                    normalized["GAME_DATE_MSK"] = game_date_msk
+                    games_by_id[gid] = normalized
 
         return fetched_any_scoreboard
 
@@ -793,10 +893,11 @@ def get_games_by_date(date: str):
             team_game = dict(zip(headers, row))
             game_date = datetime.strptime(team_game["GAME_DATE"], "%Y-%m-%d").date()
 
-            # NBA games usually start on the previous US calendar day for Moscow.
-            # With no exact UTC timestamp in LeagueGameLog, this keeps completed
-            # playoff games aligned with the app's MSK calendar.
-            game_date_msk = game_date + timedelta(days=1)
+            static_game = find_static_game(team_game["GAME_ID"], game_date)
+            game_time_utc = static_game.get("gameTimeUTC")
+            game_dt_utc = parse_utc(game_time_utc)
+            game_date_msk = game_dt_utc.astimezone(MSK_TZ).date() if game_dt_utc else game_date
+
             if game_date_msk != target_msk_date:
                 continue
 

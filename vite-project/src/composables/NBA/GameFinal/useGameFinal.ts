@@ -34,6 +34,40 @@ export function useGameFinal(filters: Ref<Filters>) {
         }
     }
 
+    const buildGameFromDetail = (detail: any) => {
+        if (!detail?.gameId) return null
+
+        return {
+            gameId: detail.gameId,
+            status: detail.status || 'TBD',
+
+            dateUTC: detail.dateUTC,
+            dateMSK: detail.dateMSK,
+
+            home: {
+                name: detail.home?.name || '',
+                abbr: detail.home?.abbr || '',
+                score: detail.home?.score ?? null
+            },
+
+            away: {
+                name: detail.away?.name || '',
+                abbr: detail.away?.abbr || '',
+                score: detail.away?.score ?? null
+            }
+        }
+    }
+
+    const fetchGameDetailFallback = async () => {
+        const res = await fetch(`/api/game-detail/${gameId}`)
+
+        if (!res.ok) {
+            throw new Error('Failed to load game detail')
+        }
+
+        return buildGameFromDetail(await res.json())
+    }
+
     const fetchGame = async () => {
         try {
             const period = filters.value?.period
@@ -49,8 +83,20 @@ export function useGameFinal(filters: Ref<Filters>) {
             }
 
             const data = await res.json()
-
             const meta = data?.meta || {}
+
+            if (!data || (!meta.homeAbbr && !meta.awayAbbr)) {
+                const fallbackGame = await fetchGameDetailFallback()
+
+                if (!fallbackGame) {
+                    throw new Error('Failed to load game data')
+                }
+
+                game.value = fallbackGame
+                recap.value = null
+                error.value = null
+                return
+            }
 
             const players = data?.players || []
 
@@ -61,7 +107,7 @@ export function useGameFinal(filters: Ref<Filters>) {
 
             game.value = {
                 gameId,
-                status: 'Final',
+                status: meta?.status || 'Final',
 
                 dateUTC: data?.dateUTC,
                 dateMSK: data?.dateMSK,

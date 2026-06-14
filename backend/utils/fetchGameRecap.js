@@ -136,6 +136,7 @@ async function fetchGameRecap(gameId, periodFilter = null) {
                 awayAbbr,
                 homeScore,
                 awayScore,
+                status: game?.gameStatusText || game?.gameStatus || 'Final',
                 runs,
                 clutch,
                 keyMoments,
@@ -530,8 +531,9 @@ async function fetchLegacyGame(gameId) {
     const miscTeamStats = getLegacyMiscTeamStats(miscSets)
     const playByPlay = rowsToObjects(findResultSet(playByPlaySets, 'PlayByPlay'))
 
-    const homeTeamId = Number(gameSummary.HOME_TEAM_ID)
-    const awayTeamId = Number(gameSummary.VISITOR_TEAM_ID)
+    const metadata = root.metadata || {}
+    const homeTeamId = Number(gameSummary.HOME_TEAM_ID || metadata.HOME_TEAM_ID)
+    const awayTeamId = Number(gameSummary.VISITOR_TEAM_ID || metadata.VISITOR_TEAM_ID)
 
     if (!homeTeamId || !awayTeamId) {
         throw new Error('Legacy box score is missing teams')
@@ -540,9 +542,13 @@ async function fetchLegacyGame(gameId) {
     return {
         game: {
             gameId,
-            gameTimeUTC: parseLegacyGameDate(gameSummary.GAME_DATE_EST),
+            gameTimeUTC: parseLegacyGameDate(metadata.GAME_TIME_UTC || gameSummary.GAME_DATE_EST || metadata.GAME_DATE_EST),
             homeTeam: buildLegacyTeam({
                 teamId: homeTeamId,
+                fallback: {
+                    teamTricode: metadata.HOME_TEAM_ABBREVIATION,
+                    score: metadata.HOME_TEAM_SCORE
+                },
                 lineScore,
                 teamStats,
                 miscTeamStats,
@@ -550,6 +556,10 @@ async function fetchLegacyGame(gameId) {
             }),
             awayTeam: buildLegacyTeam({
                 teamId: awayTeamId,
+                fallback: {
+                    teamTricode: metadata.VISITOR_TEAM_ABBREVIATION,
+                    score: metadata.VISITOR_TEAM_SCORE
+                },
                 lineScore,
                 teamStats,
                 miscTeamStats,
@@ -612,21 +622,22 @@ function pickLegacyMiscTeam(miscTeamStats, teamId) {
     return miscTeamStats.find((row) => Number(row.TEAM_ID ?? row.teamId) === teamId) || {}
 }
 
-function buildLegacyTeam({ teamId, lineScore, teamStats, miscTeamStats, playerStats }) {
+function buildLegacyTeam({ teamId, fallback = {}, lineScore, teamStats, miscTeamStats, playerStats }) {
     const teamMeta = TEAM_MAP[teamId] || {}
     const line = lineScore.find((row) => Number(row.TEAM_ID) === teamId) || {}
     const stats = teamStats.find((row) => Number(row.TEAM_ID) === teamId) || {}
     const misc = pickLegacyMiscTeam(miscTeamStats, teamId)
-    const abbr = line.TEAM_ABBREVIATION || stats.TEAM_ABBREVIATION || teamMeta.abbr || ''
+    const abbr = line.TEAM_ABBREVIATION || stats.TEAM_ABBREVIATION || fallback.teamTricode || teamMeta.abbr || ''
+    const score = toNumber(line.PTS ?? stats.PTS ?? fallback.score)
 
     return {
         teamId,
         teamName: teamMeta.name || stats.TEAM_NAME || line.TEAM_NAME || abbr,
         teamTricode: abbr,
-        score: toNumber(line.PTS ?? stats.PTS),
+        score,
         periods: getLegacyPeriods(line),
         statistics: {
-            points: toNumber(stats.PTS ?? line.PTS),
+            points: toNumber(stats.PTS ?? line.PTS ?? fallback.score),
             reboundsTotal: toNumber(stats.REB),
             reboundsOffensive: toNumber(stats.OREB),
             reboundsDefensive: toNumber(stats.DREB),

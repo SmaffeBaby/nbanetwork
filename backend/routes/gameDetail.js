@@ -8,6 +8,7 @@ const PYTHON_API = process.env.PYTHON_API || 'http://python-backend:8000'
 
 function normalizeGame(data) {
     const summary = data?.summary
+    const metadata = data?.metadata
 
     const gameSummary = summary?.resultSets?.find(
         (r) => r.name === 'GameSummary'
@@ -20,7 +21,46 @@ function normalizeGame(data) {
     const gameRow = gameSummary?.rowSet?.[0]
 
     if (!gameRow) {
-        throw new Error('Invalid game summary data')
+        if (!metadata?.GAME_ID) {
+            throw new Error('Invalid game summary data')
+        }
+
+        const homeMeta = TEAM_MAP[metadata.HOME_TEAM_ID] || {}
+        const awayMeta = TEAM_MAP[metadata.VISITOR_TEAM_ID] || {}
+        const gameDateUTC = metadata.GAME_TIME_UTC || metadata.GAME_DATE_EST
+        const date = gameDateUTC ? new Date(gameDateUTC) : null
+        const gameDateMSK = date && !Number.isNaN(date.getTime())
+            ? date.toLocaleString('ru-RU', {
+                timeZone: 'Europe/Moscow',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            : metadata.GAME_DATE_MSK || ''
+
+        return {
+            gameId: metadata.GAME_ID,
+            status: metadata.GAME_STATUS || 'TBD',
+
+            dateUTC: gameDateUTC,
+            dateMSK: gameDateMSK,
+
+            home: {
+                teamId: metadata.HOME_TEAM_ID,
+                abbr: metadata.HOME_TEAM_ABBREVIATION || homeMeta.abbr || '',
+                name: homeMeta.name || metadata.HOME_TEAM_ABBREVIATION || '',
+                score: metadata.HOME_TEAM_SCORE ?? null
+            },
+
+            away: {
+                teamId: metadata.VISITOR_TEAM_ID,
+                abbr: metadata.VISITOR_TEAM_ABBREVIATION || awayMeta.abbr || '',
+                name: awayMeta.name || metadata.VISITOR_TEAM_ABBREVIATION || '',
+                score: metadata.VISITOR_TEAM_SCORE ?? null
+            }
+        }
     }
 
     const homeTeamId = gameRow[6]
@@ -34,7 +74,7 @@ function normalizeGame(data) {
     const homeMeta = TEAM_MAP[homeTeamId] || {}
     const awayMeta = TEAM_MAP[awayTeamId] || {}
 
-    const gameDateUTC = gameRow[0]
+    const gameDateUTC = metadata?.GAME_TIME_UTC || gameRow[0]
 
     const date = new Date(gameDateUTC)
 
