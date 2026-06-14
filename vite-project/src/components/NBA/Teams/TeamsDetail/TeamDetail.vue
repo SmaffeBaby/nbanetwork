@@ -36,7 +36,11 @@
       </div>
 
       <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <select v-model="season" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium shadow-sm sm:w-auto">
+        <select
+            v-if="showSeasonSelector"
+            v-model="season"
+            class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium shadow-sm sm:w-auto"
+        >
           <option v-for="s in seasons" :key="s" :value="s">
             {{ s }}
           </option>
@@ -97,6 +101,10 @@
           v-if="activeTab === 'Статьи'"
           :teamAbbr="teamAbbr"
       />
+      <TeamContractsPayroll
+          v-if="activeTab === 'Контракты'"
+          :teamAbbr="teamAbbr"
+      />
     </div>
 
   </div>
@@ -112,6 +120,7 @@ import TeamUpcomingGames from './TeamUpcomingGames.vue'
 import TeamStats2 from './TeamStats2.vue'
 import TeamPointsTrendTable from './TeamPointsTrendTable.vue'
 import TeamArticles from './TeamArticles.vue'
+import TeamContractsPayroll from '../../Contracts/TeamContractsPayroll.vue'
 import FavoriteTeamButton from '../../Favorites/FavoriteTeamButton.vue'
 import Categories from '../../../Categories/Categories.vue'
 
@@ -123,7 +132,7 @@ import type { CategoryOption } from '../../../../types/categories'
 const route = useRoute()
 const teamAbbr = route.params.abbr as string
 
-type TeamTab = 'Будущие игры' | 'Команда' | 'История игр' | 'Статистика' | 'Форма' | 'Статьи'
+type TeamTab = 'Будущие игры' | 'Команда' | 'История игр' | 'Статистика' | 'Форма' | 'Статьи' | 'Контракты'
 
 const tabOptions: CategoryOption<TeamTab>[] = [
   { value: 'Будущие игры', label: 'Будущие игры' },
@@ -131,12 +140,16 @@ const tabOptions: CategoryOption<TeamTab>[] = [
   { value: 'История игр', label: 'История игр' },
   { value: 'Статистика', label: 'Статистика' },
   { value: 'Форма', label: 'Форма' },
+  { value: 'Контракты', label: 'Контракты' },
   { value: 'Статьи', label: 'Статьи', dividerBefore: true }
 ]
 const activeTab = ref<TeamTab>('Команда')
 const seasonType = ref<'regular' | 'playoffs'>('regular')
 
 const teamId = computed(() => TEAM_ID_MAP[teamAbbr])
+const showSeasonSelector = computed(() =>
+    ['Команда', 'История игр', 'Статистика', 'Форма'].includes(activeTab.value)
+)
 const showSeasonTypeSwitcher = computed(() =>
     ['Команда', 'Статистика', 'Форма'].includes(activeTab.value)
 )

@@ -19,6 +19,7 @@ const translateRoutes = require('./routes/translate')
 const gameBroadcastRoutes = require('./routes/gameBroadcast')
 const socialRoutes = require('./routes/social')
 const newsRoutes = require('./routes/news')
+const teamContractsRoutes = require('./routes/teamContracts')
 
 
 const app = express()
@@ -50,6 +51,7 @@ app.use('/api', translateRoutes)
 app.use('/api', gameBroadcastRoutes)
 app.use('/api', socialRoutes)
 app.use('/api', newsRoutes)
+app.use('/api', teamContractsRoutes)
 
 app.use((error, req, res, next) => {
     if (error?.type === 'entity.too.large') {
