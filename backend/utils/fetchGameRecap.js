@@ -5,6 +5,14 @@ const TEAM_MAP = require('../constants/teamMap')
 
 const PYTHON_API = process.env.PYTHON_API || 'http://python-backend:8000'
 
+function isPlaceholderDate(value) {
+    return !value || String(value).trim().startsWith('1900-01-01')
+}
+
+function hasExplicitTime(value) {
+    return /T\d{2}:\d{2}/.test(String(value || ''))
+}
+
 async function fetchGameRecap(gameId, periodFilter = null) {
     try {
         let game = null
@@ -41,17 +49,19 @@ async function fetchGameRecap(gameId, periodFilter = null) {
 
         let gameDateMSK = null
 
-        if (gameDateUTC) {
+        if (!isPlaceholderDate(gameDateUTC) && hasExplicitTime(gameDateUTC)) {
             const date = new Date(gameDateUTC)
 
-            gameDateMSK = date.toLocaleString('ru-RU', {
-                timeZone: 'Europe/Moscow',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            })
+            if (!Number.isNaN(date.getTime())) {
+                gameDateMSK = date.toLocaleString('ru-RU', {
+                    timeZone: 'Europe/Moscow',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+            }
         }
 
         const homeTeamId = game?.homeTeam?.teamId
@@ -542,7 +552,11 @@ async function fetchLegacyGame(gameId) {
     return {
         game: {
             gameId,
-            gameTimeUTC: parseLegacyGameDate(metadata.GAME_TIME_UTC || gameSummary.GAME_DATE_EST || metadata.GAME_DATE_EST),
+            gameTimeUTC: parseLegacyGameDate(
+                !isPlaceholderDate(metadata.GAME_TIME_UTC) && hasExplicitTime(metadata.GAME_TIME_UTC)
+                    ? metadata.GAME_TIME_UTC
+                    : (!isPlaceholderDate(gameSummary.GAME_DATE_EST) && hasExplicitTime(gameSummary.GAME_DATE_EST) ? gameSummary.GAME_DATE_EST : null)
+            ),
             homeTeam: buildLegacyTeam({
                 teamId: homeTeamId,
                 fallback: {

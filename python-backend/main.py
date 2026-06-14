@@ -18,6 +18,7 @@ from nba_api.stats.endpoints import leaguegamelog
 
 app = FastAPI()
 MSK_TZ = ZoneInfo("Europe/Moscow")
+ET_TZ = ZoneInfo("America/New_York")
 SCHEDULE_URLS = [
     "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json",
     "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json",
@@ -91,11 +92,96 @@ def parse_utc_datetime(value):
     if not value:
         return None
 
+    normalized = str(value).strip()
+    if normalized.startswith("1900-01-01"):
+        return None
+
     try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
         return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
     except ValueError:
         return None
+
+def to_utc_iso(value):
+    parsed = parse_utc_datetime(value)
+    if not parsed:
+        return None
+
+    return parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+def parse_date_value(value, fallback_date=None):
+    if not value:
+        return fallback_date
+
+    normalized = str(value).strip()
+    if normalized.startswith("1900-01-01"):
+        return fallback_date
+
+    try:
+        return datetime.fromisoformat(normalized[:10]).date()
+    except ValueError:
+        return fallback_date
+
+def parse_et_tipoff(game_date, *time_values):
+    date_part = parse_date_value(game_date)
+    if not date_part:
+        return None
+
+    for value in time_values:
+        match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", str(value or ""), re.I)
+        if not match:
+            continue
+
+        hours = int(match.group(1))
+        minutes = int(match.group(2))
+        ampm = match.group(3).lower()
+
+        if ampm == "pm" and hours != 12:
+            hours += 12
+        if ampm == "am" and hours == 12:
+            hours = 0
+
+        tipoff_et = datetime(
+            date_part.year,
+            date_part.month,
+            date_part.day,
+            hours,
+            minutes,
+            tzinfo=ET_TZ
+        )
+
+        return tipoff_et.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    return None
+
+def get_scheduled_game_time_utc(game, fallback_date=None):
+    for key in ["gameTimeUTC", "gameDateTimeUTC"]:
+        value = to_utc_iso(game.get(key))
+        if value:
+            return value
+
+    game_date_est = (
+        game.get("gameDateEst")
+        or game.get("gameDate")
+        or (fallback_date.isoformat() if fallback_date else None)
+    )
+
+    et_tipoff = parse_et_tipoff(
+        game_date_est,
+        game.get("gameTimeEst"),
+        game.get("gameStatusText"),
+        game.get("gameStatusTextLong")
+    )
+    if et_tipoff:
+        return et_tipoff
+
+    # gameDateUTC from NBA schedule/static data is often only a calendar date.
+    # Use it only when it contains a meaningful non-midnight time.
+    game_date_utc = parse_utc_datetime(game.get("gameDateUTC"))
+    if game_date_utc and (game_date_utc.hour or game_date_utc.minute):
+        return game_date_utc.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    return None
 
 def get_msk_date(value, fallback_date=None):
     parsed = parse_utc_datetime(value)
@@ -118,18 +204,17 @@ def normalize_scheduled_game(game, fallback_date=None):
     if not game_id or not home.get("teamId") or not away.get("teamId"):
         return None
 
-    game_time_utc = (
-        game.get("gameTimeUTC")
-        or game.get("gameDateTimeUTC")
-        or game.get("gameDateUTC")
-    )
-    game_msk_date = get_msk_date(game_time_utc, fallback_date)
+    game_time_utc = get_scheduled_game_time_utc(game, fallback_date)
     game_date_est = (
         game.get("gameDateEst")
         or game.get("gameDate")
         or game.get("gameDateUTC")
         or (fallback_date.isoformat() if fallback_date else "")
     )
+    if str(game_date_est).strip().startswith("1900-01-01"):
+        game_date_est = fallback_date.isoformat() if fallback_date else ""
+
+    game_msk_date = get_msk_date(game_time_utc, fallback_date)
 
     return {
         "GAME_ID": game_id,
@@ -806,11 +891,7 @@ def get_games_by_date(date: str):
                         if not gid:
                             continue
 
-                        game_time_utc = (
-                            game.get("gameDateTimeUTC")
-                            or game.get("gameTimeUTC")
-                            or game.get("gameDateUTC")
-                        )
+                        game_time_utc = get_scheduled_game_time_utc(game, target_msk_date)
                         game_dt_utc = parse_utc(game_time_utc)
 
                         if game_dt_utc:
@@ -853,7 +934,7 @@ def get_games_by_date(date: str):
                 continue
 
             for gid, game in static_games.items():
-                game_time_utc = game.get("gameTimeUTC")
+                game_time_utc = get_scheduled_game_time_utc(game, nba_date)
                 game_dt_utc = parse_utc(game_time_utc)
 
                 if game_dt_utc:

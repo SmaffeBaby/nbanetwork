@@ -80,8 +80,14 @@ export const formatWeekday = (dateKey: string) => {
     }).format(dateKeyToDate(dateKey))
 }
 
+const isPlaceholderDate = (value?: string | null) => {
+    return !value || value.startsWith('1900-01-01')
+}
+
 const getGameDay = (game: DailyGameDTO) => {
-    return game.GAME_DATE_MSK || game.GAME_DATE_EST?.slice(0, 10) || ''
+    if (!isPlaceholderDate(game.GAME_DATE_MSK)) return game.GAME_DATE_MSK || ''
+    if (!isPlaceholderDate(game.GAME_DATE_EST)) return game.GAME_DATE_EST?.slice(0, 10) || ''
+    return ''
 }
 
 const formatMSKTime = (dateStr: string) => {
@@ -112,7 +118,9 @@ const convertETToMSKTime = (status: string) => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 }
 
-const getGameDateTime = (game: DailyGameDTO) => game.GAME_TIME_UTC || ''
+const getGameDateTime = (game: DailyGameDTO) => {
+    return isPlaceholderDate(game.GAME_TIME_UTC) ? '' : game.GAME_TIME_UTC || ''
+}
 
 const getDateDiffFromToday = (dateKey: string) => {
     const date = dateKeyToDate(dateKey)

@@ -37,18 +37,23 @@ export type RecentGame = {
 }
 
 const getDayFromString = (dateStr: string): string => {
-    if (!dateStr) return ''
+    if (!dateStr || dateStr.startsWith('1900-01-01')) return ''
 
     // поддержка "2026-04-13T01:00:00Z" или "2026-04-13 ..."
     return dateStr.slice(0, 10)
 }
 
+const isPlaceholderDate = (value?: string | null) => {
+    return !value || value.startsWith('1900-01-01')
+}
+
 const getGameDateTime = (game: DailyGameDTO): string => {
-    return game.GAME_TIME_UTC || ''
+    return isPlaceholderDate(game.GAME_TIME_UTC) ? '' : game.GAME_TIME_UTC || ''
 }
 
 const getGameDay = (game: DailyGameDTO): string => {
-    return game.GAME_DATE_MSK || getDayFromString(game.GAME_DATE_EST)
+    if (!isPlaceholderDate(game.GAME_DATE_MSK)) return game.GAME_DATE_MSK || ''
+    return getDayFromString(game.GAME_DATE_EST)
 }
 
 const formatMSKTime = (dateStr: string): string => {
@@ -163,8 +168,8 @@ export function useRecentGames() {
     const currentDate = ref<Date>(d)
 
     const normalizeGame = (g: any): RecentGame => {
-        const homeAbbr = TEAM_ID_TO_ABBR[g.HOME_TEAM_ID] || 'UNK'
-        const awayAbbr = TEAM_ID_TO_ABBR[g.VISITOR_TEAM_ID] || 'UNK'
+        const homeAbbr = g.HOME_TEAM_ABBREVIATION || TEAM_ID_TO_ABBR[g.HOME_TEAM_ID] || 'UNK'
+        const awayAbbr = g.VISITOR_TEAM_ABBREVIATION || TEAM_ID_TO_ABBR[g.VISITOR_TEAM_ID] || 'UNK'
 
         return {
             Game_ID: g.GAME_ID,

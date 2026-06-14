@@ -6,6 +6,31 @@ const TEAM_MAP = require('../constants/teamMap')
 
 const PYTHON_API = process.env.PYTHON_API || 'http://python-backend:8000'
 
+function isPlaceholderDate(value) {
+    return !value || String(value).trim().startsWith('1900-01-01')
+}
+
+function hasExplicitTime(value) {
+    return /T\d{2}:\d{2}/.test(String(value || ''))
+}
+
+function formatMSKDateTime(value, fallback = '') {
+    if (isPlaceholderDate(value) || !hasExplicitTime(value)) return fallback
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) return fallback
+
+    return date.toLocaleString('ru-RU', {
+        timeZone: 'Europe/Moscow',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}
+
 function normalizeGame(data) {
     const summary = data?.summary
     const metadata = data?.metadata
@@ -27,18 +52,10 @@ function normalizeGame(data) {
 
         const homeMeta = TEAM_MAP[metadata.HOME_TEAM_ID] || {}
         const awayMeta = TEAM_MAP[metadata.VISITOR_TEAM_ID] || {}
-        const gameDateUTC = metadata.GAME_TIME_UTC || metadata.GAME_DATE_EST
-        const date = gameDateUTC ? new Date(gameDateUTC) : null
-        const gameDateMSK = date && !Number.isNaN(date.getTime())
-            ? date.toLocaleString('ru-RU', {
-                timeZone: 'Europe/Moscow',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            })
-            : metadata.GAME_DATE_MSK || ''
+        const gameDateUTC = !isPlaceholderDate(metadata.GAME_TIME_UTC) && hasExplicitTime(metadata.GAME_TIME_UTC)
+            ? metadata.GAME_TIME_UTC
+            : null
+        const gameDateMSK = formatMSKDateTime(gameDateUTC, metadata.GAME_DATE_MSK || '')
 
         return {
             gameId: metadata.GAME_ID,
@@ -74,18 +91,10 @@ function normalizeGame(data) {
     const homeMeta = TEAM_MAP[homeTeamId] || {}
     const awayMeta = TEAM_MAP[awayTeamId] || {}
 
-    const gameDateUTC = metadata?.GAME_TIME_UTC || gameRow[0]
-
-    const date = new Date(gameDateUTC)
-
-    const gameDateMSK = date.toLocaleString('ru-RU', {
-        timeZone: 'Europe/Moscow',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    })
+    const gameDateUTC = !isPlaceholderDate(metadata?.GAME_TIME_UTC) && hasExplicitTime(metadata.GAME_TIME_UTC)
+        ? metadata.GAME_TIME_UTC
+        : (!isPlaceholderDate(gameRow[0]) && hasExplicitTime(gameRow[0]) ? gameRow[0] : null)
+    const gameDateMSK = formatMSKDateTime(gameDateUTC, metadata?.GAME_DATE_MSK || '')
 
     return {
         gameId: gameRow[2],
@@ -113,7 +122,7 @@ function normalizeGame(data) {
 router.get('/game-detail/:gameId', async (req, res) => {
     const { gameId } = req.params
 
-    const key = `game-detail:${gameId}`
+    const key = `game-detail:v2:${gameId}`
 
     try {
         const raw = await fetchWithCache({
