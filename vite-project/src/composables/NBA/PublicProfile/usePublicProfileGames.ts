@@ -1,6 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { FavoriteGame } from '../../../stores/auth'
+import { useDateSort } from '../../useDateSort'
 
 const toDateInputValue = (date: string | null | undefined) => {
     if (!date) return ''
@@ -85,12 +86,23 @@ export const usePublicProfileGames = (
         return result
     })
 
+    const {
+        dateSortOrder,
+        sortedByDate: sortedGames,
+        setDateSortOrder: setBaseDateSortOrder
+    } = useDateSort(filteredGames, game => game.date)
+
+    const setDateSortOrder = (order: typeof dateSortOrder.value) => {
+        setBaseDateSortOrder(order)
+        page.value = 1
+    }
+
     const totalPages = computed(() =>
-        Math.max(1, Math.ceil(filteredGames.value.length / pageSize))
+        Math.max(1, Math.ceil(sortedGames.value.length / pageSize))
     )
 
     const visibleGames = computed(() =>
-        filteredGames.value.slice((page.value - 1) * pageSize, page.value * pageSize)
+        sortedGames.value.slice((page.value - 1) * pageSize, page.value * pageSize)
     )
 
     const isHidden = (gameId: string) => hiddenScores.value.includes(gameId)
@@ -162,17 +174,20 @@ export const usePublicProfileGames = (
         pageSize,
         selectedDate,
         selectedTeam,
+        dateSortOrder,
         availableDates,
         minDate,
         maxDate,
         teamOptions,
         filteredGames,
+        sortedGames,
         visibleGames,
         totalPages,
         isHidden,
         setSelectedDate,
         resetSelectedDate,
         setSelectedTeam,
+        setDateSortOrder,
         toggleScore,
         score,
         previousPage,

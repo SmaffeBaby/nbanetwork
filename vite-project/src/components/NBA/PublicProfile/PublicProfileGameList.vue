@@ -27,6 +27,11 @@
       />
 
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <DateSortControl
+            :model-value="dateSortOrder"
+            @update:model-value="setDateSortOrder"
+        />
+
         <PublicProfileTeamFilter
             v-model="selectedTeam"
             :teams="teamOptions"
@@ -145,6 +150,7 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 import type { FavoriteGame } from '../../../stores/auth'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
 import Datepicker from '../../Datepicker/Datepicker.vue'
+import DateSortControl from '../../Sort/DateSortControl.vue'
 import PublicProfileTeamFilter from './PublicProfileTeamFilter.vue'
 import { usePublicProfileGames } from '../../../composables/NBA/PublicProfile/usePublicProfileGames'
 
@@ -158,6 +164,7 @@ const {
   pageSize,
   selectedDate,
   selectedTeam,
+  dateSortOrder,
   availableDates,
   minDate,
   maxDate,
@@ -169,6 +176,7 @@ const {
   setSelectedDate,
   resetSelectedDate,
   setSelectedTeam,
+  setDateSortOrder,
   toggleScore,
   score,
   previousPage,
