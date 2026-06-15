@@ -1,7 +1,7 @@
-import { ref, onMounted } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import axios from 'axios'
 
-export function useTeamUpcomingGames(teamId: number) {
+export function useTeamUpcomingGames(teamId: Ref<number>) {
     const games = ref<any[]>([])
     const loading = ref(false)
     const error = ref<string | null>(null)
@@ -75,12 +75,17 @@ export function useTeamUpcomingGames(teamId: number) {
     }
 
     const loadGames = async () => {
+        if (!teamId.value) {
+            games.value = []
+            return
+        }
+
         loading.value = true
         error.value = null
 
         try {
             const res = await axios.get(
-                `/api/team-upcoming-games/${teamId}`
+                `/api/team-upcoming-games/${teamId.value}`
             )
 
             const resultSet = res.data.resultSets?.[0]
@@ -120,7 +125,7 @@ export function useTeamUpcomingGames(teamId: number) {
         }
     }
 
-    onMounted(loadGames)
+    watch(teamId, loadGames, { immediate: true })
 
     return {
         games,

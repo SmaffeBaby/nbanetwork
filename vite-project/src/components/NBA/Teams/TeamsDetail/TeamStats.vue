@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, toRef } from 'vue'
+import { watch, toRef } from 'vue'
 import { useTeamDetail } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamDetail'
 import { useSlider } from '../../../../composables/useSlider'
 import StatLeaders from '../../player_stats/all_stats/StatLeaders.vue'
@@ -87,13 +87,12 @@ const props = defineProps<{
 
 const seasonRef = toRef(props, 'season')
 const seasonTypeRef = toRef(props, 'seasonType')
+const teamAbbrRef = toRef(props, 'teamAbbr')
 
 const { players, loading, search, fetchPlayers } =
-    useTeamDetail(props.teamAbbr, seasonRef, seasonTypeRef)
+    useTeamDetail(teamAbbrRef, seasonRef, seasonTypeRef)
 
-onMounted(fetchPlayers)
-
-watch([seasonRef, seasonTypeRef], fetchPlayers)
+watch([teamAbbrRef, seasonRef, seasonTypeRef], fetchPlayers, { immediate: true })
 
 const stats = [
   { title: 'Points Per Game', stat: 'PTS' },

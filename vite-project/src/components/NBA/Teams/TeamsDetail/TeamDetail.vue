@@ -130,7 +130,7 @@ import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
 import type { CategoryOption } from '../../../../types/categories'
 
 const route = useRoute()
-const teamAbbr = route.params.abbr as string
+const teamAbbr = computed(() => String(route.params.abbr || '').toUpperCase())
 
 type TeamTab = 'Будущие игры' | 'Команда' | 'История игр' | 'Статистика' | 'Форма' | 'Статьи' | 'Контракты'
 
@@ -146,7 +146,7 @@ const tabOptions: CategoryOption<TeamTab>[] = [
 const activeTab = ref<TeamTab>('Команда')
 const seasonType = ref<'regular' | 'playoffs'>('regular')
 
-const teamId = computed(() => TEAM_ID_MAP[teamAbbr])
+const teamId = computed(() => TEAM_ID_MAP[teamAbbr.value] ?? 0)
 const showSeasonSelector = computed(() =>
     ['Команда', 'История игр', 'Статистика', 'Форма'].includes(activeTab.value)
 )

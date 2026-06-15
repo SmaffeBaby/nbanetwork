@@ -45,11 +45,12 @@ const props = defineProps<{
   seasonType: 'regular' | 'playoffs'
 }>()
 
+const teamIdRef = toRef(props, 'teamId')
 const seasonRef = toRef(props, 'season')
 const seasonTypeRef = toRef(props, 'seasonType')
 
 const { stats, loading } =
-    useTeamStats2(props.teamId, seasonRef, seasonTypeRef)
+    useTeamStats2(teamIdRef, seasonRef, seasonTypeRef)
 
 const chartRef = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null

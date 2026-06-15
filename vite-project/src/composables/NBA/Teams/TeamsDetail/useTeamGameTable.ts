@@ -3,7 +3,7 @@ import type { Ref } from 'vue'
 import axios from 'axios'
 import { useAuthStore } from '../../../../stores/auth'
 
-export function useTeamGameTable(teamId: number, season: Ref<string>) {
+export function useTeamGameTable(teamId: Ref<number>, season: Ref<string>) {
     const auth = useAuthStore()
 
     const games = ref<any[]>([])
@@ -18,8 +18,13 @@ export function useTeamGameTable(teamId: number, season: Ref<string>) {
     })
 
     const fetchGames = async () => {
+        if (!teamId.value) {
+            games.value = []
+            return
+        }
+
         const res = await axios.get(
-            `/api/team-games/${teamId}/${season.value}?season_type=all`
+            `/api/team-games/${teamId.value}/${season.value}?season_type=all`
         )
 
         const data = res.data
@@ -36,7 +41,7 @@ export function useTeamGameTable(teamId: number, season: Ref<string>) {
         })
     }
 
-    watch(season, fetchGames, { immediate: true })
+    watch([teamId, season], fetchGames, { immediate: true })
 
     const filteredGames = computed(() => {
         if (filter.value === 'ALL') return games.value

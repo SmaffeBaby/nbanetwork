@@ -101,6 +101,7 @@
 </template>
 
 <script setup lang="ts">
+import { toRef } from 'vue'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import { useTeamUpcomingGames } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamUpcomingGames'
 
@@ -108,5 +109,5 @@ const props = defineProps<{
   teamId: number
 }>()
 
-const { games, loading, error, parseMatchup } = useTeamUpcomingGames(props.teamId)
+const { games, loading, error, parseMatchup } = useTeamUpcomingGames(toRef(props, 'teamId'))
 </script>

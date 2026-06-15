@@ -3,7 +3,7 @@ import type { Ref } from 'vue'
 import axios from 'axios'
 
 export function useTeamStats2(
-    teamId: number,
+    teamId: Ref<number>,
     season: Ref<string>,
     seasonType: Ref<'regular' | 'playoffs'>
 ) {
@@ -44,14 +44,17 @@ export function useTeamStats2(
     }
 
     const fetchStats = async () => {
-        if (!teamId) return
+        if (!teamId.value) {
+            stats.value = null
+            return
+        }
 
         loading.value = true
 
         try {
             if (seasonType.value === 'playoffs') {
                 const res = await axios.get(
-                    `/api/team-games/${teamId}/${season.value}?season_type=playoffs`
+                    `/api/team-games/${teamId.value}/${season.value}?season_type=playoffs`
                 )
 
                 const data = res.data
@@ -88,7 +91,7 @@ export function useTeamStats2(
             })
 
             stats.value = teams.find(
-                (t: any) => t.TeamID == teamId
+                (t: any) => t.TeamID == teamId.value
             ) || null
 
         } catch (e) {
@@ -98,7 +101,7 @@ export function useTeamStats2(
         }
     }
 
-    watch([season, seasonType], fetchStats, { immediate: true })
+    watch([teamId, season, seasonType], fetchStats, { immediate: true })
 
     return {
         stats,

@@ -204,7 +204,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { toRef, watch, onMounted } from 'vue'
+import { toRef } from 'vue'
 import { useTeamGameTable } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamGameTable'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 
@@ -215,6 +215,7 @@ const props = defineProps<{
   season: string
 }>()
 
+const teamIdRef = toRef(props, 'teamId')
 const seasonRef = toRef(props, 'season')
 const {
   filter,
@@ -223,12 +224,7 @@ const {
   parseMatchup,
   setSort,
   getSortIcon,
-  fetchGames
-} = useTeamGameTable(props.teamId, seasonRef)
-
-onMounted(fetchGames)
-
-watch(seasonRef, fetchGames)
+} = useTeamGameTable(teamIdRef, seasonRef)
 
 const goToGame = (gameId: string | number) => {
   if (!gameId) return

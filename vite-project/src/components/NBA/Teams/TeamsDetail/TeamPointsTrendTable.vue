@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch, toRef } from 'vue'
+import { toRef } from 'vue'
 import { useTeamsPointsTrendTable } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamsPointsTrendTable'
 
 const props = defineProps<{
@@ -24,16 +24,10 @@ const props = defineProps<{
   seasonType: 'regular' | 'playoffs'
 }>()
 
+const teamIdRef = toRef(props, 'teamId')
 const seasonRef = toRef(props, 'season')
 const seasonTypeRef = toRef(props, 'seasonType')
 
-const { chartRef, fetchGames } =
-    useTeamsPointsTrendTable(props.teamId, seasonRef, seasonTypeRef)
-
-watch(
-    () => props.teamId,
-    () => {
-      fetchGames()
-    }
-)
+const { chartRef } =
+    useTeamsPointsTrendTable(teamIdRef, seasonRef, seasonTypeRef)
 </script>
