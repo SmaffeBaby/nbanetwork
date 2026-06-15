@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import json
 import re
+import threading
+import time
 from difflib import SequenceMatcher
 from urllib.request import Request, urlopen
 from nba_api.stats.endpoints import leaguestandings
@@ -29,6 +31,15 @@ NBA_CDN_HEADERS = {
 }
 STATIC_SCOREBOARD_CACHE = {}
 SCHEDULE_GAME_CACHE = None
+SCHEDULE_GAME_CACHE_TTL_SECONDS = 6 * 60 * 60
+GAMES_BY_DATE_CACHE_TTL_SECONDS = 5 * 60
+GAMES_BY_DATE_CACHE_MAX_SIZE = 256
+GAMES_BY_DATE_MIN_DATE = datetime(2000, 1, 1).date()
+GAMES_BY_DATE_MAX_FUTURE_DAYS = 370
+GAMES_BY_DATE_FETCH_SEMAPHORE = threading.BoundedSemaphore(2)
+GAMES_BY_DATE_CACHE = {}
+GAMES_BY_DATE_CACHE_LOCK = threading.Lock()
+SCHEDULE_GAME_CACHE_LOCK = threading.Lock()
 CYRILLIC_TO_LATIN = str.maketrans({
     "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
     "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
@@ -255,8 +266,14 @@ def fetch_static_scoreboard(nba_date):
 def fetch_schedule_games_by_id():
     global SCHEDULE_GAME_CACHE
 
-    if SCHEDULE_GAME_CACHE is not None:
-        return SCHEDULE_GAME_CACHE
+    now = time.time()
+
+    with SCHEDULE_GAME_CACHE_LOCK:
+        if (
+            SCHEDULE_GAME_CACHE is not None
+            and now - SCHEDULE_GAME_CACHE.get("fetched_at", 0) < SCHEDULE_GAME_CACHE_TTL_SECONDS
+        ):
+            return SCHEDULE_GAME_CACHE["games_by_id"]
 
     games_by_id = {}
 
@@ -283,13 +300,64 @@ def fetch_schedule_games_by_id():
                         games_by_id[normalized["GAME_ID"]] = normalized
 
             if games_by_id:
-                SCHEDULE_GAME_CACHE = games_by_id
+                with SCHEDULE_GAME_CACHE_LOCK:
+                    SCHEDULE_GAME_CACHE = {
+                        "fetched_at": now,
+                        "games_by_id": games_by_id,
+                    }
                 return games_by_id
         except Exception as e:
             print(f"Failed to fetch NBA schedule from {url}: {e}")
 
-    SCHEDULE_GAME_CACHE = games_by_id
+    with SCHEDULE_GAME_CACHE_LOCK:
+        SCHEDULE_GAME_CACHE = {
+            "fetched_at": now,
+            "games_by_id": games_by_id,
+        }
     return games_by_id
+
+def parse_games_by_date_param(date_value):
+    try:
+        target_date = datetime.strptime(date_value, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date")
+
+    if target_date.isoformat() != date_value:
+        raise HTTPException(status_code=400, detail="Invalid date")
+
+    max_date = datetime.now(MSK_TZ).date() + timedelta(days=GAMES_BY_DATE_MAX_FUTURE_DAYS)
+    if target_date < GAMES_BY_DATE_MIN_DATE or target_date > max_date:
+        raise HTTPException(status_code=400, detail="Date out of allowed range")
+
+    return target_date
+
+def get_cached_games_by_date(date_key):
+    now = time.time()
+
+    with GAMES_BY_DATE_CACHE_LOCK:
+        cached = GAMES_BY_DATE_CACHE.get(date_key)
+        if cached and now - cached["fetched_at"] < GAMES_BY_DATE_CACHE_TTL_SECONDS:
+            return cached["payload"]
+
+    return None
+
+def cache_games_by_date(date_key, payload):
+    games = list(payload) if isinstance(payload, list) else []
+
+    with GAMES_BY_DATE_CACHE_LOCK:
+        GAMES_BY_DATE_CACHE[date_key] = {
+            "fetched_at": time.time(),
+            "payload": games,
+        }
+
+        if len(GAMES_BY_DATE_CACHE) > GAMES_BY_DATE_CACHE_MAX_SIZE:
+            oldest_key = min(
+                GAMES_BY_DATE_CACHE,
+                key=lambda key: GAMES_BY_DATE_CACHE[key]["fetched_at"]
+            )
+            GAMES_BY_DATE_CACHE.pop(oldest_key, None)
+
+    return games
 
 def find_scheduled_game(game_id):
     try:
@@ -835,7 +903,28 @@ def data_frames_to_result_sets(data_frames, names):
 
 @app.get("/games/by-date/{date}")
 def get_games_by_date(date: str):
-    target_msk_date = datetime.strptime(date, "%Y-%m-%d").date()
+    target_msk_date = parse_games_by_date_param(date)
+    cached_games = get_cached_games_by_date(date)
+    if cached_games is not None:
+        return cached_games
+
+    if not GAMES_BY_DATE_FETCH_SEMAPHORE.acquire(blocking=False):
+        raise HTTPException(
+            status_code=503,
+            detail="Games by date fetch is busy. Please retry shortly.",
+            headers={"Retry-After": "5"},
+        )
+
+    try:
+        cached_games = get_cached_games_by_date(date)
+        if cached_games is not None:
+            return cached_games
+
+        return fetch_games_by_date_uncached(date, target_msk_date)
+    finally:
+        GAMES_BY_DATE_FETCH_SEMAPHORE.release()
+
+def fetch_games_by_date_uncached(date, target_msk_date):
     season = (
         f"{target_msk_date.year}-{str(target_msk_date.year + 1)[-2:]}"
         if target_msk_date.month >= 10
@@ -876,51 +965,17 @@ def get_games_by_date(date: str):
             return None
 
     def add_schedule_games():
-        for url in SCHEDULE_URLS:
-            try:
-                request = Request(url, headers=NBA_CDN_HEADERS)
+        try:
+            scheduled_games = fetch_schedule_games_by_id()
+        except Exception as e:
+            print(f"Failed to fetch NBA schedule: {e}")
+            return False
 
-                with urlopen(request, timeout=10) as response:
-                    schedule = json.loads(response.read().decode("utf-8"))
+        for gid, game in scheduled_games.items():
+            if game.get("GAME_DATE_MSK") == target_msk_date.isoformat():
+                games_by_id[gid] = game
 
-                game_dates = schedule.get("leagueSchedule", {}).get("gameDates", [])
-
-                for game_date_entry in game_dates:
-                    for game in game_date_entry.get("games", []):
-                        gid = game.get("gameId")
-                        if not gid:
-                            continue
-
-                        game_time_utc = get_scheduled_game_time_utc(game, target_msk_date)
-                        game_dt_utc = parse_utc(game_time_utc)
-
-                        if game_dt_utc:
-                            game_msk_date = game_dt_utc.astimezone(MSK_TZ).date()
-                            if game_msk_date != target_msk_date:
-                                continue
-                            game_date_msk = game_msk_date.isoformat()
-                        else:
-                            game_date_value = (
-                                game.get("gameDateEst")
-                                or game.get("gameDate")
-                                or game_date_entry.get("gameDate")
-                                or ""
-                            )
-                            game_date_msk = str(game_date_value)[:10]
-                            if game_date_msk != target_msk_date.isoformat():
-                                continue
-
-                        normalized = normalize_scheduled_game(game, target_msk_date)
-                        if normalized:
-                            normalized["GAME_DATE_MSK"] = game_date_msk
-                            games_by_id[gid] = normalized
-
-                if games_by_id:
-                    return True
-            except Exception as e:
-                print(f"Failed to fetch NBA schedule from {url}: {e}")
-
-        return False
+        return bool(games_by_id)
 
     def add_static_games():
         fetched_any_scoreboard = False
@@ -1026,10 +1081,10 @@ def get_games_by_date(date: str):
     games_by_id = {}
 
     if add_static_games() and games_by_id:
-        return list(games_by_id.values())
+        return cache_games_by_date(date, list(games_by_id.values()))
 
     if add_schedule_games():
-        return list(games_by_id.values())
+        return cache_games_by_date(date, list(games_by_id.values()))
 
     for nba_date in dates_to_fetch:
         formatted = nba_date.strftime("%m/%d/%Y")
@@ -1113,7 +1168,7 @@ def get_games_by_date(date: str):
     except Exception as e:
         print(f"Failed to fetch completed games from LeagueGameLog: {e}")
 
-    return list(games_by_id.values())
+    return cache_games_by_date(date, list(games_by_id.values()))
 
 @app.get("/game-boxscore-v3/{game_id}/quarter/{quarter}")
 def get_game_boxscore_quarter(game_id: str, quarter: int):
