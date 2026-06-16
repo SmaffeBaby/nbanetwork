@@ -12,6 +12,9 @@ import type {
 } from '../../../../types/teamAbout'
 
 const TABLE = 'team_about_pages'
+const CACHE_PREFIX = 'team-about-page:'
+const CACHE_TTL = 10 * 60 * 1000
+const memoryCache = new Map<string, { page: TeamAboutPage; cachedAt: number }>()
 
 const createId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -169,6 +172,49 @@ const normalizeBlocks = (blocks: unknown): TeamAboutBlock[] => {
 const cloneBlocks = (blocks: TeamAboutBlock[]) =>
   normalizeBlocks(JSON.parse(JSON.stringify(blocks)))
 
+const clonePage = (page: TeamAboutPage): TeamAboutPage => ({
+  ...page,
+  blocks: cloneBlocks(page.blocks)
+})
+
+const cacheKey = (teamAbbr: string) => `${CACHE_PREFIX}${teamAbbr}`
+
+const readCachedPage = (teamAbbr: string) => {
+  const memory = memoryCache.get(teamAbbr)
+  if (memory) return memory
+
+  try {
+    const raw = sessionStorage.getItem(cacheKey(teamAbbr))
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { page: TeamAboutPage; cachedAt: number }
+    const page = {
+      ...parsed.page,
+      blocks: normalizeBlocks(parsed.page?.blocks)
+    }
+    const cacheEntry = { page, cachedAt: Number(parsed.cachedAt) || 0 }
+    memoryCache.set(teamAbbr, cacheEntry)
+    return cacheEntry
+  } catch {
+    sessionStorage.removeItem(cacheKey(teamAbbr))
+    return null
+  }
+}
+
+const writeCachedPage = (page: TeamAboutPage) => {
+  const cacheEntry = {
+    page: clonePage(page),
+    cachedAt: Date.now()
+  }
+
+  memoryCache.set(page.team_abbr, cacheEntry)
+
+  try {
+    sessionStorage.setItem(cacheKey(page.team_abbr), JSON.stringify(cacheEntry))
+  } catch {
+    // Large base64 images can exceed storage quota; memory cache still helps during this session.
+  }
+}
+
 const createDefaultBlocks = (teamAbbr: string): TeamAboutBlock[] => [
   {
     ...(createTeamAboutBlock('heading') as TeamAboutHeadingBlock),
@@ -196,7 +242,23 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
     const abbr = teamAbbr.value
     if (!abbr) return
 
-    loading.value = true
+    const cached = readCachedPage(abbr)
+    const cacheIsFresh = cached && Date.now() - cached.cachedAt < CACHE_TTL
+
+    if (cached) {
+      page.value = clonePage(cached.page)
+      draftBlocks.value = page.value.blocks.length
+        ? cloneBlocks(page.value.blocks)
+        : createDefaultBlocks(abbr)
+    }
+
+    if (cacheIsFresh) {
+      loading.value = false
+      error.value = ''
+      return
+    }
+
+    loading.value = !cached
     error.value = ''
 
     try {
@@ -221,6 +283,7 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
             published: true
           }
 
+      writeCachedPage(page.value)
       draftBlocks.value = page.value.blocks.length
         ? cloneBlocks(page.value.blocks)
         : createDefaultBlocks(abbr)
@@ -360,6 +423,7 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
         published: data.published ?? true,
         updated_at: data.updated_at
       }
+      writeCachedPage(page.value)
       draftBlocks.value = cloneBlocks(page.value.blocks)
       isEditing.value = false
     } catch (saveException: any) {

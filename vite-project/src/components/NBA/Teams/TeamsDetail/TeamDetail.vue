@@ -115,11 +115,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 
 import TeamStats from './TeamStats.vue'
-import TeamAbout from './TeamAbout.vue'
 import TeamGamesTable from './TeamGamesTable.vue'
 import TeamUpcomingGames from './TeamUpcomingGames.vue'
 import TeamStats2 from './TeamStats2.vue'
@@ -133,6 +132,8 @@ import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import { generateNbaSeasons } from '../../../../utils/generateNbaSeasons'
 import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
 import type { CategoryOption } from '../../../../types/categories'
+
+const TeamAbout = defineAsyncComponent(() => import('./TeamAbout.vue'))
 
 const route = useRoute()
 const teamAbbr = computed(() => String(route.params.abbr || '').toUpperCase())

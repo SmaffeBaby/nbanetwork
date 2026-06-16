@@ -147,7 +147,7 @@
                 class="grid gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 lg:grid-cols-[120px_minmax(0,1fr)_auto]"
               >
                 <div class="flex items-center justify-center rounded-lg bg-white p-3">
-                  <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.label || item.mvpPlayerName || 'Hall of fame item'" class="h-20 w-20 object-contain" />
+                  <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.label || item.mvpPlayerName || 'Hall of fame item'" class="h-20 w-20 object-contain" loading="lazy" decoding="async" />
                   <span v-else class="text-center text-xs font-black uppercase text-gray-300">SVG / PNG</span>
                 </div>
 
@@ -247,6 +247,8 @@
               :src="block.images[galleryIndex(block.id)]?.url"
               :alt="block.images[galleryIndex(block.id)]?.alt"
               class="aspect-video w-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
           </div>
           <div v-if="block.images.length > 1" class="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
@@ -258,7 +260,7 @@
               :class="galleryIndex(block.id) === imageIndex ? 'border-blue-600' : 'border-transparent'"
               @click="galleryIndexes[block.id] = imageIndex"
             >
-              <img :src="image.url" :alt="image.alt" class="aspect-video w-full object-cover" />
+              <img :src="image.url" :alt="image.alt" class="aspect-video w-full object-cover" loading="lazy" decoding="async" />
             </button>
           </div>
         </div>
@@ -280,6 +282,8 @@
                   :src="item.imageUrl"
                   :alt="item.label || item.mvpPlayerName || 'Hall of fame item'"
                   class="h-16 w-16 object-contain sm:h-20 sm:w-20"
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div v-if="item.label || item.mvpPlayerName || item.mvpSeason" class="min-w-0">
                   <div v-if="item.label" class="text-xs font-black uppercase text-gray-400">{{ item.label }}</div>
