@@ -85,6 +85,10 @@
           :season="season"
           :seasonType="seasonType"
       />
+      <TeamAbout
+          v-if="activeTab === 'О команде'"
+          :teamAbbr="teamAbbr"
+      />
       <TeamStats2
           v-if="activeTab === 'Статистика'"
           :teamId="teamId"
@@ -115,6 +119,7 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 import TeamStats from './TeamStats.vue'
+import TeamAbout from './TeamAbout.vue'
 import TeamGamesTable from './TeamGamesTable.vue'
 import TeamUpcomingGames from './TeamUpcomingGames.vue'
 import TeamStats2 from './TeamStats2.vue'
@@ -132,11 +137,12 @@ import type { CategoryOption } from '../../../../types/categories'
 const route = useRoute()
 const teamAbbr = computed(() => String(route.params.abbr || '').toUpperCase())
 
-type TeamTab = 'Будущие игры' | 'Команда' | 'История игр' | 'Статистика' | 'Форма' | 'Статьи' | 'Контракты'
+type TeamTab = 'Будущие игры' | 'Команда' | 'О команде' | 'История игр' | 'Статистика' | 'Форма' | 'Статьи' | 'Контракты'
 
 const tabOptions: CategoryOption<TeamTab>[] = [
   { value: 'Будущие игры', label: 'Будущие игры' },
   { value: 'Команда', label: 'Команда' },
+  { value: 'О команде', label: 'О команде' },
   { value: 'История игр', label: 'История игр' },
   { value: 'Статистика', label: 'Статистика' },
   { value: 'Форма', label: 'Форма' },

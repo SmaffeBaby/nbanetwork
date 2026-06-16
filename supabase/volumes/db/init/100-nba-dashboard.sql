@@ -203,6 +203,16 @@ on public.news_slider_items (created_at desc);
 create index if not exists news_slider_items_sort_order_idx
 on public.news_slider_items (sort_order asc, created_at desc);
 
+create table if not exists public.team_about_pages (
+  team_abbr text primary key,
+  blocks jsonb not null default '[]'::jsonb,
+  published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by uuid references public.profiles(id) on delete set null,
+  constraint team_about_pages_team_abbr_format check (team_abbr = upper(team_abbr) and team_abbr ~ '^[A-Z]{2,4}$')
+);
+
 create table if not exists public.patch_notes (
   id uuid primary key default gen_random_uuid(),
   author_id uuid references public.profiles(id) on delete set null,
@@ -395,6 +405,11 @@ create trigger news_slider_items_set_updated_at
 before update on public.news_slider_items
 for each row execute function public.set_updated_at();
 
+drop trigger if exists team_about_pages_set_updated_at on public.team_about_pages;
+create trigger team_about_pages_set_updated_at
+before update on public.team_about_pages
+for each row execute function public.set_updated_at();
+
 drop trigger if exists patch_notes_set_updated_at on public.patch_notes;
 create trigger patch_notes_set_updated_at
 before update on public.patch_notes
@@ -410,6 +425,7 @@ alter table public.profile_follows enable row level security;
 alter table public.profile_comment_notifications enable row level security;
 alter table public.news_articles enable row level security;
 alter table public.news_slider_items enable row level security;
+alter table public.team_about_pages enable row level security;
 alter table public.patch_notes enable row level security;
 alter table public.news_article_comments enable row level security;
 alter table public.news_article_comment_reads enable row level security;
@@ -742,6 +758,59 @@ using (
   )
 )
 with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Published team about pages are public" on public.team_about_pages;
+create policy "Published team about pages are public"
+on public.team_about_pages for select
+to anon, authenticated
+using (published = true);
+
+drop policy if exists "Admins can insert team about pages" on public.team_about_pages;
+create policy "Admins can insert team about pages"
+on public.team_about_pages for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Admins can update team about pages" on public.team_about_pages;
+create policy "Admins can update team about pages"
+on public.team_about_pages for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.admin = true
+  )
+);
+
+drop policy if exists "Admins can delete team about pages" on public.team_about_pages;
+create policy "Admins can delete team about pages"
+on public.team_about_pages for delete
+to authenticated
+using (
   exists (
     select 1
     from public.profiles
