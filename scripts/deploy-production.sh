@@ -12,5 +12,5 @@ for required_file in .env supabase/.env vite-project/.env backend/headers.conf; 
   fi
 done
 
-docker compose up -d --build frontend backend python-backend
-docker compose ps frontend backend python-backend
+docker compose up -d --build minio minio-createbucket storage frontend backend python-backend
+docker compose ps minio minio-createbucket storage frontend backend python-backend
