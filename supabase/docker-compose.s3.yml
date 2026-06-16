@@ -1,7 +1,7 @@
 services:
 
   minio:
-    image: cgr.dev/chainguard/minio
+    image: quay.io/minio/minio:latest
     #ports:
     #  - '9000:9000'
     #  - '9001:9001'
@@ -9,22 +9,17 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server --console-address ":9001" /data
-    healthcheck:
-      test: [ "CMD", "mc", "ready", "local" ]
-      interval: 2s
-      timeout: 10s
-      retries: 5
     volumes:
       - minio-data:/data
 
   minio-createbucket:
-    image: cgr.dev/chainguard/minio-client:latest-dev
+    image: quay.io/minio/mc:latest
     depends_on:
       minio:
-        condition: service_healthy
+        condition: service_started
     entrypoint: >
       /bin/sh -ec "
-      mc alias set supa-minio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
+      until mc alias set supa-minio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; do sleep 1; done &&
       mc mb --ignore-existing supa-minio/${GLOBAL_S3_BUCKET}
       "
 
@@ -33,7 +28,7 @@ services:
       minio-createbucket:
         condition: service_completed_successfully
       minio:
-        condition: service_healthy
+        condition: service_started
     environment:
       STORAGE_BACKEND: s3
       GLOBAL_S3_ENDPOINT: http://minio:9000

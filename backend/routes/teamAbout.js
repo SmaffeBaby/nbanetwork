@@ -6,6 +6,14 @@ const router = express.Router()
 
 const TABLE = 'team_about_pages'
 const CACHE_TTL = 10 * 60 * 1000
+const STORAGE_BUCKET = process.env.TEAM_ABOUT_STORAGE_BUCKET || process.env.SUPABASE_TEAM_ABOUT_BUCKET || '123'
+const MAX_ASSET_BYTES = 6 * 1024 * 1024
+const ALLOWED_ASSET_TYPES = new Set([
+    'image/png',
+    'image/svg+xml',
+    'image/jpeg',
+    'image/webp'
+])
 const cache = new Map()
 
 function normalizeTeamAbbr(value) {
@@ -18,6 +26,50 @@ function isValidTeamAbbr(value) {
 
 function cacheKey(teamAbbr) {
     return teamAbbr
+}
+
+function createRandomSuffix() {
+    return Math.random().toString(36).slice(2, 10)
+}
+
+function sanitizeFileName(value, fallback = 'image') {
+    const name = String(value || fallback)
+        .replace(/\\/g, '/')
+        .split('/')
+        .pop()
+        .replace(/[^a-zA-Z0-9._-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+
+    return name || fallback
+}
+
+function extensionForContentType(contentType) {
+    if (contentType === 'image/svg+xml') return 'svg'
+    if (contentType === 'image/png') return 'png'
+    if (contentType === 'image/jpeg') return 'jpg'
+    if (contentType === 'image/webp') return 'webp'
+    return 'bin'
+}
+
+function parseDataUrl(dataUrl) {
+    const match = /^data:([^;,]+);base64,(.+)$/i.exec(String(dataUrl || ''))
+    if (!match) return null
+
+    return {
+        contentType: match[1].toLowerCase(),
+        buffer: Buffer.from(match[2], 'base64')
+    }
+}
+
+function buildPublicStorageUrl(bucket, objectPath) {
+    const configuredBase = process.env.TEAM_ABOUT_STORAGE_PUBLIC_BASE_URL
+        || process.env.PUBLIC_STORAGE_BASE_URL
+
+    if (configuredBase) {
+        return `${configuredBase.replace(/\/$/, '')}/storage/v1/object/public/${bucket}/${objectPath}`
+    }
+
+    return `/storage/v1/object/public/${bucket}/${objectPath}`
 }
 
 function setCachedPage(teamAbbr, payload) {
@@ -135,6 +187,56 @@ router.put('/team-about/:abbr', requireUser, async (req, res) => {
     } catch (error) {
         console.error('Failed to save team about page:', error)
         res.status(500).json({ error: 'Failed to save team about page' })
+    }
+})
+
+router.post('/team-about/:abbr/assets', requireUser, async (req, res) => {
+    const teamAbbr = normalizeTeamAbbr(req.params.abbr)
+    if (!isValidTeamAbbr(teamAbbr)) {
+        return res.status(400).json({ error: 'Invalid team abbreviation' })
+    }
+
+    const admin = await requireAdmin(req, res)
+    if (!admin) return
+
+    const parsed = parseDataUrl(req.body?.dataUrl)
+    if (!parsed) {
+        return res.status(400).json({ error: 'Invalid image payload' })
+    }
+
+    const contentType = String(req.body?.contentType || parsed.contentType).toLowerCase()
+    if (contentType !== parsed.contentType || !ALLOWED_ASSET_TYPES.has(contentType)) {
+        return res.status(400).json({ error: 'Unsupported image type' })
+    }
+
+    if (parsed.buffer.length > MAX_ASSET_BYTES) {
+        return res.status(413).json({ error: 'Изображение слишком большое. Выберите файл меньше 5 МБ.' })
+    }
+
+    const fileName = sanitizeFileName(req.body?.fileName, `image.${extensionForContentType(contentType)}`)
+    const hasExtension = /\.[a-zA-Z0-9]+$/.test(fileName)
+    const finalFileName = hasExtension ? fileName : `${fileName}.${extensionForContentType(contentType)}`
+    const objectPath = `team-about/${teamAbbr}/${Date.now()}-${createRandomSuffix()}-${finalFileName}`
+
+    try {
+        const { error } = await admin.storage
+            .from(STORAGE_BUCKET)
+            .upload(objectPath, parsed.buffer, {
+                cacheControl: '31536000',
+                contentType,
+                upsert: false
+            })
+
+        if (error) throw error
+
+        res.status(201).json({
+            bucket: STORAGE_BUCKET,
+            path: objectPath,
+            url: buildPublicStorageUrl(STORAGE_BUCKET, objectPath)
+        })
+    } catch (error) {
+        console.error('Failed to upload team about asset:', error)
+        res.status(500).json({ error: 'Failed to upload image' })
     }
 })
 

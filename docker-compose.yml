@@ -2,8 +2,20 @@ include:
   - path: ./supabase/docker-compose.yml
     env_file:
       - ./supabase/.env
+  - path: ./supabase/docker-compose.s3.yml
+    env_file:
+      - ./supabase/.env
 
 services:
+  storage:
+    environment:
+      STORAGE_BACKEND: s3
+      GLOBAL_S3_ENDPOINT: http://minio:9000
+      GLOBAL_S3_PROTOCOL: http
+      GLOBAL_S3_FORCE_PATH_STYLE: "true"
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-supa-storage}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-7ec11643641092091119f11e1a1f4a8e}
+
   frontend:
     build:
       context: .                       # корень проекта

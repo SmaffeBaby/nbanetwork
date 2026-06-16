@@ -18,6 +18,12 @@ const IMAGE_MAX_HEIGHT = 1000
 const IMAGE_QUALITY = 0.78
 const memoryCache = new Map<string, { page: TeamAboutPage; cachedAt: number }>()
 
+type PreparedImageUpload = {
+  dataUrl: string
+  fileName: string
+  contentType: string
+}
+
 const createId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
@@ -77,6 +83,40 @@ const compressRasterImage = async (file: File) => {
     return fileToDataUrl(file)
   } finally {
     URL.revokeObjectURL(rawUrl)
+  }
+}
+
+const contentTypeFromDataUrl = (dataUrl: string) => {
+  const match = /^data:([^;,]+);/i.exec(dataUrl)
+  return match?.[1]?.toLowerCase() || 'application/octet-stream'
+}
+
+const extensionForContentType = (contentType: string) => {
+  if (contentType === 'image/svg+xml') return 'svg'
+  if (contentType === 'image/png') return 'png'
+  if (contentType === 'image/jpeg') return 'jpg'
+  if (contentType === 'image/webp') return 'webp'
+  return 'img'
+}
+
+const fileNameForUpload = (file: File, contentType: string) => {
+  const baseName = file.name
+    .replace(/\.[^.]+$/, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'image'
+
+  return `${baseName}.${extensionForContentType(contentType)}`
+}
+
+const prepareImageUpload = async (file: File): Promise<PreparedImageUpload> => {
+  const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
+  const dataUrl = isSvg ? await fileToDataUrl(file) : await compressRasterImage(file)
+  const contentType = contentTypeFromDataUrl(dataUrl)
+
+  return {
+    dataUrl,
+    contentType,
+    fileName: fileNameForUpload(file, contentType)
   }
 }
 
@@ -380,6 +420,23 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
     block.images = block.images.filter(image => image.id !== imageId)
   }
 
+  const uploadTeamAboutAsset = async (file: File) => {
+    const abbr = teamAbbr.value
+    if (!abbr) throw new Error('Команда не выбрана.')
+
+    const prepared = await prepareImageUpload(file)
+    const response = await authFetch(`/api/team-about/${encodeURIComponent(abbr)}/assets`, {
+      method: 'POST',
+      body: JSON.stringify(prepared)
+    })
+
+    if (!response?.url) {
+      throw new Error('Сервер не вернул ссылку на изображение.')
+    }
+
+    return String(response.url)
+  }
+
   const uploadGalleryImage = async (block: TeamAboutGalleryBlock, event: Event) => {
     const input = event.target as HTMLInputElement
     const files = Array.from(input.files ?? [])
@@ -395,7 +452,7 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
     const uploaded = await Promise.all(
       images.map(async file => ({
         id: createId(),
-        url: await compressRasterImage(file),
+        url: await uploadTeamAboutAsset(file),
         alt: file.name.replace(/\.[^.]+$/, '')
       }))
     )
@@ -426,8 +483,9 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
     const file = input.files?.[0]
     if (!file) return
 
-    const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
-    const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')
+    const lowerName = file.name.toLowerCase()
+    const isSvg = file.type === 'image/svg+xml' || lowerName.endsWith('.svg')
+    const isPng = file.type === 'image/png' || lowerName.endsWith('.png')
 
     if (!isSvg && !isPng) {
       error.value = 'Можно загрузить только SVG или PNG.'
@@ -436,9 +494,7 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
     }
 
     error.value = ''
-    item.imageUrl = isSvg
-      ? await fileToDataUrl(file)
-      : await compressRasterImage(file)
+    item.imageUrl = await uploadTeamAboutAsset(file)
     input.value = ''
   }
 
