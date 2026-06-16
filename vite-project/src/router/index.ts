@@ -23,7 +23,7 @@ const routes = [
     { path: '/player-stats/all', name: 'PlayerStatsAllType', component: PlayerStats },
     { path: '/player-stats/playoffs', name: 'PlayerStatsPlayoffs', component: PlayerStats },
     { path: '/player/:name',name: 'PlayerPage', component: () => import('../views/PlayerPage.vue')},
-    { path: '/team/:abbr', name: 'TeamDetail', component: () => import('../views/TeamDetail.vue')},
+    { path: '/team/:abbr/:section?', name: 'TeamDetail', component: () => import('../views/TeamDetail.vue')},
     { path: '/game/:gameId', name: 'GameDetail', component: () => import('../views/GameDetail.vue')}
 ]
 

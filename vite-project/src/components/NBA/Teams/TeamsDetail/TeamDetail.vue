@@ -115,8 +115,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, defineAsyncComponent, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import TeamStats from './TeamStats.vue'
 import TeamGamesTable from './TeamGamesTable.vue'
@@ -136,9 +136,25 @@ import type { CategoryOption } from '../../../../types/categories'
 const TeamAbout = defineAsyncComponent(() => import('./TeamAbout.vue'))
 
 const route = useRoute()
+const router = useRouter()
 const teamAbbr = computed(() => String(route.params.abbr || '').toUpperCase())
 
 type TeamTab = 'Будущие игры' | 'Команда' | 'О команде' | 'История игр' | 'Статистика' | 'Форма' | 'Статьи' | 'Контракты'
+
+const defaultTab: TeamTab = 'Команда'
+const tabToSection: Record<TeamTab, string> = {
+  'Будущие игры': 'upcoming',
+  'Команда': 'roster',
+  'О команде': 'about',
+  'История игр': 'history',
+  'Статистика': 'stats',
+  'Форма': 'form',
+  'Статьи': 'articles',
+  'Контракты': 'contracts'
+}
+const sectionToTab = Object.fromEntries(
+    Object.entries(tabToSection).map(([tab, section]) => [section, tab])
+) as Record<string, TeamTab>
 
 const tabOptions: CategoryOption<TeamTab>[] = [
   { value: 'Будущие игры', label: 'Будущие игры' },
@@ -152,6 +168,38 @@ const tabOptions: CategoryOption<TeamTab>[] = [
 ]
 const activeTab = ref<TeamTab>('Команда')
 const seasonType = ref<'regular' | 'playoffs'>('regular')
+
+const getRouteSection = () => String(route.params.section || '')
+const getTabFromRoute = () => sectionToTab[getRouteSection()] ?? defaultTab
+
+watch(
+    () => [route.params.abbr, route.params.section],
+    () => {
+      const nextTab = getTabFromRoute()
+      if (activeTab.value !== nextTab) {
+        activeTab.value = nextTab
+      }
+
+      const section = getRouteSection()
+      if (section && !sectionToTab[section]) {
+        void router.replace({
+          name: 'TeamDetail',
+          params: { abbr: teamAbbr.value, section: tabToSection[defaultTab] }
+        })
+      }
+    },
+    { immediate: true }
+)
+
+watch(activeTab, tab => {
+  const section = tabToSection[tab]
+  if (!section || section === getRouteSection()) return
+
+  void router.push({
+    name: 'TeamDetail',
+    params: { abbr: teamAbbr.value, section }
+  })
+})
 
 const teamId = computed(() => TEAM_ID_MAP[teamAbbr.value] ?? 0)
 const showSeasonSelector = computed(() =>
