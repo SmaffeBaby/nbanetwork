@@ -1,5 +1,5 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import { supabase } from '../../../../lib/supabase'
+import { authFetch } from '../../../../api/authFetch'
 import { sanitizeNewsHtml } from '../../../../utils/news'
 import type {
   TeamAboutBlock,
@@ -11,9 +11,11 @@ import type {
   TeamAboutParagraphBlock
 } from '../../../../types/teamAbout'
 
-const TABLE = 'team_about_pages'
 const CACHE_PREFIX = 'team-about-page:'
 const CACHE_TTL = 10 * 60 * 1000
+const IMAGE_MAX_WIDTH = 1400
+const IMAGE_MAX_HEIGHT = 1000
+const IMAGE_QUALITY = 0.78
 const memoryCache = new Map<string, { page: TeamAboutPage; cachedAt: number }>()
 
 const createId = () =>
@@ -27,6 +29,56 @@ const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
   reader.onerror = () => reject(reader.error)
   reader.readAsDataURL(file)
 })
+
+const canvasToDataUrl = (canvas: HTMLCanvasElement, type: string, quality: number) =>
+  new Promise<string>((resolve) => {
+    canvas.toBlob(blob => {
+      if (!blob) {
+        resolve(canvas.toDataURL(type, quality))
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.readAsDataURL(blob)
+    }, type, quality)
+  })
+
+const compressRasterImage = async (file: File) => {
+  if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') {
+    return fileToDataUrl(file)
+  }
+
+  const rawUrl = URL.createObjectURL(file)
+
+  try {
+    const image = new Image()
+    image.decoding = 'async'
+    image.src = rawUrl
+    await image.decode()
+
+    const scale = Math.min(
+      1,
+      IMAGE_MAX_WIDTH / image.naturalWidth,
+      IMAGE_MAX_HEIGHT / image.naturalHeight
+    )
+    const width = Math.max(1, Math.round(image.naturalWidth * scale))
+    const height = Math.max(1, Math.round(image.naturalHeight * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+
+    const context = canvas.getContext('2d')
+    if (!context) return fileToDataUrl(file)
+
+    context.drawImage(image, 0, 0, width, height)
+    return canvasToDataUrl(canvas, 'image/webp', IMAGE_QUALITY)
+  } catch {
+    return fileToDataUrl(file)
+  } finally {
+    URL.revokeObjectURL(rawUrl)
+  }
+}
 
 const createHallOfFameItem = (): TeamAboutHallOfFameItem => ({
   id: createId(),
@@ -262,26 +314,20 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
     error.value = ''
 
     try {
-      const { data, error: loadError } = await supabase
-        .from(TABLE)
-        .select('team_abbr, blocks, published, updated_at')
-        .eq('team_abbr', abbr)
-        .maybeSingle()
+      const response = await fetch(`/api/team-about/${encodeURIComponent(abbr)}`)
+      const data = await response.json()
+      console.debug('team-about cache:', response.headers.get('X-Cache-Status') || 'UNKNOWN', abbr)
 
-      if (loadError) throw loadError
+      if (!response.ok) throw new Error(data?.error || 'Failed to load team about page')
 
-      page.value = data
+      page.value = data?.team_abbr
         ? {
             team_abbr: data.team_abbr,
             blocks: normalizeBlocks(data.blocks),
             published: data.published ?? true,
             updated_at: data.updated_at
           }
-        : {
-            team_abbr: abbr,
-            blocks: [],
-            published: true
-          }
+        : { team_abbr: abbr, blocks: [], published: true }
 
       writeCachedPage(page.value)
       draftBlocks.value = page.value.blocks.length
@@ -349,7 +395,7 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
     const uploaded = await Promise.all(
       images.map(async file => ({
         id: createId(),
-        url: await fileToDataUrl(file),
+        url: await compressRasterImage(file),
         alt: file.name.replace(/\.[^.]+$/, '')
       }))
     )
@@ -390,7 +436,9 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
     }
 
     error.value = ''
-    item.imageUrl = await fileToDataUrl(file)
+    item.imageUrl = isSvg
+      ? await fileToDataUrl(file)
+      : await compressRasterImage(file)
     input.value = ''
   }
 
@@ -402,20 +450,14 @@ export function useTeamAbout(teamAbbr: Ref<string>) {
     error.value = ''
 
     try {
-      await supabase.auth.getSession()
       const blocks = normalizeBlocks(draftBlocks.value)
-      const { data, error: saveError } = await supabase
-        .from(TABLE)
-        .upsert({
-          team_abbr: abbr,
+      const data = await authFetch(`/api/team-about/${encodeURIComponent(abbr)}`, {
+        method: 'PUT',
+        body: JSON.stringify({
           blocks,
-          published: true,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'team_abbr' })
-        .select('team_abbr, blocks, published, updated_at')
-        .single()
-
-      if (saveError) throw saveError
+          published: true
+        })
+      })
 
       page.value = {
         team_abbr: data.team_abbr,
