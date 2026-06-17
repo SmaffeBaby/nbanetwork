@@ -33,6 +33,7 @@ jobs:
             --exclude 'backend/headers.conf' \
             --exclude 'supabase/.env' \
             --exclude 'vite-project/.env' \
+            --exclude 'volumes/' \
             --exclude 'supabase/volumes/db/data/' \
             --exclude 'supabase/volumes/storage/' \
             -e "ssh -i ~/.ssh/production_key -p ${{ secrets.PROD_SSH_PORT || 22 }}" \
