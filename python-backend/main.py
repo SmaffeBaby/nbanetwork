@@ -241,6 +241,42 @@ def normalize_scheduled_game(game, fallback_date=None):
         "GAME_STATUS": game.get("gameStatusText") or game.get("gameStatusTextLong") or game.get("gameStatus") or "TBD",
     }
 
+def normalize_live_boxscore_game(game_id, game):
+    if not game:
+        return None
+
+    home = game.get("homeTeam", {}) or {}
+    away = game.get("awayTeam", {}) or {}
+
+    if not home.get("teamId") or not away.get("teamId"):
+        return None
+
+    game_time_utc = to_utc_iso(game.get("gameTimeUTC"))
+    game_date_msk = get_msk_date(game_time_utc)
+
+    return {
+        "GAME_ID": game.get("gameId") or game_id,
+        "GAME_DATE_EST": game.get("gameEt") or game.get("gameTimeLocal") or game.get("gameTimeUTC") or "",
+        "GAME_DATE_MSK": game_date_msk.isoformat() if game_date_msk else "",
+        "GAME_TIME_UTC": game_time_utc,
+        "HOME_TEAM_ID": home.get("teamId"),
+        "VISITOR_TEAM_ID": away.get("teamId"),
+        "HOME_TEAM_ABBREVIATION": home.get("teamTricode") or home.get("teamAbbreviation"),
+        "VISITOR_TEAM_ABBREVIATION": away.get("teamTricode") or away.get("teamAbbreviation"),
+        "HOME_TEAM_SCORE": home.get("score"),
+        "VISITOR_TEAM_SCORE": away.get("score"),
+        "GAME_STATUS": game.get("gameStatusText") or game.get("gameStatus") or "TBD",
+    }
+
+def fetch_live_boxscore_metadata(game_id):
+    url = f"https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{game_id}.json"
+    request = Request(url, headers=NBA_CDN_HEADERS)
+
+    with urlopen(request, timeout=10) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+
+    return normalize_live_boxscore_game(game_id, payload.get("game", {}) or {})
+
 def fetch_static_scoreboard(nba_date):
     cached = STATIC_SCOREBOARD_CACHE.get(nba_date)
     if cached is not None:
@@ -361,6 +397,13 @@ def cache_games_by_date(date_key, payload):
 
 def find_scheduled_game(game_id):
     try:
+        live_game = fetch_live_boxscore_metadata(game_id)
+        if live_game:
+            return live_game
+    except Exception as e:
+        print(f"Failed to fetch NBA live boxscore metadata for {game_id}: {e}")
+
+    try:
         scheduled = fetch_schedule_games_by_id().get(game_id)
         if scheduled:
             return scheduled
@@ -379,6 +422,35 @@ def find_scheduled_game(game_id):
                 return normalized
         except Exception as e:
             print(f"Failed to fetch NBA static scoreboard for {nba_date}: {e}")
+
+    return None
+
+def get_completed_game_time_utc(game_id, fallback_date=None):
+    try:
+        live_game = fetch_live_boxscore_metadata(game_id)
+        if live_game and live_game.get("GAME_TIME_UTC"):
+            return live_game.get("GAME_TIME_UTC")
+    except Exception as e:
+        print(f"Failed to fetch NBA live boxscore metadata for {game_id}: {e}")
+
+    try:
+        summary = boxscoresummaryv2.BoxScoreSummaryV2(game_id=game_id).get_dict()
+        game_summary = next(
+            (result_set for result_set in summary.get("resultSets", []) if result_set.get("name") == "GameSummary"),
+            None
+        )
+
+        if game_summary and game_summary.get("rowSet"):
+            row = dict(zip(game_summary.get("headers", []), game_summary["rowSet"][0]))
+            scheduled_time = get_scheduled_game_time_utc({
+                "gameId": game_id,
+                "gameDateEst": row.get("GAME_DATE_EST"),
+                "gameStatusText": row.get("GAME_STATUS_TEXT"),
+            }, fallback_date)
+            if scheduled_time:
+                return scheduled_time
+    except Exception as e:
+        print(f"Failed to fetch NBA completed game time for {game_id}: {e}")
 
     return None
 
@@ -971,9 +1043,19 @@ def fetch_games_by_date_uncached(date, target_msk_date):
             print(f"Failed to fetch NBA schedule: {e}")
             return False
 
+        scheduled_dates = [
+            parse_date_value(game.get("GAME_DATE_MSK"))
+            for game in scheduled_games.values()
+            if game.get("GAME_DATE_MSK")
+        ]
+        scheduled_dates = [game_date for game_date in scheduled_dates if game_date]
+
         for gid, game in scheduled_games.items():
             if game.get("GAME_DATE_MSK") == target_msk_date.isoformat():
                 games_by_id[gid] = game
+
+        if scheduled_dates and min(scheduled_dates) <= target_msk_date <= max(scheduled_dates):
+            return True
 
         return bool(games_by_id)
 
@@ -1051,19 +1133,22 @@ def fetch_games_by_date_uncached(date, target_msk_date):
 
             game_date = datetime.strptime(home["GAME_DATE"], "%Y-%m-%d").date()
             static_game = find_static_game(gid, game_date)
-            game_time_utc = static_game.get("gameTimeUTC")
+            game_time_utc = get_scheduled_game_time_utc(static_game, game_date)
+
+            if not game_time_utc:
+                game_time_utc = get_completed_game_time_utc(gid, game_date)
+
             game_dt_utc = parse_utc(game_time_utc)
-            game_date_msk = (
-                game_dt_utc.astimezone(MSK_TZ).date().isoformat()
-                if game_dt_utc
-                else target_msk_date.isoformat()
-            )
+            game_msk_date = game_dt_utc.astimezone(MSK_TZ).date() if game_dt_utc else game_date
+
+            if game_msk_date != target_msk_date:
+                continue
 
             games_by_id[gid] = {
                 "GAME_ID": gid,
 
                 "GAME_DATE_EST": f"{home['GAME_DATE']}T00:00:00",
-                "GAME_DATE_MSK": game_date_msk,
+                "GAME_DATE_MSK": game_msk_date.isoformat(),
                 "GAME_TIME_UTC": game_time_utc,
 
                 "HOME_TEAM_ID": home["TEAM_ID"],
@@ -1080,10 +1165,10 @@ def fetch_games_by_date_uncached(date, target_msk_date):
 
     games_by_id = {}
 
-    if add_static_games() and games_by_id:
+    if add_schedule_games():
         return cache_games_by_date(date, list(games_by_id.values()))
 
-    if add_schedule_games():
+    if add_static_games() and games_by_id:
         return cache_games_by_date(date, list(games_by_id.values()))
 
     for nba_date in dates_to_fetch:

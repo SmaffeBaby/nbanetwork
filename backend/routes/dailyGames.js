@@ -17,6 +17,33 @@ const RATE_LIMIT_MAX_REQUESTS = 60
 const pendingDateRequests = new Map()
 const requestBuckets = new Map()
 
+function getGameMskDate(game) {
+    const gameTimeUTC = game?.GAME_TIME_UTC
+
+    if (gameTimeUTC) {
+        const date = new Date(gameTimeUTC)
+
+        if (!Number.isNaN(date.getTime())) {
+            return getMskDateKey(date)
+        }
+    }
+
+    return String(game?.GAME_DATE_MSK || game?.GAME_DATE_EST || '').slice(0, 10)
+}
+
+function sanitizeGamesForDate(date, games) {
+    const seen = new Set()
+
+    return (Array.isArray(games) ? games : []).filter((game) => {
+        const gameId = String(game?.GAME_ID || '')
+        if (!gameId || seen.has(gameId)) return false
+        if (getGameMskDate(game) !== date) return false
+
+        seen.add(gameId)
+        return true
+    })
+}
+
 function getMskDateKey(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Europe/Moscow',
@@ -94,7 +121,7 @@ async function fetchAndCacheGames(date) {
         `http://python-backend:8000/games/by-date/${date}`
     )
         .then(async (response) => {
-            const games = Array.isArray(response.data) ? response.data : []
+            const games = sanitizeGamesForDate(date, response.data)
 
             try {
                 await writeGamesByDateCache(date, games)
@@ -115,7 +142,7 @@ async function resolveGamesByDate(date) {
     try {
         const cachedGames = await readGamesByDateCache(date)
         if (cachedGames) {
-            return cachedGames
+            return sanitizeGamesForDate(date, cachedGames)
         }
     } catch (cacheError) {
         console.error('Failed to read games cache:', cacheError)

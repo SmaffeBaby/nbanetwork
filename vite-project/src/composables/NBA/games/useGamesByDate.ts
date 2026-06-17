@@ -165,6 +165,17 @@ const normalizeGame = (game: DailyGameDTO): GamesPageGame => {
     }
 }
 
+const uniqueByGameId = <T extends { id: string }>(games: T[]) => {
+    const seen = new Set<string>()
+
+    return games.filter((game) => {
+        if (!game.id || seen.has(game.id)) return false
+
+        seen.add(game.id)
+        return true
+    })
+}
+
 const fetchGamesByDate = async (dateKey: string): Promise<DailyGameDTO[]> => {
     const response = await fetch(`${API_BASE}/api/games/by-date/${dateKey}`)
     const data = await response.json()
@@ -203,7 +214,9 @@ export function useGamesByDate() {
             const rawGames = await getGamesByDate(dateKey, queryClient)
             if (requestId !== loadRequestId) return
 
-            const normalized = rawGames.map(normalizeGame).filter(game => game.gameDay === dateKey)
+            const normalized = uniqueByGameId(
+                rawGames.map(normalizeGame).filter(game => game.gameDay === dateKey)
+            )
             games.value = normalized
             counts.value = {
                 ...counts.value,
@@ -244,9 +257,13 @@ export function useGamesByDate() {
             missingDates.map(async (dateKey) => {
                 try {
                     const rawGames = await getGamesByDate(dateKey, queryClient)
+                    const gamesForDate = uniqueByGameId(
+                        rawGames.map(normalizeGame).filter(game => game.gameDay === dateKey)
+                    )
+
                     return {
                         dateKey,
-                        count: rawGames.filter(game => getGameDay(game) === dateKey).length,
+                        count: gamesForDate.length,
                         isLoading: false
                     }
                 } catch {

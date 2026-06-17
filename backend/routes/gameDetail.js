@@ -31,8 +31,43 @@ function formatMSKDateTime(value, fallback = '') {
     })
 }
 
+function rowsToObjects(resultSet) {
+    const headers = resultSet?.headers || []
+    const rows = resultSet?.rowSet || []
+
+    return rows.map((row) => {
+        const obj = {}
+
+        headers.forEach((header, index) => {
+            obj[header] = row[index]
+        })
+
+        return obj
+    })
+}
+
+function toNumberOrNull(value) {
+    if (value === null || value === undefined || value === '') return null
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+function getTeamId(...values) {
+    for (const value of values) {
+        const teamId = toNumberOrNull(value)
+
+        if (teamId && TEAM_MAP[teamId]) {
+            return teamId
+        }
+    }
+
+    return toNumberOrNull(values.find((value) => value !== null && value !== undefined))
+}
+
 function normalizeGame(data) {
     const summary = data?.summary
+    const boxscore = data?.boxscore
     const metadata = data?.metadata
 
     const gameSummary = summary?.resultSets?.find(
@@ -42,8 +77,14 @@ function normalizeGame(data) {
     const lineScore = summary?.resultSets?.find(
         (r) => r.name === 'LineScore'
     )
+    const teamStats = boxscore?.resultSets?.find(
+        (r) => r.name === 'TeamStats'
+    )
 
-    const gameRow = gameSummary?.rowSet?.[0]
+    const gameRow = rowsToObjects(gameSummary)[0]
+    const teamStatsRows = rowsToObjects(teamStats)
+    const homeStatsRow = teamStatsRows[0] || {}
+    const awayStatsRow = teamStatsRows[1] || {}
 
     if (!gameRow) {
         if (!metadata?.GAME_ID) {
@@ -80,41 +121,41 @@ function normalizeGame(data) {
         }
     }
 
-    const homeTeamId = gameRow[6]
-    const awayTeamId = gameRow[7]
+    const homeTeamId = getTeamId(gameRow.HOME_TEAM_ID, metadata?.HOME_TEAM_ID, homeStatsRow.TEAM_ID)
+    const awayTeamId = getTeamId(gameRow.VISITOR_TEAM_ID, metadata?.VISITOR_TEAM_ID, awayStatsRow.TEAM_ID)
 
-    const rows = lineScore?.rowSet || []
+    const rows = rowsToObjects(lineScore)
 
-    const homeRow = rows.find((r) => r[3] === homeTeamId)
-    const awayRow = rows.find((r) => r[3] === awayTeamId)
+    const homeRow = rows.find((r) => Number(r.TEAM_ID) === Number(homeTeamId)) || homeStatsRow
+    const awayRow = rows.find((r) => Number(r.TEAM_ID) === Number(awayTeamId)) || awayStatsRow
 
     const homeMeta = TEAM_MAP[homeTeamId] || {}
     const awayMeta = TEAM_MAP[awayTeamId] || {}
 
     const gameDateUTC = !isPlaceholderDate(metadata?.GAME_TIME_UTC) && hasExplicitTime(metadata.GAME_TIME_UTC)
         ? metadata.GAME_TIME_UTC
-        : (!isPlaceholderDate(gameRow[0]) && hasExplicitTime(gameRow[0]) ? gameRow[0] : null)
+        : (!isPlaceholderDate(gameRow.GAME_DATE_EST) && hasExplicitTime(gameRow.GAME_DATE_EST) ? gameRow.GAME_DATE_EST : null)
     const gameDateMSK = formatMSKDateTime(gameDateUTC, metadata?.GAME_DATE_MSK || '')
 
     return {
-        gameId: gameRow[2],
-        status: gameRow[4] || 'Game',
+        gameId: gameRow.GAME_ID || metadata?.GAME_ID,
+        status: gameRow.GAME_STATUS_TEXT || metadata?.GAME_STATUS || 'Game',
 
         dateUTC: gameDateUTC,
         dateMSK: gameDateMSK,
 
         home: {
             teamId: homeTeamId,
-            abbr: homeMeta.abbr || '',
-            name: homeMeta.name || '',
-            score: homeRow?.[22] ?? 0
+            abbr: homeRow?.TEAM_ABBREVIATION || metadata?.HOME_TEAM_ABBREVIATION || homeMeta.abbr || '',
+            name: homeMeta.name || homeRow?.TEAM_NAME || metadata?.HOME_TEAM_ABBREVIATION || '',
+            score: toNumberOrNull(homeRow?.PTS) ?? toNumberOrNull(metadata?.HOME_TEAM_SCORE)
         },
 
         away: {
             teamId: awayTeamId,
-            abbr: awayMeta.abbr || '',
-            name: awayMeta.name || '',
-            score: awayRow?.[22] ?? 0
+            abbr: awayRow?.TEAM_ABBREVIATION || metadata?.VISITOR_TEAM_ABBREVIATION || awayMeta.abbr || '',
+            name: awayMeta.name || awayRow?.TEAM_NAME || metadata?.VISITOR_TEAM_ABBREVIATION || '',
+            score: toNumberOrNull(awayRow?.PTS) ?? toNumberOrNull(metadata?.VISITOR_TEAM_SCORE)
         }
     }
 }

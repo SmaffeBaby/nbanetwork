@@ -542,8 +542,7 @@ async function fetchLegacyGame(gameId) {
     const playByPlay = rowsToObjects(findResultSet(playByPlaySets, 'PlayByPlay'))
 
     const metadata = root.metadata || {}
-    const homeTeamId = Number(gameSummary.HOME_TEAM_ID || metadata.HOME_TEAM_ID)
-    const awayTeamId = Number(gameSummary.VISITOR_TEAM_ID || metadata.VISITOR_TEAM_ID)
+    const { homeTeamId, awayTeamId } = getLegacyTeamIds(gameSummary, metadata, teamStats)
 
     if (!homeTeamId || !awayTeamId) {
         throw new Error('Legacy box score is missing teams')
@@ -634,6 +633,16 @@ function getLegacyMiscTeamStats(resultSets) {
 
 function pickLegacyMiscTeam(miscTeamStats, teamId) {
     return miscTeamStats.find((row) => Number(row.TEAM_ID ?? row.teamId) === teamId) || {}
+}
+
+function getLegacyTeamIds(gameSummary, metadata, teamStats) {
+    const homeTeamId = Number(gameSummary.HOME_TEAM_ID || metadata.HOME_TEAM_ID || teamStats[0]?.TEAM_ID)
+    const awayTeamId = Number(gameSummary.VISITOR_TEAM_ID || metadata.VISITOR_TEAM_ID || teamStats[1]?.TEAM_ID)
+
+    return {
+        homeTeamId,
+        awayTeamId
+    }
 }
 
 function buildLegacyTeam({ teamId, fallback = {}, lineScore, teamStats, miscTeamStats, playerStats }) {

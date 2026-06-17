@@ -142,6 +142,17 @@ const loadGamesForDate = async (date: Date) => {
     }
 }
 
+const uniqueByGameId = <T extends { Game_ID: string }>(games: T[]) => {
+    const seen = new Set<string>()
+
+    return games.filter((game) => {
+        if (!game.Game_ID || seen.has(game.Game_ID)) return false
+
+        seen.add(game.Game_ID)
+        return true
+    })
+}
+
 export function useRecentGames() {
     const authStore = useAuthStore()
     const { user } = storeToRefs(authStore)
@@ -206,7 +217,7 @@ export function useRecentGames() {
 
             if (requestId !== loadRequestId) return
 
-            gamesList.value = all.filter(g => g.gameDay === targetDay)
+            gamesList.value = uniqueByGameId(all.filter(g => g.gameDay === targetDay))
             prefetchAdjacentDays(date)
 
             error.value = null

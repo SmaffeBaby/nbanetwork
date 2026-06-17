@@ -51,13 +51,15 @@ function generateAIRecap({
 
     const winner = isHomeWinner ? homeTeam : awayTeam
     const loser = isHomeWinner ? awayTeam : homeTeam
+    const winnerScore = isHomeWinner ? homeScore : awayScore
+    const loserScore = isHomeWinner ? awayScore : homeScore
 
     const lead = topPlayers[0] || {}
     const second = topPlayers[1] || null
 
     const winLines = [
-        `${teamLink(winner)} обыграли ${teamLink(loser)} со счётом ${homeScore}-${awayScore}`,
-        `${teamLink(winner)} уверенно победили ${teamLink(loser)} (${homeScore}-${awayScore})`,
+        `${teamLink(winner)} обыграли ${teamLink(loser)} со счётом ${winnerScore}-${loserScore}`,
+        `${teamLink(winner)} уверенно победили ${teamLink(loser)} (${winnerScore}-${loserScore})`,
         `${teamLink(winner)} оказались сильнее ${teamLink(loser)}`,
         `${teamLink(winner)} вырвали победу у ${teamLink(loser)}`,
         `${teamLink(winner)} добились победы над ${teamLink(loser)}`
@@ -96,9 +98,10 @@ function generateAIRecap({
     const runLine = runs?.length
         ? (() => {
             const r = runs[0]
-            const opponent = r.team === homeTeam ? awayTeam : homeTeam
+            const runTeam = r.team === 'home' ? homeTeam : r.team === 'away' ? awayTeam : r.team
+            const opponent = runTeam === homeTeam ? awayTeam : homeTeam
 
-            return `🔥 ${teamLink(r.team)} совершили рывок ${r.points}-0, не позволив ${teamLink(opponent)} набрать очки`
+            return `🔥 ${teamLink(runTeam)} совершили рывок ${r.points}-0, не позволив ${teamLink(opponent)} набрать очки`
         })()
         : null
 
@@ -113,7 +116,7 @@ function generateAIRecap({
     const finalClutch = clutch || pick(clutchLines)
 
     return {
-        title: `${resolveTeam(winner).name} ${homeScore}-${awayScore} ${resolveTeam(loser).name}`,
+        title: `${resolveTeam(winner).name} ${winnerScore}-${loserScore} ${resolveTeam(loser).name}`,
 
         storyline: [storyMain, storyExtra].filter(Boolean),
 
