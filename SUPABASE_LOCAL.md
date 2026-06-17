@@ -48,6 +48,16 @@ supabase/volumes/db/init/100-nba-dashboard.sql
 
 It creates `profiles` and `map_points`, enables RLS, and adds `profiles` to the realtime publication. The migration runs only when the Supabase Postgres data directory is first created.
 
+## Production Supabase data
+
+Production runtime data is kept outside the synced Supabase template directory:
+
+```text
+/opt/nba-dashboard/volumes
+```
+
+GitHub Actions excludes this directory from `rsync --delete`, and `scripts/deploy-production.sh` refuses to deploy if the production Postgres container is mounted from a different data directory.
+
 ## Reset local Supabase data
 
 This deletes local Supabase data:
