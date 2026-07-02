@@ -15,15 +15,17 @@
       <h2 class="m-0 text-lg font-black text-gray-950 md:col-span-5">
         {{ editingSlide ? 'Редактировать слайд' : 'Добавить слайд' }}
       </h2>
-      <label class="block">
+      <label class="block space-y-2">
         <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">Фото ПК 1344x432</span>
         <input type="file" accept="image/*" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm" @change="attachImage($event, 'desktop')" />
-        <span v-if="imageData" class="mt-1 block truncate text-xs font-semibold text-gray-400">Изображение выбрано</span>
+        <input v-model="imageUrl" type="text" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="или /storage/v1/object/public/123/main-slider/news.png" />
+        <span v-if="imageUpload" class="block truncate text-xs font-semibold text-gray-400">Файл выбран, будет загружен в Storage</span>
       </label>
-      <label class="block">
+      <label class="block space-y-2">
         <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">Фото мобильное 616x747</span>
         <input type="file" accept="image/*" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm" @change="attachImage($event, 'mobile')" />
-        <span v-if="mobileImageData" class="mt-1 block truncate text-xs font-semibold text-gray-400">Изображение выбрано</span>
+        <input v-model="mobileImageUrl" type="text" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="или /storage/v1/object/public/123/main-slider/mobile.png" />
+        <span v-if="mobileImageUpload" class="block truncate text-xs font-semibold text-gray-400">Файл выбран, будет загружен в Storage</span>
       </label>
       <label class="block">
         <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">Ссылка</span>
@@ -36,7 +38,7 @@
       <div class="flex gap-2 self-end">
         <button
           type="submit"
-          :disabled="saving || !imageData"
+          :disabled="saving || !hasDesktopImage"
           class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-950/15 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {{ saving ? 'Сохраняем...' : 'Сохранить' }}
@@ -56,7 +58,7 @@
       Загружаем новости...
     </div>
 
-    <div v-else-if="slides.length" id="news-carousel" class="relative mx-auto w-full max-w-[1344px]" data-carousel="slide">
+    <div v-else-if="slides.length" id="news-carousel" class="relative mx-auto w-full max-w-[1344px]">
       <div class="relative aspect-[616/747] overflow-hidden rounded-2xl bg-gray-950 shadow-xl sm:aspect-[1344/432]">
         <Transition name="news-slide">
           <component
@@ -66,7 +68,6 @@
             target="_blank"
             rel="noopener noreferrer"
             class="absolute inset-0 block"
-            data-carousel-item
           >
             <picture>
               <source v-if="activeSlide.mobile_image_url" :srcset="activeSlide.mobile_image_url" media="(max-width: 639px)" />
@@ -90,18 +91,17 @@
             :class="index === activeIndex ? 'bg-white' : 'bg-white/45 hover:bg-white/75'"
             :aria-current="index === activeIndex"
             :aria-label="`Slide ${index + 1}`"
-            :data-carousel-slide-to="index"
             @click="goToSlide(index)"
           ></button>
         </div>
 
-        <button type="button" class="group absolute start-0 top-0 z-30 flex h-full cursor-pointer items-center justify-center px-2 focus:outline-none sm:px-4" data-carousel-prev @click="prevSlide">
+        <button type="button" class="group absolute start-0 top-0 z-30 flex h-full cursor-pointer items-center justify-center px-2 focus:outline-none sm:px-4" @click="prevSlide">
           <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-gray-950 shadow-lg shadow-black/20 ring-1 ring-black/5 transition group-hover:scale-105 group-hover:bg-gray-50 group-focus:outline-none group-focus:ring-4 group-focus:ring-white/80 sm:h-10 sm:w-10">
             <ChevronLeftIcon class="h-5 w-5" aria-hidden="true" />
             <span class="sr-only">Previous</span>
           </span>
         </button>
-        <button type="button" class="group absolute end-0 top-0 z-30 flex h-full cursor-pointer items-center justify-center px-2 focus:outline-none sm:px-4" data-carousel-next @click="nextSlide">
+        <button type="button" class="group absolute end-0 top-0 z-30 flex h-full cursor-pointer items-center justify-center px-2 focus:outline-none sm:px-4" @click="nextSlide">
           <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-gray-950 shadow-lg shadow-black/20 ring-1 ring-black/5 transition group-hover:scale-105 group-hover:bg-gray-50 group-focus:outline-none group-focus:ring-4 group-focus:ring-white/80 sm:h-10 sm:w-10">
             <ChevronRightIcon class="h-5 w-5" aria-hidden="true" />
             <span class="sr-only">Next</span>
@@ -144,8 +144,11 @@ const {
   saving,
   showForm,
   editingSlide,
-  imageData,
-  mobileImageData,
+  imageUrl,
+  mobileImageUrl,
+  imageUpload,
+  mobileImageUpload,
+  hasDesktopImage,
   linkUrl,
   sortOrder,
   formError,

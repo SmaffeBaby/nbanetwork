@@ -7,6 +7,19 @@ const router = express.Router()
 const MAX_CONTENT_LENGTH = 1024 * 1024 * 40
 const MAX_COMMENT_IMAGE_SIZE = 1024 * 1024 * 8
 const MAX_SLIDER_IMAGE_SIZE = 1024 * 1024 * 8
+const NEWS_SLIDER_CACHE_TTL = 5 * 60 * 1000
+const NEWS_SLIDER_STALE_TTL = 30 * 60 * 1000
+const SLIDER_STORAGE_BUCKET = process.env.NEWS_SLIDER_STORAGE_BUCKET
+    || process.env.SUPABASE_NEWS_SLIDER_BUCKET
+    || '123'
+const ALLOWED_SLIDER_IMAGE_TYPES = new Set([
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+    'image/gif'
+])
+let newsSliderCache = null
+let newsSliderRefreshPromise = null
 
 function normalizeText(value) {
     return String(value || '').trim()
@@ -29,6 +42,57 @@ function normalizeOptionalUrl(value) {
     if (!url) return null
     if (/^(https?:\/\/|\/)/i.test(url)) return url
     return ''
+}
+
+function normalizeRequiredUrl(value) {
+    const url = normalizeText(value)
+    if (!url) return ''
+    if (/^(https?:\/\/|\/)/i.test(url)) return url
+    return ''
+}
+
+function createRandomSuffix() {
+    return Math.random().toString(36).slice(2, 10)
+}
+
+function sanitizeFileName(value, fallback = 'image') {
+    const name = String(value || fallback)
+        .replace(/\\/g, '/')
+        .split('/')
+        .pop()
+        .replace(/[^a-zA-Z0-9._-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+
+    return name || fallback
+}
+
+function extensionForContentType(contentType) {
+    if (contentType === 'image/png') return 'png'
+    if (contentType === 'image/jpeg') return 'jpg'
+    if (contentType === 'image/webp') return 'webp'
+    if (contentType === 'image/gif') return 'gif'
+    return 'bin'
+}
+
+function parseDataUrl(dataUrl) {
+    const match = /^data:([^;,]+);base64,(.+)$/i.exec(String(dataUrl || ''))
+    if (!match) return null
+
+    return {
+        contentType: match[1].toLowerCase(),
+        buffer: Buffer.from(match[2], 'base64')
+    }
+}
+
+function buildPublicStorageUrl(bucket, objectPath) {
+    const configuredBase = process.env.NEWS_SLIDER_STORAGE_PUBLIC_BASE_URL
+        || process.env.PUBLIC_STORAGE_BASE_URL
+
+    if (configuredBase) {
+        return `${configuredBase.replace(/\/$/, '')}/storage/v1/object/public/${bucket}/${objectPath}`
+    }
+
+    return `/storage/v1/object/public/${bucket}/${objectPath}`
 }
 
 function normalizePositiveInteger(value, fallback = null) {
@@ -116,6 +180,82 @@ function normalizeSliderItem(row) {
         sort_order: row.sort_order || 1,
         profiles: Array.isArray(row.profiles) ? row.profiles[0] ?? null : row.profiles ?? null
     }
+}
+
+function setNewsSliderHeaders(res, status) {
+    res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=900')
+    res.set('X-Cache-Status', status)
+}
+
+function setNewsSliderCache(payload) {
+    const now = Date.now()
+    newsSliderCache = {
+        payload,
+        expiresAt: now + NEWS_SLIDER_CACHE_TTL,
+        staleUntil: now + NEWS_SLIDER_STALE_TTL
+    }
+}
+
+function getNewsSliderCacheState() {
+    if (!newsSliderCache) return { status: 'MISS', payload: null }
+
+    const now = Date.now()
+    if (now <= newsSliderCache.expiresAt) {
+        return { status: 'HIT', payload: newsSliderCache.payload }
+    }
+
+    if (now <= newsSliderCache.staleUntil) {
+        return { status: 'STALE', payload: newsSliderCache.payload }
+    }
+
+    newsSliderCache = null
+    return { status: 'MISS', payload: null }
+}
+
+function invalidateNewsSliderCache() {
+    newsSliderCache = null
+}
+
+async function loadNewsSliderPayload(admin = getAdmin()) {
+    const { data, error } = await admin
+        .from('news_slider_items')
+        .select(`
+            id,
+            image_url,
+            mobile_image_url,
+            link_url,
+            sort_order,
+            created_by,
+            created_at,
+            updated_at,
+            profiles:created_by (
+                first_name,
+                last_name,
+                avatar_img
+            )
+        `)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(12)
+
+    if (error) throw error
+
+    return { slides: (data || []).map(normalizeSliderItem) }
+}
+
+async function refreshNewsSliderCache(admin = getAdmin()) {
+    if (!newsSliderRefreshPromise) {
+        newsSliderRefreshPromise = loadNewsSliderPayload(admin)
+            .then(payload => {
+                setNewsSliderCache(payload)
+                return payload
+            })
+            .finally(() => {
+                newsSliderRefreshPromise = null
+            })
+    }
+
+    return newsSliderRefreshPromise
 }
 
 async function reorderSliderItems(admin, targetId, requestedOrder) {
@@ -287,36 +427,70 @@ router.post('/news-articles', requireUser, async (req, res) => {
 })
 
 router.get('/news-slider', async (_req, res) => {
-    try {
-        const admin = getAdmin()
-        const { data, error } = await admin
-            .from('news_slider_items')
-            .select(`
-                id,
-                image_url,
-                mobile_image_url,
-                link_url,
-                sort_order,
-                created_by,
-                created_at,
-                updated_at,
-                profiles:created_by (
-                    first_name,
-                    last_name,
-                    avatar_img
-                )
-            `)
-            .order('sort_order', { ascending: true })
-            .order('created_at', { ascending: false })
-            .limit(12)
+    const cached = getNewsSliderCacheState()
+    if (cached.payload && cached.status !== 'MISS') {
+        setNewsSliderHeaders(res, cached.status)
 
-        if (error) {
-            return res.status(500).json({ error: error.message })
+        if (cached.status === 'STALE') {
+            refreshNewsSliderCache().catch(error => {
+                console.error('Failed to refresh news slider cache:', error)
+            })
         }
 
-        res.json({ slides: (data || []).map(normalizeSliderItem) })
+        return res.json(cached.payload)
+    }
+
+    try {
+        const payload = await refreshNewsSliderCache()
+        setNewsSliderHeaders(res, 'MISS')
+        res.json(payload)
     } catch (error) {
         res.status(500).json({ error: error.message || 'News slider service is unavailable' })
+    }
+})
+
+router.post('/news-slider/assets', requireUser, async (req, res) => {
+    try {
+        const admin = await requireAdmin(req, res)
+        if (!admin) return
+
+        const parsed = parseDataUrl(req.body?.dataUrl)
+        if (!parsed) {
+            return res.status(400).json({ error: 'Invalid image payload' })
+        }
+
+        const contentType = String(req.body?.contentType || parsed.contentType).toLowerCase()
+        if (contentType !== parsed.contentType || !ALLOWED_SLIDER_IMAGE_TYPES.has(contentType)) {
+            return res.status(400).json({ error: 'Unsupported image type' })
+        }
+
+        if (parsed.buffer.length > MAX_SLIDER_IMAGE_SIZE) {
+            return res.status(413).json({ error: 'Изображение слишком большое. Выберите файл меньше 8 МБ.' })
+        }
+
+        const fileName = sanitizeFileName(req.body?.fileName, `image.${extensionForContentType(contentType)}`)
+        const hasExtension = /\.[a-zA-Z0-9]+$/.test(fileName)
+        const finalFileName = hasExtension ? fileName : `${fileName}.${extensionForContentType(contentType)}`
+        const objectPath = `main-slider/${Date.now()}-${createRandomSuffix()}-${finalFileName}`
+
+        const { error } = await admin.storage
+            .from(SLIDER_STORAGE_BUCKET)
+            .upload(objectPath, parsed.buffer, {
+                cacheControl: '31536000',
+                contentType,
+                upsert: false
+            })
+
+        if (error) throw error
+
+        res.status(201).json({
+            bucket: SLIDER_STORAGE_BUCKET,
+            path: objectPath,
+            url: buildPublicStorageUrl(SLIDER_STORAGE_BUCKET, objectPath)
+        })
+    } catch (error) {
+        console.error('Failed to upload news slider asset:', error)
+        res.status(500).json({ error: 'Failed to upload image' })
     }
 })
 
@@ -325,8 +499,8 @@ router.post('/news-slider', requireUser, async (req, res) => {
         const admin = await requireAdmin(req, res)
         if (!admin) return
 
-        const imageUrl = normalizeText(req.body?.image_url)
-        const mobileImageUrl = normalizeText(req.body?.mobile_image_url) || null
+        const imageUrl = normalizeRequiredUrl(req.body?.image_url)
+        const mobileImageUrl = req.body?.mobile_image_url ? normalizeRequiredUrl(req.body.mobile_image_url) : null
         const linkUrl = normalizeOptionalUrl(req.body?.link_url)
         const sortOrder = normalizePositiveInteger(req.body?.sort_order, 1)
 
@@ -334,12 +508,16 @@ router.post('/news-slider', requireUser, async (req, res) => {
             return res.status(400).json({ error: 'Image is required' })
         }
 
+        if (req.body?.mobile_image_url && !mobileImageUrl) {
+            return res.status(400).json({ error: 'Mobile image URL is invalid' })
+        }
+
         if (!sortOrder) {
             return res.status(400).json({ error: 'Sort order must be a positive integer' })
         }
 
         if (imageUrl.length > MAX_SLIDER_IMAGE_SIZE || (mobileImageUrl && mobileImageUrl.length > MAX_SLIDER_IMAGE_SIZE)) {
-            return res.status(400).json({ error: 'Image is too large. Choose a file smaller than 5 MB.' })
+            return res.status(400).json({ error: 'Image URL is too long.' })
         }
 
         if (linkUrl === '') {
@@ -363,7 +541,9 @@ router.post('/news-slider', requireUser, async (req, res) => {
         }
 
         await reorderSliderItems(admin, data.id, sortOrder)
+        invalidateNewsSliderCache()
 
+        res.set('X-Cache-Status', 'BYPASS')
         res.status(201).json({ slide: { ...data, sort_order: sortOrder } })
     } catch (error) {
         res.status(500).json({ error: error.message || 'News slider service is unavailable' })
@@ -375,8 +555,8 @@ router.patch('/news-slider/:id', requireUser, async (req, res) => {
         const admin = await requireAdmin(req, res)
         if (!admin) return
 
-        const imageUrl = normalizeText(req.body?.image_url)
-        const mobileImageUrl = normalizeText(req.body?.mobile_image_url) || null
+        const imageUrl = normalizeRequiredUrl(req.body?.image_url)
+        const mobileImageUrl = req.body?.mobile_image_url ? normalizeRequiredUrl(req.body.mobile_image_url) : null
         const linkUrl = normalizeOptionalUrl(req.body?.link_url)
         const sortOrder = normalizePositiveInteger(req.body?.sort_order, null)
 
@@ -384,12 +564,16 @@ router.patch('/news-slider/:id', requireUser, async (req, res) => {
             return res.status(400).json({ error: 'Image is required' })
         }
 
+        if (req.body?.mobile_image_url && !mobileImageUrl) {
+            return res.status(400).json({ error: 'Mobile image URL is invalid' })
+        }
+
         if (sortOrder === null && req.body?.sort_order !== undefined) {
             return res.status(400).json({ error: 'Sort order must be a positive integer' })
         }
 
         if (imageUrl.length > MAX_SLIDER_IMAGE_SIZE || (mobileImageUrl && mobileImageUrl.length > MAX_SLIDER_IMAGE_SIZE)) {
-            return res.status(400).json({ error: 'Image is too large. Choose a file smaller than 5 MB.' })
+            return res.status(400).json({ error: 'Image URL is too long.' })
         }
 
         if (linkUrl === '') {
@@ -417,7 +601,9 @@ router.patch('/news-slider/:id', requireUser, async (req, res) => {
         }
 
         const nextSortOrder = sortOrder ? await reorderSliderItems(admin, data.id, sortOrder) : data.sort_order
+        invalidateNewsSliderCache()
 
+        res.set('X-Cache-Status', 'BYPASS')
         res.json({ slide: { ...data, sort_order: nextSortOrder || data.sort_order } })
     } catch (error) {
         res.status(500).json({ error: error.message || 'News slider service is unavailable' })
@@ -438,6 +624,8 @@ router.delete('/news-slider/:id', requireUser, async (req, res) => {
             return res.status(500).json({ error: error.message })
         }
 
+        invalidateNewsSliderCache()
+        res.set('X-Cache-Status', 'BYPASS')
         res.json({ ok: true })
     } catch (error) {
         res.status(500).json({ error: error.message || 'News slider service is unavailable' })
