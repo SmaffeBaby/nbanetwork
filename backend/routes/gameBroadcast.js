@@ -49,6 +49,13 @@ router.get('/game-broadcast/:gameId', async (req, res) => {
 })
 
 async function fetchGameMeta(gameId) {
+    if (gameId.startsWith('espn:')) {
+        const recap = await require('../services/espnGameService').getEspnGame(gameId)
+        const m = recap.meta
+        return { gameId, dateUTC: recap.dateUTC,
+            home: { teamId: m.homeTeamId, abbr: m.homeAbbr, name: m.homeTeam, score: m.homeScore },
+            away: { teamId: m.awayTeamId, abbr: m.awayAbbr, name: m.awayTeam, score: m.awayScore } }
+    }
     const boxUrl = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`
     try {
         const response = await axios.get(boxUrl, { timeout: 15000, headers: NBA_CDN_HEADERS })

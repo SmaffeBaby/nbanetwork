@@ -1,11 +1,11 @@
 <template>
-  <form class="space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg sm:p-6" @submit.prevent="save">
+  <form class="space-y-5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-lg sm:p-6" @submit.prevent="save">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="text-xl font-black text-gray-950">{{ article ? 'Редактировать новость' : 'Добавить новость' }}</h2>
-        <p class="text-sm font-semibold text-gray-500">Статья появится в ленте и на страницах выбранных игр.</p>
+        <h2 class="text-xl font-black text-gray-950 dark:text-slate-100">{{ article ? 'Редактировать новость' : 'Добавить новость' }}</h2>
+        <p class="text-sm font-semibold text-gray-500 dark:text-slate-400">Статья появится в ленте и на страницах выбранных игр.</p>
       </div>
-      <button type="button" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700" @click="$emit('cancel')">
+      <button type="button" class="rounded-xl border border-gray-200 dark:border-slate-700 px-4 py-2 text-sm font-bold text-gray-700 dark:text-slate-200" @click="$emit('cancel')">
         Закрыть
       </button>
     </div>
@@ -16,20 +16,20 @@
           v-model="title"
           type="text"
           required
-          class="w-full rounded-xl border border-gray-200 px-4 py-3 text-lg font-black outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+          class="w-full rounded-xl border border-gray-200 dark:border-slate-700 px-4 py-3 text-lg font-black outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
           placeholder="Заголовок новости"
         />
 
-        <div class="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-          <div class="flex flex-wrap gap-2 border-b border-gray-200 bg-white p-2">
-            <select class="rounded-lg border border-gray-200 px-2 py-2 text-sm font-semibold" @change="handleBlockFormat">
+        <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
+          <div class="flex flex-wrap gap-2 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2">
+            <select class="rounded-lg border border-gray-200 dark:border-slate-700 px-2 py-2 text-sm font-semibold" @change="handleBlockFormat">
               <option value="p">Абзац</option>
               <option value="h2">Заголовок H2</option>
               <option value="h3">Заголовок H3</option>
               <option value="blockquote">Цитата</option>
               <option value="sources">Источники</option>
             </select>
-            <select class="rounded-lg border border-gray-200 px-2 py-2 text-sm font-semibold" @change="runCommand('fontName', ($event.target as HTMLSelectElement).value)">
+            <select class="rounded-lg border border-gray-200 dark:border-slate-700 px-2 py-2 text-sm font-semibold" @change="runCommand('fontName', ($event.target as HTMLSelectElement).value)">
               <option value="Inter">Inter</option>
               <option value="Arial">Arial</option>
               <option value="Georgia">Georgia</option>
@@ -61,7 +61,7 @@
 
           <div
             ref="editor"
-            class="news-editor news-content min-h-[360px] bg-white p-4 outline-none"
+            class="news-editor news-content min-h-[360px] bg-white dark:bg-slate-900 p-4 outline-none"
             contenteditable="true"
             @click="selectEditorImage"
             @input="syncContent"
@@ -71,32 +71,32 @@
 
       <aside class="space-y-4">
         <label class="block space-y-2">
-          <span class="text-sm font-bold text-gray-700">Обложка URL</span>
+          <span class="text-sm font-bold text-gray-700 dark:text-slate-200">Обложка URL</span>
           <input v-model="coverImageUrl" type="url" class="field" placeholder="https://..." />
         </label>
 
         <label class="block space-y-2">
-          <span class="text-sm font-bold text-gray-700">Обложка файлом</span>
-          <input type="file" accept="image/*" class="field bg-white text-sm" @change="addCoverFile" />
+          <span class="text-sm font-bold text-gray-700 dark:text-slate-200">Обложка файлом</span>
+          <input type="file" accept="image/*" class="field bg-white dark:bg-slate-900 text-sm" @change="addCoverFile" />
         </label>
 
         <label class="block space-y-2">
-          <span class="text-sm font-bold text-gray-700">ID игр</span>
+          <span class="text-sm font-bold text-gray-700 dark:text-slate-200">ID игр</span>
           <textarea v-model="gameIdsInput" class="field min-h-24" placeholder="0042500224, 0022500001" />
         </label>
 
         <label class="block space-y-2">
-          <span class="text-sm font-bold text-gray-700">Команды</span>
+          <span class="text-sm font-bold text-gray-700 dark:text-slate-200">Команды</span>
           <textarea v-model="teamAbbrsInput" class="field min-h-20" placeholder="DET, OKC, BOS" />
         </label>
 
         <label class="block space-y-2">
-          <span class="text-sm font-bold text-gray-700">Хештеги</span>
+          <span class="text-sm font-bold text-gray-700 dark:text-slate-200">Хештеги</span>
           <textarea v-model="hashtagsInput" class="field min-h-24" placeholder="#playoffs, #okc, #finals" />
         </label>
 
-        <label class="flex items-center gap-3 rounded-xl border border-gray-200 p-3 text-sm font-bold text-gray-700">
-          <input v-model="published" type="checkbox" class="h-4 w-4 rounded border-gray-300" />
+        <label class="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-slate-700 p-3 text-sm font-bold text-gray-700 dark:text-slate-200">
+          <input v-model="published" type="checkbox" class="h-4 w-4 rounded border-gray-300 dark:border-slate-600" />
           Опубликовано
         </label>
 

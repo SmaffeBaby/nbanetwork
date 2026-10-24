@@ -166,12 +166,19 @@ router.get('/game-detail/:gameId', async (req, res) => {
     const key = `game-detail:v2:${gameId}`
 
     try {
+        if (gameId.startsWith('espn:')) {
+            const recap = await require('../services/espnGameService').getEspnGame(gameId)
+            const m = recap.meta
+            return res.json({ gameId, status: m.status, dateUTC: recap.dateUTC, dateMSK: recap.dateMSK,
+                home: { teamId: m.homeTeamId, abbr: m.homeAbbr, name: m.homeTeam, score: m.homeScore },
+                away: { teamId: m.awayTeamId, abbr: m.awayAbbr, name: m.awayTeam, score: m.awayScore } })
+        }
         const raw = await fetchWithCache({
             key,
             ttl: 1000 * 60 * 10,
             fetcher: async () => {
                 const response = await fetch(
-                    `${PYTHON_API}/game-detail/${gameId}`
+                    `${PYTHON_API}/game-detail/${gameId}`, { signal: AbortSignal.timeout(20000) }
                 )
 
                 if (!response.ok) {

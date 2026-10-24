@@ -14,6 +14,9 @@ function hasExplicitTime(value) {
 }
 
 async function fetchGameRecap(gameId, periodFilter = null) {
+    if (gameId.startsWith('espn:')) {
+        return require('../services/espnGameService').getEspnGame(gameId, periodFilter)
+    }
     try {
         let game = null
         let plays = []

@@ -1,11 +1,11 @@
 <template>
-  <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-md">
+  <div class="rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-md">
     <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div>
         <div class="text-xs font-semibold uppercase tracking-wide text-blue-600">
           VK Video
         </div>
-        <h2 class="mt-1 text-xl font-bold text-gray-950">
+        <h2 class="mt-1 text-xl font-bold text-gray-950 dark:text-slate-100">
           Трансляция матча
         </h2>
       </div>
@@ -14,7 +14,7 @@
           href="https://vkvideo.ru/playlist/-202211208_8"
           target="_blank"
           rel="noopener noreferrer"
-          class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:border-gray-900 hover:text-gray-950 hover:no-underline"
+          class="rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 transition hover:border-gray-900 hover:text-gray-950 hover:no-underline"
       >
         Плейлист VK
       </a>
@@ -22,7 +22,7 @@
 
     <div
         v-if="loading"
-        class="rounded-xl border border-gray-100 bg-gray-50 p-5 text-sm text-gray-500"
+        class="rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-5 text-sm text-gray-500 dark:text-slate-400"
     >
       Ищем трансляцию по командам и дате МСК...
     </div>
@@ -47,21 +47,21 @@
       </div>
 
       <div class="space-y-2">
-        <h3 class="text-lg font-semibold leading-snug text-gray-950">
+        <h3 class="text-lg font-semibold leading-snug text-gray-950 dark:text-slate-100">
           {{ broadcast.video.title }}
         </h3>
 
-        <div class="flex flex-wrap gap-2 text-xs text-gray-500">
+        <div class="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-slate-400">
           <span
               v-if="broadcast.video.publishedAtMSK?.label"
-              class="rounded-lg bg-gray-100 px-3 py-1"
+              class="rounded-lg bg-gray-100 dark:bg-slate-800 px-3 py-1"
           >
             {{ broadcast.video.publishedAtMSK.label }}
           </span>
 
           <span
               v-if="broadcast.match?.score"
-              class="rounded-lg bg-gray-100 px-3 py-1"
+              class="rounded-lg bg-gray-100 dark:bg-slate-800 px-3 py-1"
           >
             Match score: {{ broadcast.match.score }}
           </span>
@@ -70,9 +70,9 @@
 
       <div
           v-if="broadcast.alternatives?.length"
-          class="rounded-xl border border-gray-100 bg-gray-50 p-4"
+          class="rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-4"
       >
-        <div class="mb-2 text-xs font-semibold uppercase text-gray-500">
+        <div class="mb-2 text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">
           Похожие трансляции
         </div>
 
@@ -83,7 +83,7 @@
               :href="item.url"
               target="_blank"
               rel="noopener noreferrer"
-              class="block text-sm text-gray-700 hover:text-gray-950"
+              class="block text-sm text-gray-700 dark:text-slate-200 hover:text-gray-950"
           >
             {{ item.title }}
           </a>
@@ -93,13 +93,13 @@
 
     <div
         v-else
-        class="rounded-xl border border-gray-100 bg-gray-50 p-5 text-sm text-gray-600"
+        class="rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-5 text-sm text-gray-600 dark:text-slate-300"
     >
       {{ broadcast?.message || 'Трансляция для этого матча пока не найдена.' }}
 
       <div
           v-if="broadcast?.target?.dateMSK?.label"
-          class="mt-3 text-xs text-gray-500"
+          class="mt-3 text-xs text-gray-500 dark:text-slate-400"
       >
         Дата матча: {{ broadcast.target.dateMSK.label }}
       </div>

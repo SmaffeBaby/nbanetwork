@@ -4,14 +4,19 @@
     <GamePlayersFilters
         v-model="filters"
         :has-overtime="hasOvertime"
+        :period-stats-available="recap?.supportsPeriodStats !== false"
     />
 
+    <p v-if="loading" role="status" class="text-sm text-gray-500 dark:text-slate-400">Загружаем статистику…</p>
+    <p v-if="error" role="alert" class="text-sm text-red-500">{{ error }}</p>
+    <p v-if="recap?.periodNotice" class="text-xs text-gray-500 dark:text-slate-400">{{ recap.periodNotice }}</p>
     <GameTeamsTabs
         :teams="teams"
         v-model:activeTeam="activeTeam"
     />
 
     <GamePlayersTable
+        v-if="!loading && !error"
         :players="filtered"
         :sortKey="sortKey"
         :sortDir="sortDir"
@@ -26,6 +31,7 @@
     />
 
     <PlayerExcelStats
+        v-if="!loading && !error"
         :players="players"
         :recap="recap"
         :getPlayerImage="getPlayerImage"
@@ -54,7 +60,7 @@ const filters = ref({
   period: null as string | number | null
 })
 
-const { recap } = useGameFinal(filters)
+const { recap, loading, error } = useGameFinal(filters)
 const { players } = useGamePlayersStats(recap)
 
 const hasKnownOvertime = ref(false)

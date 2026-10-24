@@ -8,7 +8,7 @@
       Нет травмированных игроков
     </div>
 
-    <div class="grid grid-cols-1 gap-2 text-xs text-gray-500 sm:grid-cols-2 sm:gap-4 sm:text-gray-400">
+    <div class="grid grid-cols-1 gap-2 text-xs text-gray-500 dark:text-slate-400 sm:grid-cols-2 sm:gap-4 sm:text-gray-400">
       <div class="font-semibold sm:text-left">
         {{ awayAbbr }}
       </div>
@@ -25,7 +25,7 @@
             v-for="p in awayPlayers"
             :key="p.PLAYER_ID"
             class="flex min-w-0 items-center gap-2 rounded-xl p-3 sm:gap-3
-                   bg-white/70 backdrop-blur-md
+                   bg-white/70 dark:bg-slate-900/80 backdrop-blur-md
                    border border-white/30
                    shadow-sm hover:shadow-md transition"
         >
@@ -42,14 +42,14 @@
               })"
               :data-player-id="p.PLAYER_ID"
               @error="handleImageError"
-              class="h-10 w-10 shrink-0 rounded-lg bg-gray-100 object-cover"
+              class="h-10 w-10 shrink-0 rounded-lg bg-gray-100 dark:bg-slate-800 object-cover"
           />
 
           <div class="min-w-0 flex-1">
             <router-link
                 :to="{ name: 'PlayerPage', params: { name: p.name } }"
-                class="block text-sm font-semibold truncate text-gray-900 hover:underline"
-                style="color: black;"
+                class="block text-sm font-semibold truncate text-gray-900 dark:text-slate-100 hover:underline"
+
             >
               {{ p.name }}
             </router-link>
@@ -70,7 +70,7 @@
       </div>
 
       <div class="space-y-3">
-        <div v-if="homePlayers.length" class="text-xs font-semibold text-gray-500 sm:hidden">
+        <div v-if="homePlayers.length" class="text-xs font-semibold text-gray-500 dark:text-slate-400 sm:hidden">
           {{ homeAbbr }}
         </div>
 
@@ -78,7 +78,7 @@
             v-for="p in homePlayers"
             :key="p.PLAYER_ID"
             class="flex min-w-0 items-center justify-start gap-2 rounded-xl p-3 sm:justify-end sm:gap-3
-                   bg-white/70 backdrop-blur-md
+                   bg-white/70 dark:bg-slate-900/80 backdrop-blur-md
                    border border-white/30
                    shadow-sm hover:shadow-md transition"
         >
@@ -86,8 +86,8 @@
           <div class="order-3 min-w-0 flex-1 text-left sm:order-none sm:text-right">
             <router-link
                 :to="{ name: 'PlayerPage', params: { name: p.name } }"
-                class="block text-sm font-semibold truncate text-gray-900 hover:underline"
-                style="color: black;"
+                class="block text-sm font-semibold truncate text-gray-900 dark:text-slate-100 hover:underline"
+
             >
               {{ p.name }}
             </router-link>
@@ -111,7 +111,7 @@
               })"
               :data-player-id="p.PLAYER_ID"
               @error="handleImageError"
-              class="order-2 h-10 w-10 shrink-0 rounded-lg bg-gray-100 object-cover sm:order-none"
+              class="order-2 h-10 w-10 shrink-0 rounded-lg bg-gray-100 dark:bg-slate-800 object-cover sm:order-none"
           />
 
           <img

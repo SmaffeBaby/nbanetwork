@@ -1,80 +1,36 @@
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import type { Game } from '../../../api/api.ts'
-import { formatGameTime, getDateKey, toMSK } from '../utils'
+import { formatGameTime } from '../utils'
+import { getTodayDateKey, shiftDateKey } from '../games/useGamesByDate'
 
 export function useDailyGames() {
     const gamesList = ref<Game[]>([])
     const selectedTimezone = ref('Europe/Moscow')
     const error = ref<string | null>(null)
-
-    const getTomorrowMSK = () => {
-        const nowMSK = toMSK(new Date())
-        nowMSK.setHours(0, 0, 0, 0)
-        nowMSK.setDate(nowMSK.getDate() + 1)
-        return nowMSK
-    }
-
+    const loading = ref(true)
+    let pending = false
+    let timer: ReturnType<typeof setInterval> | undefined
     const loadGames = async () => {
+        if (pending) return
+        pending = true
         try {
-            const targetDate = getTomorrowMSK()
-            const startMSK = new Date(targetDate)
-            startMSK.setHours(0, 0, 0, 0)
-            const endMSK = new Date(targetDate)
-            endMSK.setHours(23, 59, 59, 999)
-
-            const prevDate = new Date(targetDate.getTime() - 86400000)
-            const nextDate = new Date(targetDate.getTime() + 86400000)
-            const datesToFetch = [prevDate, targetDate, nextDate]
-
-            let allGames: Game[] = []
-            for (const d of datesToFetch) {
-                const dateKey = getDateKey(d)
-                const res = await fetch(`/api/daily-games?date=${dateKey}`)
-                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
-                const data: Game[] = await res.json()
-                allGames.push(...data)
-            }
-
-            gamesList.value = allGames.filter(game => {
-                const gameMSK = toMSK(new Date(game.datetime))
-                return gameMSK >= startMSK && gameMSK <= endMSK
-            })
-
+            const dateKey = shiftDateKey(getTodayDateKey(), 1)
+            const res = await fetch(`/api/daily-games?date=${dateKey}`, { signal: AbortSignal.timeout(30000) })
+            if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
+            gamesList.value = await res.json()
             error.value = null
-        } catch (err) {
-            console.error('Ошибка при загрузке игр:', err)
+        } catch {
             error.value = 'Не удалось загрузить игры'
-            gamesList.value = []
+        } finally {
+            loading.value = false
+            pending = false
         }
     }
-
-    const updateScores = () => {
-        if (!Array.isArray(gamesList.value)) return
-
-        gamesList.value = gamesList.value.map(game => {
-            if (game.period === 0 && game.home_team_score === 0 && game.visitor_team_score === 0) return game
-            if (game.status === 'Final') return game
-
-            const randomScore = () => Math.floor(Math.random() * 3)
-            return {
-                ...game,
-                home_team_score: (game.home_team_score ?? 0) + randomScore(),
-                visitor_team_score: (game.visitor_team_score ?? 0) + randomScore(),
-            }
-        })
-    }
-
     onMounted(() => {
         loadGames()
-        setInterval(updateScores, 2000)
+        timer = setInterval(loadGames, 60000)
     })
-
-    return {
-        gamesList,
-        selectedTimezone,
-        error,
-        formatGameTime,
-    }
+    onUnmounted(() => clearInterval(timer))
+    return { gamesList, selectedTimezone, error, loading, formatGameTime }
 }
-
 export type { Game } from '../../../api/api.ts'

@@ -1,29 +1,29 @@
 <template>
   <div
       v-if="recap"
-      class="rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-md sm:p-6"
+      class="rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-left shadow-md sm:p-6"
   >
     <article v-if="apRecap" class="space-y-5">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-800 pb-4">
         <div class="space-y-1">
           <div class="text-xs font-semibold uppercase tracking-wide text-red-600">
             AP NBA
           </div>
 
-          <div class="text-xs text-gray-500">
+          <div class="text-xs text-gray-500 dark:text-slate-400">
             {{ apRecap.byline || 'Associated Press' }}
             <span v-if="formattedApDate"> · {{ formattedApDate }}</span>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-          <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+          <div class="inline-flex rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 p-1">
             <button
                 type="button"
                 class="rounded-md px-3 py-1.5 text-xs font-semibold transition"
                 :class="selectedLanguage === 'en'
-                ? 'bg-white text-gray-950 shadow-sm'
-                : 'text-gray-500 hover:text-gray-900'"
+                ? 'bg-white dark:bg-slate-900 text-gray-950 dark:text-slate-100 shadow-sm'
+                : 'text-gray-500 dark:text-slate-400 hover:text-gray-900'"
                 @click="selectedLanguage = 'en'"
             >
               EN
@@ -33,8 +33,8 @@
                 type="button"
                 class="rounded-md px-3 py-1.5 text-xs font-semibold transition"
                 :class="selectedLanguage === 'ru'
-                ? 'bg-white text-gray-950 shadow-sm'
-                : 'text-gray-500 hover:text-gray-900'"
+                ? 'bg-white dark:bg-slate-900 text-gray-950 dark:text-slate-100 shadow-sm'
+                : 'text-gray-500 dark:text-slate-400 hover:text-gray-900'"
                 @click="selectedLanguage = 'ru'"
             >
               RU
@@ -46,7 +46,7 @@
               :href="apRecap.sourceUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:border-gray-900 hover:text-gray-950 hover:no-underline"
+              class="inline-flex items-center rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 transition hover:border-gray-900 hover:text-gray-950 hover:no-underline"
           >
             Читать AP
           </a>
@@ -61,11 +61,11 @@
       />
 
       <div class="space-y-3">
-        <h2 class="text-xl font-bold leading-tight text-gray-950 sm:text-2xl">
+        <h2 class="text-xl font-bold leading-tight text-gray-950 dark:text-slate-100 sm:text-2xl">
           {{ displayApRecap.title || recap.title }}
         </h2>
 
-        <div class="text-sm font-semibold text-gray-500">
+        <div class="text-sm font-semibold text-gray-500 dark:text-slate-400">
           {{ selectedLanguage === 'ru' ? 'Обзор матча' : 'Game Recap' }}
         </div>
       </div>
@@ -75,12 +75,12 @@
           class="rounded-lg border px-3 py-2 text-sm"
           :class="translationError
           ? 'border-red-100 bg-red-50 text-red-600'
-          : 'border-gray-100 bg-gray-50 text-gray-500'"
+          : 'border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 text-gray-500 dark:text-slate-400'"
       >
         {{ translationError || 'Переводим статью...' }}
       </div>
 
-      <div class="space-y-4 text-left text-[15px] leading-7 text-gray-800">
+      <div class="space-y-4 text-left text-[15px] leading-7 text-gray-800 dark:text-slate-200">
         <p
             v-for="(paragraph, i) in displayApRecap.paragraphs || []"
             :key="i"
@@ -89,10 +89,10 @@
         </p>
       </div>
 
-      <div class="flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+      <div class="flex flex-wrap gap-2 border-t border-gray-100 dark:border-slate-800 pt-4">
         <span
             v-if="recap.insight"
-            class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600"
+            class="rounded-full bg-gray-100 dark:bg-slate-800 px-3 py-1 text-xs font-medium text-gray-600 dark:text-slate-300"
         >
           {{ recap.insight }}
         </span>
@@ -100,7 +100,7 @@
         <span
             v-for="(q, i) in displayQuarters"
             :key="i"
-            class="rounded-lg bg-gray-50 px-3 py-1 text-xs text-gray-600"
+            class="rounded-lg bg-gray-50 dark:bg-slate-900 px-3 py-1 text-xs text-gray-600 dark:text-slate-300"
         >
           {{ q }}
         </span>
@@ -110,14 +110,19 @@
     <div v-else class="space-y-5">
       <div class="flex justify-left mb-2">
         <img
+            v-if="recap.source !== 'espn'"
             src="/logos/RE_AI.svg"
             alt="RE AI"
             class="h-35 w-35 opacity-80"
         />
       </div>
 
+      <div v-if="recap.source === 'espn'" class="space-y-2">
+        <h2 class="text-xl font-bold">{{ recap.title }}</h2>
+        <p v-if="recap.venue" class="text-sm text-gray-500 dark:text-slate-400">{{ recap.venue }}</p>
+      </div>
       <div class="flex justify-between items-center">
-        <span class="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
+        <span class="text-xs bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 px-3 py-1 rounded-full">
           {{ recap.insight || '—' }}
         </span>
       </div>
@@ -131,8 +136,8 @@
         relative
         p-3
         rounded-xl
-        border border-gray-100
-        bg-gray-50
+        border border-gray-100 dark:border-slate-800
+        bg-gray-50 dark:bg-slate-900
         hover:bg-white
         hover:shadow-sm
         transition-all
@@ -141,10 +146,10 @@
       "
         >
 
-          <div class="absolute left-0 top-0 h-full w-1 bg-gray-200 group-hover:bg-blue-400 transition-colors"></div>
+          <div class="absolute left-0 top-0 h-full w-1 bg-gray-200 dark:bg-slate-700 group-hover:bg-blue-400 transition-colors"></div>
 
           <div
-              class="text-sm text-gray-800 leading-relaxed pl-3"
+              class="text-sm text-gray-800 dark:text-slate-200 leading-relaxed pl-3"
               v-html="line"
           />
         </div>
@@ -180,16 +185,16 @@
           <router-link
               v-if="recap.mvp?.name"
               :to="{ name: 'PlayerPage', params: { name: recap.mvp.name } }"
-              class="text-lg font-semibold text-gray-900 hover:underline"
+              class="text-lg font-semibold text-gray-900 dark:text-slate-100 hover:underline"
           >
             {{ recap.mvp.name }}
           </router-link>
 
-          <div v-else class="text-lg font-semibold text-gray-900">
+          <div v-else class="text-lg font-semibold text-gray-900 dark:text-slate-100">
             —
           </div>
 
-          <div class="text-sm text-gray-600">
+          <div class="text-sm text-gray-600 dark:text-slate-300">
             {{ recap.mvp?.stats || '' }}
           </div>
         </div>
@@ -203,10 +208,10 @@
 
       <div
           v-if="recap.clutch"
-          class="bg-gray-50 border border-gray-100 p-4 rounded-xl"
+          class="bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 rounded-xl"
       >
-        <div class="text-xs text-gray-500 mb-1">Clutch</div>
-        <div class="text-sm text-gray-800">
+        <div class="text-xs text-gray-500 dark:text-slate-400 mb-1">Clutch</div>
+        <div class="text-sm text-gray-800 dark:text-slate-200">
           {{ recap.clutch }}
         </div>
       </div>
@@ -215,7 +220,7 @@
         <div
             v-for="(q, i) in displayQuarters"
             :key="i"
-            class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-lg"
+            class="text-xs bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 px-3 py-1 rounded-lg"
         >
           {{ q }}
         </div>

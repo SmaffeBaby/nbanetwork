@@ -1,9 +1,9 @@
 <template>
-  <section class="overflow-hidden rounded-lg border border-gray-200 bg-white text-left">
-    <div class="flex items-center justify-between border-b border-gray-200 px-3 py-3 sm:px-4">
+  <section class="overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-left">
+    <div class="flex items-center justify-between border-b border-gray-200 dark:border-slate-700 px-3 py-3 sm:px-4">
       <div>
-        <h2 class="text-base font-semibold text-gray-900">Комментарии</h2>
-        <p class="text-xs text-gray-500">Обсуждение этой игры</p>
+        <h2 class="text-base font-semibold text-gray-900 dark:text-slate-100">Комментарии</h2>
+        <p class="text-xs text-gray-500 dark:text-slate-400">Обсуждение этой игры</p>
       </div>
 
       <span
@@ -14,16 +14,16 @@
       </span>
     </div>
 
-    <div class="h-[60vh] min-h-[360px] overflow-y-auto bg-gray-50 p-3 sm:h-[420px] sm:p-4">
-      <div v-if="!user" class="flex h-full items-center justify-center text-sm text-gray-500">
+    <div class="h-[60vh] min-h-[360px] overflow-y-auto bg-gray-50 dark:bg-slate-900 p-3 sm:h-[420px] sm:p-4">
+      <div v-if="!user" class="flex h-full items-center justify-center text-sm text-gray-500 dark:text-slate-400">
         Войдите, чтобы читать и отправлять комментарии.
       </div>
 
-      <div v-else-if="loading" class="flex h-full items-center justify-center text-sm text-gray-500">
+      <div v-else-if="loading" class="flex h-full items-center justify-center text-sm text-gray-500 dark:text-slate-400">
         Загружаем комментарии...
       </div>
 
-      <div v-else-if="comments.length === 0" class="flex h-full items-center justify-center px-4 text-center text-sm text-gray-500">
+      <div v-else-if="comments.length === 0" class="flex h-full items-center justify-center px-4 text-center text-sm text-gray-500 dark:text-slate-400">
         Здесь пока тихо. Будьте первым. Все комментарии удалятся через 4 дня.
       </div>
 
@@ -48,9 +48,9 @@
             />
             <div
                 v-else
-                class="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gray-200"
+                class="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700"
             >
-              <span class="text-xs font-medium text-gray-600">
+              <span class="text-xs font-medium text-gray-600 dark:text-slate-300">
                 {{ getInitials(comment) }}
               </span>
             </div>
@@ -66,20 +66,20 @@
             >
               <RouterLink
                   :to="{ name: 'PublicProfile', params: { id: comment.user_id } }"
-                  class="min-w-0 truncate text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline"
+                  class="min-w-0 truncate text-sm font-semibold text-gray-900 dark:text-slate-100 hover:text-blue-600 hover:underline"
               >
                 {{ getAuthorName(comment) }}
               </RouterLink>
-              <span class="shrink-0 text-xs font-normal text-gray-500">
+              <span class="shrink-0 text-xs font-normal text-gray-500 dark:text-slate-400">
                 {{ formatTime(comment.created_at) }}
               </span>
             </div>
 
             <div
-                class="leading-1.5 flex w-fit max-w-full flex-col rounded-e-xl rounded-es-xl border-gray-200 p-3 sm:p-4"
+                class="leading-1.5 flex w-fit max-w-full flex-col rounded-e-xl rounded-es-xl border-gray-200 dark:border-slate-700 p-3 sm:p-4"
                 :class="isOwnComment(comment)
                   ? 'rounded-s-xl rounded-ee-xl rounded-es-none bg-blue-700 text-white'
-                  : 'bg-white text-gray-900 shadow-sm'"
+                  : 'bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-sm'"
             >
               <button
                   v-if="getReplyTarget(comment)"
@@ -87,7 +87,7 @@
                   class="mb-3 rounded-lg border-l-4 px-3 py-2 text-left"
                   :class="isOwnComment(comment)
                     ? 'border-blue-200 bg-blue-600/70 text-blue-50'
-                    : 'border-blue-500 bg-gray-50 text-gray-700'"
+                    : 'border-blue-500 bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-slate-200'"
                   @click="scrollToComment(comment.reply_to_id)"
               >
                 <span class="block text-xs font-semibold">
@@ -107,7 +107,7 @@
                   :src="comment.image_data"
                   alt="Comment attachment"
                   class="mt-3 max-h-72 rounded-lg border object-contain"
-                  :class="isOwnComment(comment) ? 'border-blue-500' : 'border-gray-100'"
+                  :class="isOwnComment(comment) ? 'border-blue-500' : 'border-gray-100 dark:border-slate-800'"
               />
             </div>
 
@@ -117,7 +117,7 @@
             >
               <button
                   type="button"
-                  class="font-medium text-gray-500 hover:text-blue-700"
+                  class="font-medium text-gray-500 dark:text-slate-400 hover:text-blue-700"
                   @click="setReplyTo(comment)"
               >
                 Ответить
@@ -126,7 +126,7 @@
                   v-if="canDeleteComment(comment)"
                   type="button"
                   :disabled="deleting"
-                  class="font-medium text-gray-500 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  class="font-medium text-gray-500 dark:text-slate-400 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                   @click="deleteComment(comment)"
               >
                 Удалить
@@ -137,7 +137,7 @@
       </div>
     </div>
 
-    <div class="border-t border-gray-200 bg-white p-3 sm:p-4">
+    <div class="border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 sm:p-4">
       <p v-if="error" class="mb-2 text-sm text-red-600">{{ error }}</p>
 
       <div
@@ -163,17 +163,17 @@
 
       <div
           v-if="imageData"
-          class="mb-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-2"
+          class="mb-3 flex items-center gap-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 p-2"
       >
         <img :src="imageData" alt="Selected attachment" class="h-14 w-14 rounded object-cover" />
         <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-medium text-gray-900">{{ imageName }}</p>
-          <p class="text-xs text-gray-500">Изображение будет отправлено с сообщением</p>
+          <p class="truncate text-sm font-medium text-gray-900 dark:text-slate-100">{{ imageName }}</p>
+          <p class="text-xs text-gray-500 dark:text-slate-400">Изображение будет отправлено с сообщением</p>
         </div>
         <button
             type="button"
             @click="removeImage"
-            class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100"
+            class="rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100"
         >
           Убрать
         </button>
@@ -181,7 +181,7 @@
 
       <div class="grid grid-cols-[40px_minmax(0,1fr)] items-end gap-2 sm:flex">
         <label
-            class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"
+            class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:bg-gray-200"
             title="Прикрепить изображение"
         >
           <input
@@ -200,7 +200,7 @@
             v-model="message"
             rows="2"
             :disabled="!user || sending"
-            class="block min-w-0 flex-1 resize-none rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+            class="block min-w-0 flex-1 resize-none rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 p-2.5 text-sm text-gray-900 dark:text-slate-100 focus:border-blue-500 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder="Напишите комментарий..."
             @focus="markAsRead"
         />

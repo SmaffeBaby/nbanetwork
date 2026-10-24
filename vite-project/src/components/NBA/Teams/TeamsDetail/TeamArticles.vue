@@ -1,18 +1,18 @@
 <template>
   <section class="space-y-4">
-    <div v-if="loading" class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm font-bold text-gray-500">
+    <div v-if="loading" class="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center text-sm font-bold text-gray-500 dark:text-slate-400">
       Загружаем статьи...
     </div>
-    <div v-else-if="!articles.length" class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm font-bold text-gray-500">
+    <div v-else-if="!articles.length" class="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center text-sm font-bold text-gray-500 dark:text-slate-400">
       Для этой команды пока нет статей.
     </div>
     <div v-else class="grid gap-4 md:grid-cols-2">
-      <article v-for="article in articles" :key="article.id" class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <article v-for="article in articles" :key="article.id" class="overflow-hidden rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
         <RouterLink :to="{ name: 'NewsArticle', params: { slug: article.slug || article.id } }" class="block w-full text-left hover:no-underline">
           <img v-if="article.cover_image_url" :src="article.cover_image_url" :alt="article.title" class="h-44 w-full object-cover" />
           <div class="space-y-2 p-5">
-            <h2 class="text-lg font-black leading-tight text-gray-950">{{ article.title }}</h2>
-            <p class="line-clamp-3 text-sm leading-6 text-gray-600">{{ article.excerpt }}</p>
+            <h2 class="text-lg font-black leading-tight text-gray-950 dark:text-slate-100">{{ article.title }}</h2>
+            <p class="line-clamp-3 text-sm leading-6 text-gray-600 dark:text-slate-300">{{ article.excerpt }}</p>
           </div>
         </RouterLink>
       </article>

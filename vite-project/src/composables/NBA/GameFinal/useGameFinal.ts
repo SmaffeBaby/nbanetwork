@@ -1,4 +1,5 @@
 import { ref, onMounted, watch, type Ref } from 'vue'
+import { internalGameId } from '../../../api/gameNavigation'
 import { useRoute } from 'vue-router'
 
 type Filters = {
@@ -8,7 +9,7 @@ type Filters = {
 
 export function useGameFinal(filters: Ref<Filters>) {
     const route = useRoute()
-    const gameId = route.params.gameId as string
+    const gameId = internalGameId(String(route.params.gameId))
 
     const game = ref<any>(null)
     const recap = ref<any>(null)
@@ -68,7 +69,11 @@ export function useGameFinal(filters: Ref<Filters>) {
         return buildGameFromDetail(await res.json())
     }
 
+    let requestId = 0
     const fetchGame = async () => {
+        const currentRequest = ++requestId
+        loading.value = true
+        error.value = null
         try {
             const period = filters.value?.period
 
@@ -83,6 +88,7 @@ export function useGameFinal(filters: Ref<Filters>) {
             }
 
             const data = await res.json()
+            if (currentRequest !== requestId) return
             const meta = data?.meta || {}
 
             if (!data || (!meta.homeAbbr && !meta.awayAbbr)) {
@@ -126,9 +132,10 @@ export function useGameFinal(filters: Ref<Filters>) {
             }
 
         } catch (e: any) {
+            if (currentRequest !== requestId) return
             error.value = e?.message || 'Unknown error'
         } finally {
-            loading.value = false
+            if (currentRequest === requestId) loading.value = false
         }
     }
 

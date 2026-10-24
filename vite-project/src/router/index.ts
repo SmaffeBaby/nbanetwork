@@ -38,3 +38,10 @@ export const router = createRouter({
         return { top: 0, left: 0 }
     }
 })
+
+// Keep saved links valid while using provider-neutral public URLs.
+router.beforeEach(to => {
+    if (to.name === 'GameDetail' && String(to.params.gameId).startsWith('espn:')) {
+        return { name: 'GameDetail', params: { gameId: String(to.params.gameId).slice(5) }, query: to.query, hash: to.hash, replace: true }
+    }
+})

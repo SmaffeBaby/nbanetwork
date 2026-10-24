@@ -54,7 +54,7 @@
 
     <div
         v-else
-        class="rounded-2xl border border-dashed border-gray-300 bg-white p-5 text-center text-sm text-gray-500"
+        class="rounded-2xl border border-dashed border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-5 text-center text-sm text-gray-500 dark:text-slate-400"
     >
       Любимые игроки появятся здесь после выбора в рейтингах или на странице игрока.
     </div>

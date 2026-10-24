@@ -70,7 +70,8 @@ export function useGamesDatePicker(
 
     const getCountLabel = (dateKey: string) => {
         const countInfo = props.counts[dateKey]
-        if (countInfo?.isLoading) return '...'
+        if (!countInfo || countInfo.isLoading) return '...'
+        if (countInfo.error) return 'Ошибка'
 
         const count = countInfo?.count ?? 0
         if (count === 0) return 'нет игр'

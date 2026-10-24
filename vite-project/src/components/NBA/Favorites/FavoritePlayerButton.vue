@@ -3,7 +3,7 @@
       type="button"
       :title="title"
       :aria-label="title"
-      class="inline-flex items-center justify-center rounded-full bg-white/90 text-rose-500 shadow-lg ring-1 ring-black/5 backdrop-blur transition hover:bg-white hover:scale-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+      class="inline-flex items-center justify-center rounded-full bg-white/90 dark:bg-slate-900/90 text-rose-500 shadow-lg ring-1 ring-black/5 backdrop-blur transition hover:bg-white dark:hover:bg-slate-800 hover:scale-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
       :class="sizeClasses"
       :disabled="pending"
       @click.stop.prevent="toggle"

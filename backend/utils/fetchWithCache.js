@@ -2,10 +2,10 @@ const cache = require('../cache/cache')
 
 const pendingRequests = new Map()
 
-async function fetchWithCache({ key, ttl, fetcher, staleWhileRevalidate = true }) {
+async function fetchWithCache({ key, ttl, fetcher, staleWhileRevalidate = false }) {
     const cached = cache.get(key)
 
-    if (cached) {
+    if (cached !== null) {
         console.log('📦 cache hit:', key)
 
         if (staleWhileRevalidate && !pendingRequests.has(key)) {

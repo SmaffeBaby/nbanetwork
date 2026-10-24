@@ -9,6 +9,9 @@ from nba_api.stats.endpoints import leaguestandings
 from nba_api.stats.endpoints import leaguedashplayerstats, playergamelog
 from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.static import players as static_players
+from calendar_service import CalendarProvider
+
+calendar_provider = CalendarProvider()
 from nba_api.stats.endpoints import teamgamelog
 from nba_api.stats.endpoints import scoreboardv2
 from datetime import datetime, timedelta, timezone
@@ -31,7 +34,7 @@ NBA_CDN_HEADERS = {
 }
 STATIC_SCOREBOARD_CACHE = {}
 SCHEDULE_GAME_CACHE = None
-SCHEDULE_GAME_CACHE_TTL_SECONDS = 6 * 60 * 60
+SCHEDULE_GAME_CACHE_TTL_SECONDS = 60
 GAMES_BY_DATE_CACHE_TTL_SECONDS = 5 * 60
 GAMES_BY_DATE_CACHE_MAX_SIZE = 256
 GAMES_BY_DATE_MIN_DATE = datetime(2000, 1, 1).date()
@@ -40,6 +43,7 @@ GAMES_BY_DATE_FETCH_SEMAPHORE = threading.BoundedSemaphore(2)
 GAMES_BY_DATE_CACHE = {}
 GAMES_BY_DATE_CACHE_LOCK = threading.Lock()
 SCHEDULE_GAME_CACHE_LOCK = threading.Lock()
+SCHEDULE_FETCH_LOCK = threading.Lock()
 CYRILLIC_TO_LATIN = str.maketrans({
     "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
     "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
@@ -239,6 +243,7 @@ def normalize_scheduled_game(game, fallback_date=None):
         "HOME_TEAM_SCORE": home.get("score"),
         "VISITOR_TEAM_SCORE": away.get("score"),
         "GAME_STATUS": game.get("gameStatusText") or game.get("gameStatusTextLong") or game.get("gameStatus") or "TBD",
+        "GAME_STATUS_ID": game.get("gameStatus"),
     }
 
 def normalize_live_boxscore_game(game_id, game):
@@ -300,6 +305,10 @@ def fetch_static_scoreboard(nba_date):
     return games_by_id
 
 def fetch_schedule_games_by_id():
+    with SCHEDULE_FETCH_LOCK:
+        return _fetch_schedule_games_by_id()
+
+def _fetch_schedule_games_by_id():
     global SCHEDULE_GAME_CACHE
 
     now = time.time()
@@ -317,7 +326,7 @@ def fetch_schedule_games_by_id():
         try:
             request = Request(url, headers=NBA_CDN_HEADERS)
 
-            with urlopen(request, timeout=10) as response:
+            with urlopen(request, timeout=4) as response:
                 schedule = json.loads(response.read().decode("utf-8"))
 
             for game_date_entry in schedule.get("leagueSchedule", {}).get("gameDates", []):
@@ -372,7 +381,7 @@ def get_cached_games_by_date(date_key):
 
     with GAMES_BY_DATE_CACHE_LOCK:
         cached = GAMES_BY_DATE_CACHE.get(date_key)
-        if cached and now - cached["fetched_at"] < GAMES_BY_DATE_CACHE_TTL_SECONDS:
+        if cached and now - cached["fetched_at"] < (30 if date_key >= (datetime.now(MSK_TZ).date() - timedelta(days=1)).isoformat() else 3600):
             return cached["payload"]
 
     return None
@@ -723,189 +732,35 @@ def get_team_games(team_id: int, season: str, season_type: str = "all"):
 
 @app.get("/team-upcoming-games/{team_id}")
 def get_team_upcoming_games(team_id: int):
-    try:
-        games_by_id = {}
-        today = datetime.now(MSK_TZ).date()
-        days_ahead = 7
+    now = datetime.now(timezone.utc)
+    scheduled = fetch_schedule_games_by_id()
+    if scheduled:
+        games = list(scheduled.values())
+    else:
+        try:
+            games = calendar_provider.team_games(team_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Schedule source unavailable") from exc
 
-        def parse_date(value):
-            if not value:
-                return None
-
-            for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %I:%M:%S %p"):
-                try:
-                    return datetime.strptime(value[:19], fmt)
-                except ValueError:
-                    pass
-
-            try:
-                return datetime.fromisoformat(value.replace("Z", "+00:00"))
-            except ValueError:
-                return None
-
-        def add_game(game_id, game_date, matchup, game_time):
-            game_dt = parse_date(game_date)
-            if game_dt:
-                game_day = game_dt.astimezone(MSK_TZ).date() if game_dt.tzinfo else game_dt.date()
-                if game_day < today:
-                    return
-                sort_value = game_dt.timestamp()
-            else:
-                sort_value = 0
-
-            games_by_id[game_id] = {
-                "row": [game_id, game_date, matchup, game_time],
-                "sort": sort_value,
-            }
-
-        for url in SCHEDULE_URLS:
-            try:
-                request = Request(url, headers={
-                    "User-Agent": "Mozilla/5.0",
-                    "Referer": "https://www.nba.com"
-                })
-
-                with urlopen(request, timeout=10) as response:
-                    schedule = json.loads(response.read().decode("utf-8"))
-
-                game_dates = schedule.get("leagueSchedule", {}).get("gameDates", [])
-
-                for game_date_entry in game_dates:
-                    for game in game_date_entry.get("games", []):
-                        home = game.get("homeTeam", {})
-                        away = game.get("awayTeam", {})
-
-                        if home.get("teamId") != team_id and away.get("teamId") != team_id:
-                            continue
-
-                        game_id = game.get("gameId")
-                        if not game_id:
-                            continue
-
-                        home_abbr = home.get("teamTricode") or home.get("teamAbbreviation")
-                        away_abbr = away.get("teamTricode") or away.get("teamAbbreviation")
-                        if not home_abbr or not away_abbr:
-                            continue
-
-                        game_date_value = (
-                            game.get("gameDateTimeEst")
-                            or game.get("gameDateEst")
-                            or game.get("gameDateUTC")
-                            or game_date_entry.get("gameDate")
-                        )
-
-                        game_time = game.get("gameStatusText") or game.get("gameTimeEst") or "TBD"
-
-                        add_game(
-                            game_id,
-                            game_date_value,
-                            f"{away_abbr} @ {home_abbr}",
-                            game_time
-                        )
-            except Exception as e:
-                print(f"Failed to fetch NBA schedule from {url}: {e}")
-
-            if games_by_id:
-                break
-
-        if not games_by_id:
-            for i in range(days_ahead):
-                date = today + timedelta(days=i)
-                game_date = date.strftime("%m/%d/%Y")
-
-                data = scoreboardv2.ScoreboardV2(
-                    game_date=game_date,
-                    league_id="00"
-                )
-
-                result = data.get_dict()
-
-                game_header = next(
-                    (r for r in result["resultSets"] if r["name"] == "GameHeader"),
-                    None
-                )
-
-                line_score = next(
-                    (r for r in result["resultSets"] if r["name"] == "LineScore"),
-                    None
-                )
-
-                if not game_header or not line_score:
-                    continue
-
-                gh_headers = game_header["headers"]
-                games = []
-
-                for row in game_header["rowSet"]:
-                    obj = {}
-                    for i, h in enumerate(gh_headers):
-                        obj[h] = row[i]
-                    games.append(obj)
-
-                ls_headers = line_score["headers"]
-                teams = []
-
-                for row in line_score["rowSet"]:
-                    obj = {}
-                    for i, h in enumerate(ls_headers):
-                        obj[h] = row[i]
-                    teams.append(obj)
-
-                games_map = {}
-
-                for t in teams:
-                    gid = t["GAME_ID"]
-                    if gid not in games_map:
-                        games_map[gid] = []
-                    games_map[gid].append(t)
-
-                for g in games:
-                    if g["HOME_TEAM_ID"] != team_id and g["VISITOR_TEAM_ID"] != team_id:
-                        continue
-
-                    gid = g["GAME_ID"]
-                    if gid not in games_map:
-                        continue
-
-                    teams_in_game = games_map[gid]
-
-                    if len(teams_in_game) < 2:
-                        continue
-
-                    t1, t2 = teams_in_game
-
-                    if t1["TEAM_ID"] == g["HOME_TEAM_ID"]:
-                        home = t1
-                        away = t2
-                    else:
-                        home = t2
-                        away = t1
-
-                    matchup = f"{away['TEAM_ABBREVIATION']} @ {home['TEAM_ABBREVIATION']}"
-
-                    add_game(
-                        g["GAME_ID"],
-                        g["GAME_DATE_EST"],
-                        matchup,
-                        g["GAME_STATUS_TEXT"]
-                    )
-
-        all_games = [
-            item["row"]
-            for item in sorted(games_by_id.values(), key=lambda item: item["sort"])
-        ]
-
-        return {
-            "resultSets": [
-                {
-                    "headers": ["GAME_ID", "GAME_DATE", "MATCHUP", "GAME_TIME"],
-                    "rowSet": all_games
-                }
-            ]
-        }
-
-    except Exception as e:
-        return {"error": str(e)}
+    upcoming = []
+    for game in games:
+        if team_id not in (game["HOME_TEAM_ID"], game["VISITOR_TEAM_ID"]):
+            continue
+        tipoff = parse_utc_datetime(game.get("GAME_TIME_UTC"))
+        if not tipoff or tipoff <= now or game.get("GAME_STATUS_ID") in (2, 3):
+            continue
+        upcoming.append([
+            game["GAME_ID"], game["GAME_TIME_UTC"],
+            f'{game["VISITOR_TEAM_ABBREVIATION"]} @ {game["HOME_TEAM_ABBREVIATION"]}',
+            tipoff.astimezone(MSK_TZ).strftime("%H:%M"),
+        ])
+    upcoming.sort(key=lambda row: row[1])
+    return {"resultSets": [{
+        "headers": ["GAME_ID", "GAME_DATE", "MATCHUP", "GAME_TIME"],
+        "rowSet": upcoming,
+    }]}
 
 @app.get("/game-detail/{game_id}")
 def get_game_detail(game_id: str):
@@ -980,7 +835,7 @@ def get_games_by_date(date: str):
     if cached_games is not None:
         return cached_games
 
-    if not GAMES_BY_DATE_FETCH_SEMAPHORE.acquire(blocking=False):
+    if not GAMES_BY_DATE_FETCH_SEMAPHORE.acquire(timeout=15):
         raise HTTPException(
             status_code=503,
             detail="Games by date fetch is busy. Please retry shortly.",
@@ -997,263 +852,17 @@ def get_games_by_date(date: str):
         GAMES_BY_DATE_FETCH_SEMAPHORE.release()
 
 def fetch_games_by_date_uncached(date, target_msk_date):
-    season = (
-        f"{target_msk_date.year}-{str(target_msk_date.year + 1)[-2:]}"
-        if target_msk_date.month >= 10
-        else f"{target_msk_date.year - 1}-{str(target_msk_date.year)[-2:]}"
-    )
-    dates_to_fetch = [
-        target_msk_date - timedelta(days=1),
-        target_msk_date,
-        target_msk_date + timedelta(days=1),
-    ]
-
-    def get_static_scoreboard(nba_date):
-        return fetch_static_scoreboard(nba_date)
-
-    def find_static_game(game_id, game_date):
-        for date_candidate in [
-            game_date - timedelta(days=1),
-            game_date,
-            game_date + timedelta(days=1),
-        ]:
-            try:
-                static_game = get_static_scoreboard(date_candidate).get(game_id)
-                if static_game:
-                    return static_game
-            except Exception as e:
-                print(f"Failed to fetch NBA static scoreboard for {date_candidate}: {e}")
-
-        return {}
-
-    def parse_utc(value):
-        if not value:
-            return None
-
-        try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-        except ValueError:
-            return None
-
-    def add_schedule_games():
-        try:
-            scheduled_games = fetch_schedule_games_by_id()
-        except Exception as e:
-            print(f"Failed to fetch NBA schedule: {e}")
-            return False
-
-        scheduled_dates = [
-            parse_date_value(game.get("GAME_DATE_MSK"))
-            for game in scheduled_games.values()
-            if game.get("GAME_DATE_MSK")
-        ]
-        scheduled_dates = [game_date for game_date in scheduled_dates if game_date]
-
-        for gid, game in scheduled_games.items():
-            if game.get("GAME_DATE_MSK") == target_msk_date.isoformat():
-                games_by_id[gid] = game
-
-        if scheduled_dates and min(scheduled_dates) <= target_msk_date <= max(scheduled_dates):
-            return True
-
-        return bool(games_by_id)
-
-    def add_static_games():
-        fetched_any_scoreboard = False
-
-        for nba_date in dates_to_fetch:
-            try:
-                static_games = get_static_scoreboard(nba_date)
-                fetched_any_scoreboard = True
-            except Exception as e:
-                print(f"Failed to fetch NBA static scoreboard for {nba_date}: {e}")
-                continue
-
-            for gid, game in static_games.items():
-                game_time_utc = get_scheduled_game_time_utc(game, nba_date)
-                game_dt_utc = parse_utc(game_time_utc)
-
-                if game_dt_utc:
-                    game_msk_date = game_dt_utc.astimezone(MSK_TZ).date()
-                    if game_msk_date != target_msk_date:
-                        continue
-                    game_date_msk = game_msk_date.isoformat()
-                else:
-                    game_date_value = (
-                        game.get("gameDateEst")
-                        or game.get("gameDateUTC")
-                        or game.get("gameDate")
-                        or nba_date.isoformat()
-                    )
-                    game_date_msk = str(game_date_value)[:10]
-                    if game_date_msk != target_msk_date.isoformat():
-                        continue
-
-                normalized = normalize_scheduled_game(game, nba_date)
-                if normalized:
-                    normalized["GAME_DATE_MSK"] = game_date_msk
-                    games_by_id[gid] = normalized
-
-        return fetched_any_scoreboard
-
-    def add_completed_games_from_log(season_type):
-        data = leaguegamelog.LeagueGameLog(
-            season=season,
-            season_type_all_star=season_type
-        ).get_dict()
-
-        result_set = data["resultSets"][0]
-        headers = result_set["headers"]
-        games_map = {}
-
-        for row in result_set["rowSet"]:
-            team_game = dict(zip(headers, row))
-            game_date = datetime.strptime(team_game["GAME_DATE"], "%Y-%m-%d").date()
-
-            static_game = find_static_game(team_game["GAME_ID"], game_date)
-            game_time_utc = static_game.get("gameTimeUTC")
-            game_dt_utc = parse_utc(game_time_utc)
-            game_date_msk = game_dt_utc.astimezone(MSK_TZ).date() if game_dt_utc else game_date
-
-            if game_date_msk != target_msk_date:
-                continue
-
-            games_map.setdefault(team_game["GAME_ID"], []).append(team_game)
-
-        for gid, teams in games_map.items():
-            if len(teams) < 2:
-                continue
-
-            home = next((t for t in teams if " vs. " in t.get("MATCHUP", "")), None)
-            away = next((t for t in teams if " @ " in t.get("MATCHUP", "")), None)
-
-            if not home or not away:
-                continue
-
-            game_date = datetime.strptime(home["GAME_DATE"], "%Y-%m-%d").date()
-            static_game = find_static_game(gid, game_date)
-            game_time_utc = get_scheduled_game_time_utc(static_game, game_date)
-
-            if not game_time_utc:
-                game_time_utc = get_completed_game_time_utc(gid, game_date)
-
-            game_dt_utc = parse_utc(game_time_utc)
-            game_msk_date = game_dt_utc.astimezone(MSK_TZ).date() if game_dt_utc else game_date
-
-            if game_msk_date != target_msk_date:
-                continue
-
-            games_by_id[gid] = {
-                "GAME_ID": gid,
-
-                "GAME_DATE_EST": f"{home['GAME_DATE']}T00:00:00",
-                "GAME_DATE_MSK": game_msk_date.isoformat(),
-                "GAME_TIME_UTC": game_time_utc,
-
-                "HOME_TEAM_ID": home["TEAM_ID"],
-                "VISITOR_TEAM_ID": away["TEAM_ID"],
-
-                "HOME_TEAM_ABBREVIATION": home["TEAM_ABBREVIATION"],
-                "VISITOR_TEAM_ABBREVIATION": away["TEAM_ABBREVIATION"],
-
-                "HOME_TEAM_SCORE": home["PTS"],
-                "VISITOR_TEAM_SCORE": away["PTS"],
-
-                "GAME_STATUS": "Final"
-            }
-
-    games_by_id = {}
-
-    if add_schedule_games():
-        return cache_games_by_date(date, list(games_by_id.values()))
-
-    if add_static_games() and games_by_id:
-        return cache_games_by_date(date, list(games_by_id.values()))
-
-    for nba_date in dates_to_fetch:
-        formatted = nba_date.strftime("%m/%d/%Y")
-
-        data = scoreboardv2.ScoreboardV2(
-            game_date=formatted,
-            league_id="00"
-        )
-
-        result = data.get_dict()
-
-        game_header = None
-        line_score = None
-
-        for rs in result["resultSets"]:
-            if rs["name"] == "GameHeader":
-                game_header = rs
-            if rs["name"] == "LineScore":
-                line_score = rs
-
-        teams_map = {}
-
-        if line_score:
-            for row in line_score["rowSet"]:
-                team = dict(zip(line_score["headers"], row))
-                gid = team["GAME_ID"]
-                teams_map.setdefault(gid, []).append(team)
-
-        static_games = {}
-        try:
-            static_games = get_static_scoreboard(nba_date)
-        except Exception as e:
-            print(f"Failed to fetch NBA static scoreboard for {nba_date}: {e}")
-
-        if game_header:
-            for row in game_header["rowSet"]:
-                game = dict(zip(game_header["headers"], row))
-                gid = game["GAME_ID"]
-
-                teams = teams_map.get(gid, [])
-
-                home = next((t for t in teams if t["TEAM_ID"] == game["HOME_TEAM_ID"]), None)
-                away = next((t for t in teams if t["TEAM_ID"] == game["VISITOR_TEAM_ID"]), None)
-
-                static_game = static_games.get(gid, {})
-                game_time_utc = static_game.get("gameTimeUTC")
-                game_dt_utc = parse_utc(game_time_utc)
-
-                if game_dt_utc:
-                    game_msk_date = game_dt_utc.astimezone(MSK_TZ).date()
-                    if game_msk_date != target_msk_date:
-                        continue
-                    game_date_msk = game_msk_date.isoformat()
-                else:
-                    game_date_msk = game["GAME_DATE_EST"][:10]
-                    if game_date_msk != target_msk_date.isoformat():
-                        continue
-
-                games_by_id[gid] = {
-                    "GAME_ID": game["GAME_ID"],
-
-                    "GAME_DATE_EST": game["GAME_DATE_EST"],
-                    "GAME_DATE_MSK": game_date_msk,
-                    "GAME_TIME_UTC": game_time_utc,
-
-                    "HOME_TEAM_ID": game["HOME_TEAM_ID"],
-                    "VISITOR_TEAM_ID": game["VISITOR_TEAM_ID"],
-
-                    "HOME_TEAM_ABBREVIATION": home["TEAM_ABBREVIATION"] if home else None,
-                    "VISITOR_TEAM_ABBREVIATION": away["TEAM_ABBREVIATION"] if away else None,
-
-                    "HOME_TEAM_SCORE": home["PTS"] if home else None,
-                    "VISITOR_TEAM_SCORE": away["PTS"] if away else None,
-
-                    "GAME_STATUS": game["GAME_STATUS_TEXT"]
-                }
-
+    scheduled = fetch_schedule_games_by_id()
+    games = [game for game in scheduled.values() if game.get("GAME_DATE_MSK") == date]
+    # The schedule can cover a different season. Never mistake that for an empty day.
+    covered = [game.get("GAME_DATE_MSK", "") for game in scheduled.values()]
+    if covered and min(covered) <= date <= max(covered):
+        return cache_games_by_date(date, games)
     try:
-        add_completed_games_from_log("Regular Season")
-        add_completed_games_from_log("Playoffs")
-    except Exception as e:
-        print(f"Failed to fetch completed games from LeagueGameLog: {e}")
-
-    return cache_games_by_date(date, list(games_by_id.values()))
+        games = calendar_provider.games_on_date(target_msk_date)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Games source unavailable. Please retry.") from exc
+    return cache_games_by_date(date, games)
 
 @app.get("/game-boxscore-v3/{game_id}/quarter/{quarter}")
 def get_game_boxscore_quarter(game_id: str, quarter: int):

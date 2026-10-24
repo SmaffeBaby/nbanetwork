@@ -1,8 +1,8 @@
 <template>
   <section class="space-y-4">
-    <div class="flex flex-col gap-3 rounded-xl bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
+    <div class="flex flex-col gap-3 rounded-xl bg-white dark:bg-slate-900 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
       <div>
-        <h2 class="text-xl font-black text-gray-950">О команде</h2>
+        <h2 class="text-xl font-black text-gray-950 dark:text-slate-100">О команде</h2>
       </div>
 
       <div v-if="auth.user?.isAdmin" class="flex flex-wrap gap-2">
@@ -17,7 +17,7 @@
         <template v-else>
           <button
             type="button"
-            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-black text-gray-700 transition hover:border-gray-950"
+            class="rounded-lg border border-gray-200 dark:border-slate-700 px-4 py-2 text-sm font-black text-gray-700 dark:text-slate-200 transition hover:border-gray-950"
             @click="cancelEditing"
           >
             Отмена
@@ -34,7 +34,7 @@
       </div>
     </div>
 
-    <div v-if="loading" class="rounded-xl bg-white p-8 text-center text-sm font-bold text-gray-500 shadow-sm">
+    <div v-if="loading" class="rounded-xl bg-white dark:bg-slate-900 p-8 text-center text-sm font-bold text-gray-500 dark:text-slate-400 shadow-sm">
       Загружаем описание команды...
     </div>
 
@@ -43,7 +43,7 @@
     </div>
 
     <div v-else-if="isEditing" class="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <aside class="h-fit rounded-xl bg-white p-3 shadow-sm">
+      <aside class="h-fit rounded-xl bg-white dark:bg-slate-900 p-3 shadow-sm">
         <div class="grid grid-cols-2 gap-2 lg:grid-cols-1">
           <button type="button" class="editor-tool" @click="addBlock('paragraph')">Абзац</button>
           <button type="button" class="editor-tool" @click="addBlock('heading')">Заголовок</button>
@@ -56,7 +56,7 @@
         <article
           v-for="(block, index) in draftBlocks"
           :key="block.id"
-          class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4"
+          class="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-sm sm:p-4"
           draggable="true"
           @dragstart="draggedIndex = index"
           @dragover.prevent
@@ -64,7 +64,7 @@
         >
           <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-2 text-xs font-black uppercase text-gray-400">
-              <span class="cursor-grab rounded-md bg-gray-100 px-2 py-1">Drag</span>
+              <span class="cursor-grab rounded-md bg-gray-100 dark:bg-slate-800 px-2 py-1">Drag</span>
               <span>{{ blockLabel(block.type) }}</span>
             </div>
 
@@ -85,7 +85,7 @@
             </div>
             <div
               :ref="el => setParagraphEditor(block.id, el)"
-              class="team-about-editor min-h-28 rounded-lg border border-gray-200 p-3 text-sm leading-7 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              class="team-about-editor min-h-28 rounded-lg border border-gray-200 dark:border-slate-700 p-3 text-sm leading-7 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
               contenteditable="true"
               @input="syncParagraph(block)"
               @focus="activeParagraphId = block.id"
@@ -99,11 +99,11 @@
               <option :value="2">H2</option>
               <option :value="3">H3</option>
             </select>
-            <label class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold text-gray-600">
+            <label class="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-2 text-sm font-bold text-gray-600 dark:text-slate-300">
               <input v-model="block.collapsible" type="checkbox" />
               Скрываемый
             </label>
-            <label v-if="block.collapsible" class="flex items-center gap-2 text-sm font-bold text-gray-600 sm:col-span-3">
+            <label v-if="block.collapsible" class="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-slate-300 sm:col-span-3">
               <input v-model="block.collapsedByDefault" type="checkbox" />
               Свернуть по умолчанию
             </label>
@@ -115,10 +115,10 @@
               <div
                 v-for="image in block.images"
                 :key="image.id"
-                class="grid gap-2 rounded-lg border border-gray-100 bg-gray-50 p-2 sm:grid-cols-[1fr_1fr_auto]"
+                class="grid gap-2 rounded-lg border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-2 sm:grid-cols-[1fr_1fr_auto]"
               >
-                <input v-model="image.url" class="field bg-white" placeholder="URL изображения" />
-                <input v-model="image.alt" class="field bg-white" placeholder="Описание" />
+                <input v-model="image.url" class="field bg-white dark:bg-slate-900" placeholder="URL изображения" />
+                <input v-model="image.alt" class="field bg-white dark:bg-slate-900" placeholder="Описание" />
                 <button type="button" class="icon-btn text-red-600" @click="removeGalleryImage(block, image.id)">×</button>
               </div>
             </div>
@@ -134,7 +134,7 @@
           <div v-else class="space-y-3">
             <div class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
               <input v-model="block.title" class="field" placeholder="Название блока" />
-              <label class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-bold text-gray-600">
+              <label class="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-bold text-gray-600 dark:text-slate-300">
                 <input v-model="block.hidden" type="checkbox" />
                 Скрыть блок
               </label>
@@ -144,9 +144,9 @@
               <div
                 v-for="(item, itemIndex) in block.items"
                 :key="item.id"
-                class="grid gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 lg:grid-cols-[120px_minmax(0,1fr)_auto]"
+                class="grid gap-3 rounded-lg border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-3 lg:grid-cols-[120px_minmax(0,1fr)_auto]"
               >
-                <div class="flex items-center justify-center rounded-lg bg-white p-3">
+                <div class="flex items-center justify-center rounded-lg bg-white dark:bg-slate-900 p-3">
                   <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.label || item.mvpPlayerName || 'Hall of fame item'" class="h-20 w-20 object-contain" loading="lazy" decoding="async" />
                   <span v-else class="text-center text-xs font-black uppercase text-gray-300">SVG / PNG</span>
                 </div>
@@ -154,15 +154,15 @@
                 <div class="grid gap-2 sm:grid-cols-2">
                   <label class="space-y-1 sm:col-span-2">
                     <span class="label">Загрузить SVG или PNG</span>
-                    <input type="file" accept=".svg,.png,image/svg+xml,image/png" class="field bg-white text-sm" @change="uploadHallOfFameImage(item, $event)" />
+                    <input type="file" accept=".svg,.png,image/svg+xml,image/png" class="field bg-white dark:bg-slate-900 text-sm" @change="uploadHallOfFameImage(item, $event)" />
                   </label>
-                  <input v-model="item.imageUrl" class="field bg-white sm:col-span-2" placeholder="или URL / data URL изображения" />
-                  <input v-model="item.label" class="field bg-white sm:col-span-2" placeholder="Подпись к изображению (необязательно)" />
-                  <input v-model="item.mvpPlayerName" class="field bg-white" placeholder="MVP игрок (необязательно)" />
-                  <input v-model="item.mvpSeason" class="field bg-white" placeholder="Сезон MVP" />
+                  <input v-model="item.imageUrl" class="field bg-white dark:bg-slate-900 sm:col-span-2" placeholder="или URL / data URL изображения" />
+                  <input v-model="item.label" class="field bg-white dark:bg-slate-900 sm:col-span-2" placeholder="Подпись к изображению (необязательно)" />
+                  <input v-model="item.mvpPlayerName" class="field bg-white dark:bg-slate-900" placeholder="MVP игрок (необязательно)" />
+                  <input v-model="item.mvpSeason" class="field bg-white dark:bg-slate-900" placeholder="Сезон MVP" />
                   <label class="space-y-1">
                     <span class="label">Тип ссылки</span>
-                    <select v-model="item.linkType" class="field bg-white">
+                    <select v-model="item.linkType" class="field bg-white dark:bg-slate-900">
                       <option value="internal">Внутренняя</option>
                       <option value="external">Внешняя</option>
                     </select>
@@ -171,17 +171,17 @@
                     <span class="label">Ссылка на игрока</span>
                     <input
                       v-model="item.playerUrl"
-                      class="field bg-white"
+                      class="field bg-white dark:bg-slate-900"
                       :placeholder="item.linkType === 'internal' ? '/brunson' : 'https://...'"
                     />
                   </label>
-                  <label class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-bold text-gray-600">
+                  <label class="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-bold text-gray-600 dark:text-slate-300">
                     <input v-model="item.breakAfter" type="checkbox" />
                     Перенос после этой SVG
                   </label>
                   <label class="grid gap-1">
                     <span class="label">Отступ после, px</span>
-                    <input v-model.number="item.spacingAfter" type="number" min="0" max="160" step="4" class="field bg-white" />
+                    <input v-model.number="item.spacingAfter" type="number" min="0" max="160" step="4" class="field bg-white dark:bg-slate-900" />
                   </label>
                 </div>
 
@@ -201,7 +201,7 @@
       </div>
     </div>
 
-    <div v-else-if="!hasContent && auth.user?.isAdmin" class="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm font-bold text-gray-500">
+    <div v-else-if="!hasContent && auth.user?.isAdmin" class="rounded-xl border border-dashed border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-8 text-center text-sm font-bold text-gray-500 dark:text-slate-400">
       Описание пока пустое. Нажмите “Редактировать”, чтобы собрать страницу.
     </div>
 
@@ -218,31 +218,31 @@
         >
           <component
             :is="block.level === 3 ? 'h3' : 'h2'"
-            class="font-black text-gray-950"
+            class="font-black text-gray-950 dark:text-slate-100"
             :class="block.level === 3 ? 'text-xl' : 'text-2xl'"
           >
             {{ block.text }}
           </component>
-          <span v-if="block.collapsible" class="rounded-full bg-gray-100 px-2 py-1 text-xs font-black text-gray-500">
+          <span v-if="block.collapsible" class="rounded-full bg-gray-100 dark:bg-slate-800 px-2 py-1 text-xs font-black text-gray-500 dark:text-slate-400">
             {{ collapsedHeadings[block.id] ? '+' : '-' }}
           </span>
         </div>
 
         <div
           v-else-if="block.type === 'paragraph'"
-          class="team-about-content rounded-xl bg-white p-4 text-gray-700 shadow-sm"
+          class="team-about-content rounded-xl bg-white dark:bg-slate-900 p-4 text-gray-700 dark:text-slate-200 shadow-sm"
           v-html="block.html"
         />
 
-        <div v-else-if="block.type === 'gallery'" class="rounded-xl bg-white p-3 shadow-sm sm:p-4">
+        <div v-else-if="block.type === 'gallery'" class="rounded-xl bg-white dark:bg-slate-900 p-3 shadow-sm sm:p-4">
           <div class="mb-3 flex items-center justify-between gap-3">
-            <h3 class="text-lg font-black text-gray-950">{{ block.title }}</h3>
+            <h3 class="text-lg font-black text-gray-950 dark:text-slate-100">{{ block.title }}</h3>
             <div class="flex gap-1">
               <button type="button" class="icon-btn" @click="prevGallery(block.id)">‹</button>
               <button type="button" class="icon-btn" @click="nextGallery(block.id, block.images.length)">›</button>
             </div>
           </div>
-          <div v-if="block.images.length" class="overflow-hidden rounded-lg bg-gray-100">
+          <div v-if="block.images.length" class="overflow-hidden rounded-lg bg-gray-100 dark:bg-slate-800">
             <img
               :src="block.images[galleryIndex(block.id)]?.url"
               :alt="block.images[galleryIndex(block.id)]?.alt"
@@ -265,8 +265,8 @@
           </div>
         </div>
 
-        <div v-else-if="!block.hidden" class="rounded-xl bg-white p-4 shadow-sm">
-          <h3 class="text-xl font-black text-gray-950">{{ block.title }}</h3>
+        <div v-else-if="!block.hidden" class="rounded-xl bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <h3 class="text-xl font-black text-gray-950 dark:text-slate-100">{{ block.title }}</h3>
           <div v-if="block.items.length" class="mt-4 flex flex-wrap gap-3">
             <template v-for="item in block.items" :key="item.id">
               <component
@@ -287,14 +287,14 @@
                 />
                 <div v-if="item.label || item.mvpPlayerName || item.mvpSeason" class="min-w-0">
                   <div v-if="item.label" class="text-xs font-black uppercase text-gray-400">{{ item.label }}</div>
-                  <div v-if="item.mvpPlayerName" class="truncate text-sm font-black text-gray-950">{{ item.mvpPlayerName }}</div>
-                  <div v-if="item.mvpSeason" class="text-xs font-bold text-gray-500">{{ item.mvpSeason }}</div>
+                  <div v-if="item.mvpPlayerName" class="truncate text-sm font-black text-gray-950 dark:text-slate-100">{{ item.mvpPlayerName }}</div>
+                  <div v-if="item.mvpSeason" class="text-xs font-bold text-gray-500 dark:text-slate-400">{{ item.mvpSeason }}</div>
                 </div>
               </component>
               <div v-if="item.breakAfter" class="basis-full" :style="{ height: `${item.spacingAfter}px` }"></div>
             </template>
           </div>
-          <div v-else class="mt-4 rounded-lg border border-dashed border-gray-200 p-4 text-sm font-semibold text-gray-400">
+          <div v-else class="mt-4 rounded-lg border border-dashed border-gray-200 dark:border-slate-700 p-4 text-sm font-semibold text-gray-400">
             Зал славы пока пуст.
           </div>
         </div>

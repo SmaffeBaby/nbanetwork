@@ -1,38 +1,28 @@
 const fetchWithCache = require('../utils/fetchWithCache')
-
-const fetch = (...args) =>
-    import('node-fetch').then(({ default: fetch }) => fetch(...args))
-
-const API_BASE = 'https://api.balldontlie.io/v1/'
-const API_KEY = '4a7b83cf-4698-43e6-b480-3ac157221c66'
-
-const ONE_HOUR = 1000 * 60 * 60
+const TEAM_MAP = require('../constants/teamMap')
 
 async function getGamesByDate(dateStr) {
-    const key = `games_${dateStr}`
-
-    return fetchWithCache({
-        key,
-        ttl: ONE_HOUR,
-        fetcher: async () => {
-            const url = `${API_BASE}games?dates[]=${dateStr}`
-
-            const response = await fetch(url, {
-                headers: {
-                    Authorization: `Bearer ${API_KEY}`
-                }
-            })
-
-            if (!response.ok) {
-                throw new Error(`API error: ${response.status}`)
-            }
-
-            const json = await response.json()
-            return json.data || []
-        }
+    // Share the calendar cache with the date picker and recent games.
+    const { resolveGamesByDate, isAllowedDate } = require('../routes/dailyGames')
+    if (!isAllowedDate(dateStr)) throw new Error('Invalid date')
+    const games = await fetchWithCache({
+        key: `games-by-date-memory:${dateStr}`,
+        ttl: 30000,
+        fetcher: () => resolveGamesByDate(dateStr)
     })
+    const team = (id, abbr) => ({
+        id, abbreviation: abbr || TEAM_MAP[id]?.abbr || '',
+        full_name: TEAM_MAP[id]?.name || abbr || ''
+    })
+    return games.map(game => ({
+        id: game.GAME_ID,
+        home_team: team(game.HOME_TEAM_ID, game.HOME_TEAM_ABBREVIATION),
+        visitor_team: team(game.VISITOR_TEAM_ID, game.VISITOR_TEAM_ABBREVIATION),
+        home_team_score: game.HOME_TEAM_SCORE,
+        visitor_team_score: game.VISITOR_TEAM_SCORE,
+        status: game.GAME_STATUS,
+        period: game.GAME_STATUS_ID === 2 ? 1 : 0,
+        datetime: game.GAME_TIME_UTC
+    }))
 }
-
-module.exports = {
-    getGamesByDate
-}
+module.exports = { getGamesByDate }

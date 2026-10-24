@@ -7,7 +7,7 @@ export type Team = {
 }
 
 export type Game = {
-    id: number
+    id: number | string
     home_team: Team
     visitor_team: Team
     home_team_score: number

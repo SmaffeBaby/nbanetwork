@@ -10,7 +10,7 @@ class Cache {
 
         const { data, expiresAt } = entry
 
-        if (Date.now() > expiresAt) {
+        if (Date.now() >= expiresAt) {
             this.store.delete(key)
             return null
         }
@@ -19,6 +19,9 @@ class Cache {
     }
 
     set(key, data, ttlMs) {
+        if (!this.store.has(key) && this.store.size >= 1024) {
+            this.store.delete(this.store.keys().next().value)
+        }
         this.store.set(key, {
             data,
             expiresAt: Date.now() + ttlMs

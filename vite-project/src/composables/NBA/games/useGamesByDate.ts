@@ -38,6 +38,8 @@ export type DateGameCount = {
     dateKey: string
     count: number
     isLoading: boolean
+    error?: boolean
+    fetchedAt?: number
 }
 
 export const getTodayDateKey = () => getDateKey(toMSK(new Date()))
@@ -104,7 +106,7 @@ const formatMSKTime = (dateStr: string) => {
 
 const convertETToMSKTime = (status: string) => {
     const match = status.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
-    if (!match) return status
+    if (!match) return ''
 
     let hours = parseInt(match[1], 10)
     const minutes = parseInt(match[2], 10)
@@ -129,16 +131,16 @@ const getDateDiffFromToday = (dateKey: string) => {
     return Math.round((date.getTime() - today.getTime()) / 86400000)
 }
 
-const getQueryStaleTime = (dateKey: string) => {
+export const getQueryStaleTime = (dateKey: string) => {
     const dayDiff = getDateDiffFromToday(dateKey)
 
-    if (dayDiff >= -1 && dayDiff <= 0) return 60 * 1000
-    if (dayDiff > 0) return 10 * 60 * 1000
+    if (dayDiff >= -1 && dayDiff <= 0) return 30 * 1000
+    if (dayDiff > 0) return 5 * 60 * 1000
 
-    return 24 * 60 * 60 * 1000
+    return 60 * 60 * 1000
 }
 
-const normalizeGame = (game: DailyGameDTO): GamesPageGame => {
+export const normalizeGame = (game: DailyGameDTO): GamesPageGame => {
     const homeAbbr = game.HOME_TEAM_ABBREVIATION || TEAM_ID_TO_ABBR[game.HOME_TEAM_ID] || 'UNK'
     const awayAbbr = game.VISITOR_TEAM_ABBREVIATION || TEAM_ID_TO_ABBR[game.VISITOR_TEAM_ID] || 'UNK'
     const status = game.GAME_STATUS ?? ''
@@ -149,7 +151,7 @@ const normalizeGame = (game: DailyGameDTO): GamesPageGame => {
         datetime,
         gameDay: getGameDay(game),
         status,
-        statusTime: formatMSKTime(datetime) || convertETToMSKTime(status) || status,
+        statusTime: formatMSKTime(datetime) || '',
         home: {
             id: game.HOME_TEAM_ID,
             abbr: homeAbbr,
@@ -176,15 +178,15 @@ const uniqueByGameId = <T extends { id: string }>(games: T[]) => {
     })
 }
 
-const fetchGamesByDate = async (dateKey: string): Promise<DailyGameDTO[]> => {
-    const response = await fetch(`${API_BASE}/api/games/by-date/${dateKey}`)
+export const fetchGamesByDate = async (dateKey: string): Promise<DailyGameDTO[]> => {
+    const response = await fetch(`${API_BASE}/api/games/by-date/${dateKey}`, { signal: AbortSignal.timeout(30000) })
     const data = await response.json()
     if (!response.ok) throw new Error('Не удалось загрузить игры')
 
     return Array.isArray(data) ? data : []
 }
 
-const getGamesByDate = (
+export const getGamesByDate = (
     dateKey: string,
     queryClient: ReturnType<typeof useQueryClient>
 ): Promise<DailyGameDTO[]> => {
@@ -209,6 +211,7 @@ export function useGamesByDate() {
     const loadDate = async (dateKey: string) => {
         const requestId = ++loadRequestId
         isLoading.value = true
+        error.value = null
 
         try {
             const rawGames = await getGamesByDate(dateKey, queryClient)
@@ -223,7 +226,8 @@ export function useGamesByDate() {
                 [dateKey]: {
                     dateKey,
                     count: normalized.length,
-                    isLoading: false
+                    isLoading: false,
+                    fetchedAt: Date.now()
                 }
             }
             error.value = null
@@ -240,7 +244,10 @@ export function useGamesByDate() {
     }
 
     const loadCounts = async (dateKeys: string[]) => {
-        const missingDates = dateKeys.filter(dateKey => !counts.value[dateKey])
+        const missingDates = dateKeys.filter(dateKey => {
+            const info = counts.value[dateKey]
+            return !info || (!info.isLoading && (info.error || Date.now() - (info.fetchedAt || 0) >= getQueryStaleTime(dateKey)))
+        })
         if (!missingDates.length) return
 
         counts.value = {
@@ -253,28 +260,25 @@ export function useGamesByDate() {
             )
         }
 
-        const loadedCounts = await Promise.all(
-            missingDates.map(async (dateKey) => {
+        // A month opens 42 days. Keep prefetch bounded so the selected day stays responsive.
+        const loadedCounts: DateGameCount[] = []
+        const queue = [...missingDates]
+        await Promise.all(Array.from({ length: Math.min(2, queue.length) }, async () => {
+            while (queue.length) {
+                const dateKey = queue.shift()!
                 try {
                     const rawGames = await getGamesByDate(dateKey, queryClient)
-                    const gamesForDate = uniqueByGameId(
-                        rawGames.map(normalizeGame).filter(game => game.gameDay === dateKey)
-                    )
-
-                    return {
-                        dateKey,
-                        count: gamesForDate.length,
-                        isLoading: false
-                    }
+                    const gamesForDate = uniqueByGameId(rawGames.map(normalizeGame).filter(game => game.gameDay === dateKey))
+                    const item = { dateKey, count: gamesForDate.length, isLoading: false, fetchedAt: Date.now() }
+                    counts.value = { ...counts.value, [dateKey]: item }
+                    loadedCounts.push(item)
                 } catch {
-                    return {
-                        dateKey,
-                        count: 0,
-                        isLoading: false
-                    }
+                    const item = { dateKey, count: 0, isLoading: false, error: true }
+                    counts.value = { ...counts.value, [dateKey]: item }
+                    loadedCounts.push(item)
                 }
-            })
-        )
+            }
+        }))
 
         counts.value = {
             ...counts.value,

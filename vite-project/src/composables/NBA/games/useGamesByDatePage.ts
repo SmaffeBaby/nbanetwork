@@ -1,4 +1,5 @@
-import { computed, watch } from 'vue'
+import { computed, watch, onMounted, onUnmounted } from 'vue'
+import { openGame } from '../../../api/gameNavigation'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../../../stores/auth'
@@ -45,6 +46,8 @@ export function useGamesByDatePage() {
     })
 
     const gamesCountLabel = computed(() => {
+        if (isLoading.value) return 'Загрузка…'
+        if (error.value) return 'Ошибка загрузки'
         const count = games.value.length
         if (count === 0) return 'Нет игр'
         if (count === 1) return '1 игра'
@@ -64,7 +67,7 @@ export function useGamesByDatePage() {
     const goToToday = () => selectDate(getTodayDateKey())
 
     const goToGame = (gameId: string) => {
-        router.push(`/game/${gameId}`)
+        openGame(router, gameId)
     }
 
     const displayScore = (score: number | null) => {
@@ -77,7 +80,6 @@ export function useGamesByDatePage() {
         (dateKey) => {
             if (!isValidDateKey(String(route.params.date ?? ''))) {
                 router.replace({ name: 'GamesByDate', params: { date: dateKey } })
-                return
             }
 
             loadDate(dateKey)
@@ -85,6 +87,12 @@ export function useGamesByDatePage() {
         },
         { immediate: true }
     )
+
+    let timer: ReturnType<typeof setInterval> | undefined
+    onMounted(() => { timer = setInterval(() => {
+        if (selectedDate.value >= getTodayDateKey()) loadDate(selectedDate.value)
+    }, 60000) })
+    onUnmounted(() => clearInterval(timer))
 
     return {
         games,

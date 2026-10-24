@@ -139,6 +139,10 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (prefers-color-scheme: dark) {
+  .nba-mom-logo__image--base { filter: invert(1); }
+}
+
 @keyframes nba-mom-logo-blink {
   0%,
   100% {

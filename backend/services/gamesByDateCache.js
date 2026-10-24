@@ -1,6 +1,7 @@
 const { getAdmin } = require('../lib/supabase')
 
 const TABLE = 'nba_games_by_date_cache'
+const SOURCE = 'calendar-v2'
 const MINUTE = 60 * 1000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
@@ -40,13 +41,13 @@ function getTtlMs(dateKey, payload) {
     const dayDiff = diffInDays(dateKey)
     const games = Array.isArray(payload) ? payload : []
 
-    if (dayDiff >= 1 && games.length === 0) return 0
+    if (games.length === 0) return MINUTE
     if (dayDiff >= 1) return 6 * HOUR
-    if (dayDiff >= -1) return 5 * MINUTE
+    if (dayDiff >= -1) return 30 * 1000
 
     if (games.length === 0 || games.every(isFinalGame)) return 30 * DAY
 
-    return 12 * HOUR
+    return 5 * MINUTE
 }
 
 function isFresh(row) {
@@ -62,12 +63,13 @@ async function readGamesByDateCache(dateKey) {
     const supabase = getAdmin()
     const { data, error } = await supabase
         .from(TABLE)
-        .select('date_key,payload,fetched_at,game_count')
+        .select('date_key,payload,fetched_at,game_count,source')
         .eq('date_key', dateKey)
         .maybeSingle()
+        .abortSignal(AbortSignal.timeout(1500))
 
     if (error) throw error
-    if (!data || !isFresh(data)) return null
+    if (!data || data.source !== SOURCE || !isFresh(data)) return null
 
     return Array.isArray(data.payload) ? data.payload : []
 }
@@ -82,8 +84,9 @@ async function writeGamesByDateCache(dateKey, games) {
             payload,
             game_count: payload.length,
             fetched_at: new Date().toISOString(),
-            source: 'python-backend'
+            source: SOURCE
         }, { onConflict: 'date_key' })
+        .abortSignal(AbortSignal.timeout(1500))
 
     if (error) throw error
 

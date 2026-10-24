@@ -2,6 +2,7 @@ import { computed, type Ref } from 'vue'
 
 export interface PlayerStats {
     name: string
+    unavailableStats?: string[]
     PLAYER_ID: string
     TEAM_ID: string
 
@@ -135,6 +136,7 @@ export function useGamePlayersStats(recap: Ref<any>) {
                 ).toFixed(1)
 
                 return {
+                    unavailableStats: p.unavailableStats || [],
                     name: p.name || `${p.firstName || ''} ${p.familyName || ''}`.trim(),
                     PLAYER_ID: String(p.personId || p.playerId || ''),
                     TEAM_ID: String(p.teamId || ''),

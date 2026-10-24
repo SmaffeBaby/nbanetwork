@@ -203,12 +203,15 @@ export const usePlayerExcelStats = (props: UsePlayerExcelStatsProps) => {
 
         loadPersistentCache()
 
-        const key = detailCacheKey(player)
+        const key = `${detailCacheKey(player)}:${props.recap?.periodFilter || 'all'}:${(player.unavailableStats || []).join(',')}`
         const cached = detailCache.get(key)
 
         if (cached) return cached
 
         const details = buildDetails(player)
+        for (const group of details.groups) for (const segment of group.segments) {
+            if (player.unavailableStats?.includes(segment.key)) { segment.value = '—'; segment.percent = 0 }
+        }
         detailCache.set(key, details)
         persistCache()
 

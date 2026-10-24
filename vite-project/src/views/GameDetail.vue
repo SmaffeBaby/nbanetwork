@@ -3,7 +3,7 @@
     <Header />
 
     <div class="mx-auto w-full max-w-6xl pt-6 text-left sm:pt-10 lg:pt-16">
-      <GameFinal />
+      <GameFinal :key="$route.params.gameId as string" />
     </div>
   </div>
 </template>

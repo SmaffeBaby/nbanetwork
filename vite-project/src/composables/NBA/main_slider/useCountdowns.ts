@@ -1,17 +1,18 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, toValue, type MaybeRefOrGetter } from 'vue'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration'
 import type { Game } from './useDailyGames'
 
 dayjs.extend(duration)
 
-export function useCountdowns(gamesList: Game[]) {
-    const countdowns = ref<Record<number, string>>({})
+export function useCountdowns(gamesList: MaybeRefOrGetter<Game[]>) {
+    const countdowns = ref<Record<string, string>>({})
 
     function updateCountdowns() {
         const now = dayjs()
-        gamesList.forEach(game => {
-            if (game.period === 0) {
+        countdowns.value = {}
+        toValue(gamesList).forEach(game => {
+            if (game.period === 0 && game.status !== 'Final' && game.datetime) {
                 const gameTime = dayjs(game.datetime)
                 if (gameTime.isAfter(now)) {
                     const diff = dayjs.duration(gameTime.diff(now))

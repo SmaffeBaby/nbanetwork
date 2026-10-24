@@ -8,7 +8,7 @@ WORKDIR /app
 COPY vite-project/package*.json ./
 
 # Устанавливаем зависимости
-RUN npm install
+RUN npm ci
 
 # Копируем только фронтенд
 COPY vite-project/. .

@@ -5,7 +5,7 @@
           v-for="p in sortedPlayers.slice(0, 100)"
           :key="p.PLAYER_ID"
           type="button"
-          class="w-full rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]"
+          class="w-full rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-left shadow-sm transition active:scale-[0.99]"
           @click="goToPlayer(p)"
       >
         <div class="flex items-center justify-between gap-3">
@@ -17,8 +17,8 @@
                 @error="handleImageErr"
             />
             <div class="min-w-0">
-              <div class="truncate font-semibold text-gray-900">{{ p.PLAYER_NAME }}</div>
-              <div class="text-xs text-gray-500">{{ p.TEAM_ABBREVIATION }}</div>
+              <div class="truncate font-semibold text-gray-900 dark:text-slate-100">{{ p.PLAYER_NAME }}</div>
+              <div class="text-xs text-gray-500 dark:text-slate-400">{{ p.TEAM_ABBREVIATION }}</div>
             </div>
             <FavoritePlayerButton
                 :player="p"
@@ -32,10 +32,10 @@
           <div
               v-for="item in mobileStats(p)"
               :key="item.label"
-              class="rounded-lg bg-gray-50 px-2 py-1.5 text-center"
+              class="rounded-lg bg-gray-50 dark:bg-slate-900 px-2 py-1.5 text-center"
           >
             <div class="text-[10px] font-semibold uppercase text-gray-400">{{ item.label }}</div>
-            <div class="text-sm font-semibold text-gray-900">{{ item.value }}</div>
+            <div class="text-sm font-semibold text-gray-900 dark:text-slate-100">{{ item.value }}</div>
           </div>
         </div>
       </button>

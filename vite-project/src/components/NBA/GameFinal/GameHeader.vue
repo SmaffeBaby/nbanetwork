@@ -11,10 +11,10 @@
 
     <div
         v-else
-        class="relative rounded-2xl bg-white p-4 shadow-md transition active:scale-[0.98] sm:p-5"
+        class="relative rounded-2xl bg-white dark:bg-slate-900 p-4 shadow-md transition active:scale-[0.98] sm:p-5"
     >
 
-      <div class="mb-3 flex items-center justify-between text-xs text-gray-500">
+      <div class="mb-3 flex items-center justify-between text-xs text-gray-500 dark:text-slate-400">
 
         <div class="flex items-center gap-2 uppercase tracking-wide">
 
@@ -34,7 +34,7 @@
             @click="toggleScore"
             class="p-2 rounded-full active:scale-90 transition"
         >
-          <EyeIcon v-if="isVisible" class="w-5 h-5 text-gray-600" />
+          <EyeIcon v-if="isVisible" class="w-5 h-5 text-gray-600 dark:text-slate-300" />
           <EyeSlashIcon v-else class="w-5 h-5 text-gray-400" />
         </button>
 
@@ -50,7 +50,7 @@
                 @click="goTeam(game?.away?.abbr)"
             />
           </div>
-          <div class="mt-2 max-w-[92px] text-center text-xs font-medium leading-tight text-gray-700 sm:max-w-40 sm:text-sm">
+          <div class="mt-2 max-w-[92px] text-center text-xs font-medium leading-tight text-gray-700 dark:text-slate-200 sm:max-w-40 sm:text-sm">
             {{ game?.away?.name }}
           </div>
         </div>
@@ -59,7 +59,7 @@
           <transition name="fade-scale" mode="out-in">
             <div
                 :key="gameId + (isVisible ? '-visible' : '-hidden')"
-                class="text-2xl font-bold leading-none text-gray-700 sm:text-3xl"
+                class="text-2xl font-bold leading-none text-gray-700 dark:text-slate-200 sm:text-3xl"
             >
               <template v-if="isVisible && game?.home?.score != null">
                 {{ game.away.score }}
@@ -75,7 +75,7 @@
 
           <div class="mt-3 flex min-w-0 items-center justify-center gap-1.5">
 
-            <div class="min-w-0 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-center text-[11px] font-medium leading-5 text-gray-600 sm:px-3">
+            <div class="min-w-0 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-2.5 py-1 text-center text-[11px] font-medium leading-5 text-gray-600 dark:text-slate-300 sm:px-3">
               {{ game?.dateMSK }}
             </div>
 
@@ -84,7 +84,7 @@
                 title="Скопировать ссылку"
                 class="p-1.5 rounded-md hover:bg-gray-100 active:scale-90 transition"
             >
-              <LinkIcon class="w-4 h-4 text-gray-500" />
+              <LinkIcon class="w-4 h-4 text-gray-500 dark:text-slate-400" />
             </button>
 
           </div>
@@ -103,7 +103,7 @@
                 @click="goTeam(game?.home?.abbr)"
             />
           </div>
-          <div class="mt-2 max-w-[92px] text-center text-xs font-medium leading-tight text-gray-700 sm:max-w-40 sm:text-sm">
+          <div class="mt-2 max-w-[92px] text-center text-xs font-medium leading-tight text-gray-700 dark:text-slate-200 sm:max-w-40 sm:text-sm">
             {{ game?.home?.name }}
           </div>
         </div>
@@ -121,6 +121,7 @@ import { useRoute } from 'vue-router'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
 import { EyeIcon, EyeSlashIcon, LinkIcon } from '@heroicons/vue/24/outline'
 import { useGameHeader } from '../../../composables/NBA/GameFinal/useGameHeader'
+import { publicGameId } from '../../../api/gameNavigation'
 import { useToast } from 'vue-toastification'
 import GameUserActions from '../Favorites/GameUserActions.vue'
 
@@ -146,7 +147,7 @@ const gameId = computed(() => {
 })
 
 const gameUrl = computed(() =>
-    `${window.location.origin}/game/${gameId.value}`
+    `${window.location.origin}/game/${publicGameId(gameId.value)}`
 )
 
 const copyGameLink = async () => {

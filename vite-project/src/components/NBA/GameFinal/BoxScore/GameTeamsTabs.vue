@@ -7,7 +7,7 @@
         class="flex shrink-0 items-center gap-2 px-4 py-2 text-sm"
         :class="activeTeam === t.abbr
         ? 'border-b-2 border-black font-semibold'
-        : 'text-gray-500'"
+        : 'text-gray-500 dark:text-slate-400'"
     >
       <img :src="t.logo" class="w-5 h-5" />
       {{ t.name }}

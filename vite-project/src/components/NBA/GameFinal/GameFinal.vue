@@ -12,7 +12,7 @@
         <button
             @click="$router.back()"
             class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 py-2 sm:w-auto
-                   bg-white/10 backdrop-blur-md text-black text-sm font-medium
+                   bg-white/10 dark:bg-slate-900 backdrop-blur-md text-black dark:text-slate-100 text-sm font-medium
                    border border-white/20 shadow-sm
                    hover:bg-white/20 hover:shadow-md hover:-translate-y-0.5
                    active:scale-95 transition-all duration-200"
@@ -34,14 +34,16 @@
       </template>
 
       <template #players>
-        <GamePlayersStats :filters="filters" />
+        <p v-if="game?.status === 'Scheduled'" class="rounded-lg border p-6 text-sm text-gray-500 dark:text-slate-400">Статистика игроков появится после начала матча.</p>
+        <GamePlayersStats v-else :filters="filters" />
       </template>
 
       <template #teamStats>
         <TeamStats
-            v-if="recap"
+            v-if="recap && game?.status !== 'Scheduled'"
             :recap="recap"
         />
+        <p v-else class="rounded-lg border p-6 text-sm text-gray-500 dark:text-slate-400">Командная статистика появится после начала матча.</p>
       </template>
 
       <template #injury>
@@ -61,7 +63,7 @@
       </template>
 
       <template #data>
-        <div v-if="game" class="max-w-full overflow-auto rounded-lg border bg-gray-50 p-3 text-left text-[11px] sm:p-4 sm:text-xs">
+        <div v-if="game" class="max-w-full overflow-auto rounded-lg border bg-gray-50 dark:bg-slate-900 p-3 text-left text-[11px] sm:p-4 sm:text-xs">
           <pre>{{ game }}</pre>
         </div>
       </template>

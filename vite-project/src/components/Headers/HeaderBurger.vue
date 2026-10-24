@@ -1,7 +1,7 @@
 <template>
   <div class="fixed right-4 top-4 z-50 min-[1180px]:hidden">
     <button
-        class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/50 bg-white/70 text-slate-900 shadow-lg shadow-slate-900/10 backdrop-blur-xl transition hover:bg-white/85 focus:outline-none focus:ring-4 focus:ring-blue-100"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/50 bg-white/70 text-slate-900 dark:text-slate-100 shadow-lg shadow-slate-900/10 backdrop-blur-xl transition hover:bg-white/85 focus:outline-none focus:ring-4 focus:ring-blue-100"
         type="button"
         aria-controls="drawer-navigation"
         :aria-expanded="isOpen"
@@ -62,13 +62,13 @@
         </div>
 
         <div class="min-w-0">
-          <p class="truncate text-sm font-bold text-slate-950">{{ userName }}</p>
-          <p class="truncate text-xs text-slate-600">{{ user.email }}</p>
+          <p class="truncate text-sm font-bold text-slate-950 dark:text-slate-100">{{ userName }}</p>
+          <p class="truncate text-xs text-slate-600 dark:text-slate-300">{{ user.email }}</p>
         </div>
       </RouterLink>
 
       <button
-          class="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-slate-200"
+          class="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 transition hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-slate-200"
           type="button"
           @click="logoutFromDrawer"
       >
@@ -77,8 +77,8 @@
     </div>
 
     <div v-else-if="!loadingUser" class="mt-5 rounded-xl border border-white/60 bg-white/50 p-3 shadow-sm shadow-slate-900/5 backdrop-blur-xl">
-      <p class="text-sm font-bold text-slate-950">Войдите в аккаунт</p>
-      <p class="mt-1 text-xs leading-5 text-slate-600">Профиль, избранные команды и уведомления будут под рукой.</p>
+      <p class="text-sm font-bold text-slate-950 dark:text-slate-100">Войдите в аккаунт</p>
+      <p class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">Профиль, избранные команды и уведомления будут под рукой.</p>
       <button
           class="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100"
           type="button"
@@ -93,8 +93,8 @@
         <li>
           <RouterLink
               :to="newsLink.to"
-              class="group flex items-center rounded-lg px-2 py-2 text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
-              :class="{ 'bg-white/70 text-blue-700 shadow-sm': newsLink.isActive }"
+              class="group flex items-center rounded-lg px-2 py-2 text-slate-800 dark:text-slate-200 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+              :class="{ 'bg-white/70 text-blue-700 dark:text-blue-300 shadow-sm': newsLink.isActive }"
               @click="closeDrawer"
           >
             <InboxIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
@@ -105,8 +105,8 @@
         <li>
           <RouterLink
               :to="gamesLink.to"
-              class="group flex items-center rounded-lg px-2 py-2 text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
-              :class="{ 'bg-white/70 text-blue-700 shadow-sm': gamesLink.isActive }"
+              class="group flex items-center rounded-lg px-2 py-2 text-slate-800 dark:text-slate-200 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+              :class="{ 'bg-white/70 text-blue-700 dark:text-blue-300 shadow-sm': gamesLink.isActive }"
               @click="closeDrawer"
           >
             <CalendarIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
@@ -117,8 +117,8 @@
         <li>
           <button
               type="button"
-              class="group flex w-full items-center rounded-lg px-2 py-2 text-left text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
-              :class="{ 'bg-white/70 text-blue-700 shadow-sm': seasonIsActive }"
+              class="group flex w-full items-center rounded-lg px-2 py-2 text-left text-slate-800 dark:text-slate-200 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+              :class="{ 'bg-white/70 text-blue-700 dark:text-blue-300 shadow-sm': seasonIsActive }"
               @click="toggleMobileMenu('season')"
           >
             <PlayoffsIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
@@ -131,14 +131,14 @@
                 v-for="item in seasonLinks"
                 :key="item.label"
                 :to="item.to"
-                class="flex items-start gap-3 rounded-lg px-2 py-2 text-slate-700 transition hover:bg-white/70 hover:text-blue-700"
-                :class="{ 'bg-white/70 text-blue-700': item.isActive }"
+                class="flex items-start gap-3 rounded-lg px-2 py-2 text-slate-700 dark:text-slate-200 transition hover:bg-white/70 hover:text-blue-700"
+                :class="{ 'bg-white/70 text-blue-700 dark:text-blue-300': item.isActive }"
                 @click="closeDrawer"
             >
               <component :is="item.icon" class="mt-0.5 h-5 w-5 shrink-0" />
               <span class="min-w-0">
                 <span class="block text-sm font-bold leading-5">{{ item.label }}</span>
-                <span class="block text-xs font-medium leading-4 text-slate-500">{{ item.description }}</span>
+                <span class="block text-xs font-medium leading-4 text-slate-500 dark:text-slate-400">{{ item.description }}</span>
               </span>
             </RouterLink>
           </div>
@@ -147,8 +147,8 @@
         <li>
           <button
               type="button"
-              class="group flex w-full items-center rounded-lg px-2 py-2 text-left text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
-              :class="{ 'bg-white/70 text-blue-700 shadow-sm': teamsIsActive }"
+              class="group flex w-full items-center rounded-lg px-2 py-2 text-left text-slate-800 dark:text-slate-200 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+              :class="{ 'bg-white/70 text-blue-700 dark:text-blue-300 shadow-sm': teamsIsActive }"
               @click="toggleMobileMenu('teams')"
           >
             <TeamsIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
@@ -158,16 +158,16 @@
 
           <div v-if="mobileMenus.teams" class="mt-2 space-y-3 rounded-xl border border-white/60 bg-white/45 p-3 shadow-sm backdrop-blur-xl">
             <div v-for="conference in conferenceTeams" :key="conference.title">
-              <p class="px-1 text-xs font-black uppercase tracking-wide text-slate-500">{{ conference.title }}</p>
+              <p class="px-1 text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ conference.title }}</p>
               <div class="mt-2 grid gap-1">
                 <RouterLink
                     v-for="team in conference.teams"
                     :key="team.abbr"
                     :to="`/team/${team.abbr}`"
-                    class="flex min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-slate-700 transition hover:bg-white/70 hover:text-blue-700"
+                    class="flex min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-slate-700 dark:text-slate-200 transition hover:bg-white/70 hover:text-blue-700"
                     @click="closeDrawer"
                 >
-                  <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-100">
+                  <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-100">
                     <img :src="team.logo" :alt="team.name" class="h-[18px] w-[18px] object-contain" loading="lazy" />
                   </span>
                   <span class="truncate text-xs font-bold">{{ team.name }}</span>
@@ -180,8 +180,8 @@
         <li>
           <RouterLink
               :to="playersLink.to"
-              class="group flex items-center rounded-lg px-2 py-2 text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
-              :class="{ 'bg-white/70 text-blue-700 shadow-sm': playersLink.isActive }"
+              class="group flex items-center rounded-lg px-2 py-2 text-slate-800 dark:text-slate-200 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+              :class="{ 'bg-white/70 text-blue-700 dark:text-blue-300 shadow-sm': playersLink.isActive }"
               @click="closeDrawer"
           >
             <BagIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
@@ -192,8 +192,8 @@
         <li>
           <button
               type="button"
-              class="group flex w-full items-center rounded-lg px-2 py-2 text-left text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
-              :class="{ 'bg-white/70 text-blue-700 shadow-sm': moreIsActive }"
+              class="group flex w-full items-center rounded-lg px-2 py-2 text-left text-slate-800 dark:text-slate-200 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+              :class="{ 'bg-white/70 text-blue-700 dark:text-blue-300 shadow-sm': moreIsActive }"
               @click="toggleMobileMenu('more')"
           >
             <SparklesIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
@@ -207,14 +207,14 @@
                   v-for="item in featuredLinks"
                   :key="item.label"
                   :to="item.to"
-                  class="flex items-start gap-3 rounded-lg px-2 py-2 text-slate-700 transition hover:bg-white/70 hover:text-blue-700"
-                  :class="{ 'bg-white/70 text-blue-700': item.isActive }"
+                  class="flex items-start gap-3 rounded-lg px-2 py-2 text-slate-700 dark:text-slate-200 transition hover:bg-white/70 hover:text-blue-700"
+                  :class="{ 'bg-white/70 text-blue-700 dark:text-blue-300': item.isActive }"
                   @click="closeDrawer"
               >
                 <component :is="item.icon" class="mt-0.5 h-5 w-5 shrink-0" />
                 <span class="min-w-0">
                   <span class="block text-sm font-bold leading-5">{{ item.label }}</span>
-                  <span class="block text-xs font-medium leading-4 text-slate-500">{{ item.description }}</span>
+                  <span class="block text-xs font-medium leading-4 text-slate-500 dark:text-slate-400">{{ item.description }}</span>
                 </span>
               </RouterLink>
             </div>
@@ -224,7 +224,7 @@
                   v-for="item in categoryLinks"
                   :key="item.label"
                   :to="item.to"
-                  class="block rounded-lg px-2 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-white/70 hover:text-blue-700"
+                  class="block rounded-lg px-2 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 transition hover:bg-white/70 hover:text-blue-700"
                   @click="closeDrawer"
               >
                 {{ item.label }}
@@ -241,7 +241,7 @@
             :href="githubUrl"
             target="_blank"
             rel="noreferrer"
-            class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/55 bg-white/45 text-slate-600 shadow-sm backdrop-blur-xl transition hover:bg-white/70 hover:text-slate-950"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/55 bg-white/45 text-slate-600 dark:text-slate-300 shadow-sm backdrop-blur-xl transition hover:bg-white/70 hover:text-slate-950"
         >
           <svg class="h-5 w-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
             <path fill-rule="evenodd" d="M12.006 2a9.847 9.847 0 0 0-6.484 2.44 10.32 10.32 0 0 0-3.393 6.17 10.48 10.48 0 0 0 1.317 6.955 10.045 10.045 0 0 0 5.4 4.418c.504.095.683-.223.683-.494 0-.245-.01-1.052-.014-1.908-2.78.62-3.366-1.21-3.366-1.21a2.711 2.711 0 0 0-1.11-1.5c-.907-.637.07-.621.07-.621.317.044.62.163.885.346.266.183.487.426.647.71.135.253.318.476.538.655a2.079 2.079 0 0 0 2.37.196c.045-.52.27-1.006.635-1.37-2.219-.259-4.554-1.138-4.554-5.07a4.022 4.022 0 0 1 1.031-2.75 3.77 3.77 0 0 1 .096-2.713s.839-.275 2.749 1.05a9.26 9.26 0 0 1 5.004 0c1.906-1.325 2.74-1.05 2.74-1.05.37.858.406 1.828.101 2.713a4.017 4.017 0 0 1 1.029 2.75c0 3.939-2.339 4.805-4.564 5.058a2.471 2.471 0 0 1 .679 1.897c0 1.372-.012 2.477-.012 2.814 0 .272.18.592.687.492a10.05 10.05 0 0 0 5.388-4.421 10.473 10.473 0 0 0 1.313-6.948 10.32 10.32 0 0 0-3.39-6.165A9.847 9.847 0 0 0 12.007 2Z" clip-rule="evenodd" />
@@ -253,7 +253,7 @@
             :href="telegramUrl"
             target="_blank"
             rel="noreferrer"
-            class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/55 bg-white/45 text-slate-600 shadow-sm backdrop-blur-xl transition hover:bg-white/70 hover:text-slate-950"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/55 bg-white/45 text-slate-600 dark:text-slate-300 shadow-sm backdrop-blur-xl transition hover:bg-white/70 hover:text-slate-950"
         >
           <svg class="h-5 w-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
             <path d="M21.8 4.2 18.6 19c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L6 12.5 1.1 11c-1.1-.3-1.1-1.1.2-1.6L20.3 2c.9-.3 1.7.2 1.5 2.2Z" />
@@ -270,8 +270,8 @@
         class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
         @click.self="showForm = ''"
     >
-      <div class="w-full max-w-sm rounded-2xl border bg-white p-6 shadow-xl">
-        <h2 class="text-center text-2xl font-bold text-slate-950">Вход</h2>
+      <div class="w-full max-w-sm rounded-2xl border bg-white dark:bg-slate-900 p-6 shadow-xl">
+        <h2 class="text-center text-2xl font-bold text-slate-950 dark:text-slate-100">Вход</h2>
 
         <div class="mt-5 space-y-3">
           <input v-model="email" type="email" placeholder="Email" class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-500" />
@@ -280,14 +280,14 @@
 
         <div class="mt-4 flex gap-2">
           <button class="flex-1 rounded-lg bg-blue-600 py-2 text-white transition hover:bg-blue-700" @click="loginFromDrawer">Войти</button>
-          <button class="flex-1 rounded-lg bg-slate-200 py-2 text-slate-800 transition hover:bg-slate-300" @click="sendPasswordReset">Сброс</button>
+          <button class="flex-1 rounded-lg bg-slate-200 py-2 text-slate-800 dark:text-slate-200 transition hover:bg-slate-300" @click="sendPasswordReset">Сброс</button>
         </div>
 
-        <button class="mt-3 w-full rounded-lg border py-2 text-slate-700 transition hover:bg-green-600 hover:text-white" @click="showForm = 'register'">
+        <button class="mt-3 w-full rounded-lg border py-2 text-slate-700 dark:text-slate-200 transition hover:bg-green-600 hover:text-white" @click="showForm = 'register'">
           Регистрация
         </button>
 
-        <button class="mt-3 w-full text-sm text-slate-500 hover:text-slate-700" @click="showForm = ''">Закрыть</button>
+        <button class="mt-3 w-full text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700" @click="showForm = ''">Закрыть</button>
       </div>
     </div>
   </Teleport>
@@ -298,8 +298,8 @@
         class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
         @click.self="showForm = ''"
     >
-      <div class="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border bg-white p-6 shadow-xl">
-        <h2 class="text-center text-2xl font-bold text-slate-950">Регистрация</h2>
+      <div class="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border bg-white dark:bg-slate-900 p-6 shadow-xl">
+        <h2 class="text-center text-2xl font-bold text-slate-950 dark:text-slate-100">Регистрация</h2>
 
         <div class="mt-5 space-y-3">
           <input v-model="firstName" type="text" placeholder="Имя" class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-green-500" />
@@ -308,22 +308,22 @@
           <input v-model="password" type="password" placeholder="Пароль" class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-green-500" />
         </div>
 
-        <div class="mt-5 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p class="text-sm font-black text-slate-950">Перед регистрацией подтвердите согласие</p>
-          <p class="text-xs leading-5 text-slate-600">
+        <div class="mt-5 space-y-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-4">
+          <p class="text-sm font-black text-slate-950 dark:text-slate-100">Перед регистрацией подтвердите согласие</p>
+          <p class="text-xs leading-5 text-slate-600 dark:text-slate-300">
             NBA MOM держится на уважении к людям и баскетболу: без политической агитации, пропаганды,
             оскорблений, травли, дискриминации и провокационных материалов.
           </p>
 
-          <label v-for="item in consentItems" :key="item.model" class="flex items-start gap-3 text-sm leading-5 text-slate-700">
+          <label v-for="item in consentItems" :key="item.model" class="flex items-start gap-3 text-sm leading-5 text-slate-700 dark:text-slate-200">
             <input
                 v-model="consentModels[item.model].value"
                 type="checkbox"
-                class="mt-1 h-4 w-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
+                class="mt-1 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-green-600 focus:ring-green-500"
             />
             <span>
               {{ item.text }}
-              <RouterLink :to="item.to" target="_blank" class="font-bold text-blue-700 hover:underline">
+              <RouterLink :to="item.to" target="_blank" class="font-bold text-blue-700 dark:text-blue-300 hover:underline">
                 {{ item.linkText }}
               </RouterLink>
             </span>
@@ -332,7 +332,7 @@
 
         <div class="mt-5 flex gap-2">
           <button class="flex-1 rounded-lg bg-green-600 py-2 text-white transition hover:bg-green-700" @click="registerFromDrawer">Зарегистрироваться</button>
-          <button class="flex-1 rounded-lg bg-slate-200 py-2 text-slate-800 transition hover:bg-slate-300" @click="showForm = 'login'">Назад</button>
+          <button class="flex-1 rounded-lg bg-slate-200 py-2 text-slate-800 dark:text-slate-200 transition hover:bg-slate-300" @click="showForm = 'login'">Назад</button>
         </div>
       </div>
     </div>

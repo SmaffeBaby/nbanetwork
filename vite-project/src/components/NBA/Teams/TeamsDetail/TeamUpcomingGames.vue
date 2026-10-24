@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-4">
 
-    <div class="text-sm text-gray-500">
+    <div class="text-sm text-gray-500 dark:text-slate-400">
       Предстоящих игр: {{ games.length }}
     </div>
 
@@ -9,7 +9,7 @@
       {{ error }}
     </div>
 
-    <div v-if="loading" class="rounded-2xl border border-gray-100 bg-white px-3 py-10">
+    <div v-if="loading" class="cursor-pointer rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-10">
       <div
           role="status"
           class="flex items-center justify-center"
@@ -32,11 +32,14 @@
       <div
           v-for="game in games"
           :key="game.GAME_ID"
-          class="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm"
+          tabindex="0"
+          @click="openGame(router, game.GAME_ID)"
+          @keydown.enter="openGame(router, game.GAME_ID)"
+          class="cursor-pointer rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-sm"
       >
         <div class="flex items-center justify-between gap-3">
-          <div class="text-sm font-medium text-gray-900">{{ game.FORMATTED_DATE }}</div>
-          <div class="shrink-0 text-sm font-semibold text-gray-600">{{ game.MOSCOW_TIME }}</div>
+          <div class="text-sm font-medium text-gray-900 dark:text-slate-100">{{ game.FORMATTED_DATE }}</div>
+          <div class="shrink-0 text-sm font-semibold text-gray-600 dark:text-slate-300">{{ game.MOSCOW_TIME }}</div>
         </div>
 
         <div class="mt-3 flex flex-wrap items-center gap-2">
@@ -56,7 +59,7 @@
     <div class="hidden overflow-x-auto rounded-xl border md:block">
       <table class="min-w-[600px] w-full text-sm">
 
-        <thead class="bg-gray-100 text-gray-600 text-xs uppercase">
+        <thead class="bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-xs uppercase">
         <tr>
           <th class="p-2">Дата</th>
           <th>Матч</th>
@@ -68,7 +71,10 @@
         <tr
             v-for="game in games"
             :key="game.GAME_ID"
-            class="border-t hover:bg-gray-50 transition"
+          tabindex="0"
+          @click="openGame(router, game.GAME_ID)"
+          @keydown.enter="openGame(router, game.GAME_ID)"
+            class="cursor-pointer border-t hover:bg-gray-50 dark:hover:bg-slate-800 transition"
         >
           <td class="px-3 py-2 whitespace-nowrap">
             {{ game.FORMATTED_DATE }}
@@ -101,6 +107,10 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { openGame } from '../../../../api/gameNavigation'
+const router = useRouter()
+
 import { toRef } from 'vue'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import { useTeamUpcomingGames } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamUpcomingGames'

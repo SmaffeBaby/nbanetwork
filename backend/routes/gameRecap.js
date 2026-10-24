@@ -7,14 +7,20 @@ router.get('/game-recap/:gameId', async (req, res) => {
     const { gameId } = req.params
     const { quarter, period } = req.query
 
+    const requestedPeriod = period || quarter
+    if (requestedPeriod && !/^(?:[1-9]|10|firstHalf|secondHalf|ot)$/.test(String(requestedPeriod))) {
+        return res.status(400).json({ error: 'Invalid period' })
+    }
     try {
         const periodFilter = parsePeriodFilter(period || quarter)
 
         const data = await fetchWithCache({
             key: `recap_v9_${gameId}_${periodFilter?.key || 'all'}`,
-            ttl: 1000 * 60 * 30,
+            ttl: gameId.startsWith('espn:') ? 30000 : 1000 * 60 * 30,
             fetcher: async () => {
-                return await fetchGameRecap(gameId, periodFilter)
+                const data = await fetchGameRecap(gameId, periodFilter)
+                if (!data) throw new Error('Game data unavailable')
+                return data
             }
         })
 

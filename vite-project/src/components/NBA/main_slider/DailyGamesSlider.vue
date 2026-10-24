@@ -7,7 +7,7 @@
       <div
           v-for="game in gamesList"
           :key="game.id"
-          class="match-card w-full p-4 bg-white rounded-xl transform scale-100 transition-transform duration-300"
+          class="match-card w-full p-4 bg-white dark:bg-slate-900 rounded-xl transform scale-100 transition-transform duration-300"
       >
         <MatchCardContent :game="game" :countdowns="countdowns" :formatGameTime="formatGameTime" />
       </div>
@@ -29,7 +29,7 @@
           :key="game.id"
           class="relative"
       >
-        <div class="match-card w-full p-4 bg-white rounded-xl transform scale-100 transition-transform duration-300">
+        <div class="match-card w-full p-4 bg-white dark:bg-slate-900 rounded-xl transform scale-100 transition-transform duration-300">
           <MatchCardContent :game="game" :countdowns="countdowns" :formatGameTime="formatGameTime" />
         </div>
       </SwiperSlide>
@@ -48,7 +48,7 @@
           v-for="game in gamesList"
           :key="game.id"
       >
-        <div class="match-card w-full p-4 bg-white rounded-lg shadow-md">
+        <div class="match-card w-full p-4 bg-white dark:bg-slate-900 rounded-lg shadow-md">
           <MatchCardContent :game="game" :countdowns="countdowns" :formatGameTime="formatGameTime" />
         </div>
       </SwiperSlide>
@@ -61,7 +61,7 @@
 
     <div
         v-if="isMobile && !isCompactMobileList && !atEnd"
-        class="absolute bottom-4 left-1/2 -translate-x-1/2 text-gray-500 text-sm animate-bounce z-10"
+        class="absolute bottom-4 left-1/2 -translate-x-1/2 text-gray-500 dark:text-slate-400 text-sm animate-bounce z-10"
     >
       ⬆️ ещё игры
     </div>
@@ -83,7 +83,7 @@ const props = defineProps<{
   formatGameTime: (iso: string) => string
 }>()
 
-const { countdowns } = useCountdowns(props.gamesList)
+const { countdowns } = useCountdowns(() => props.gamesList)
 
 const isMobile = ref(false)
 const atEnd = ref(false)

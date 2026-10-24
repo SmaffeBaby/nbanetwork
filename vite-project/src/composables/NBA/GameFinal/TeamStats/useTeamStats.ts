@@ -205,7 +205,7 @@ export function useTeamStats(recap: Ref<any>) {
         ['pointsInThePaint', 'PTS in the paint'],
         ['secondChancePoints', '2nd chance pts'],
         ['fastBreakPoints', 'Fastbreak pts']
-    ].map(([key, label]) => buildComparisonRow(key, label)))
+    ].filter(([key]) => !recap.value?.unavailableStats?.includes(key)).map(([key, label]) => buildComparisonRow(key, label)))
 
     const detailStatRows = computed(() => [
         ['minutes', 'MIN'],

@@ -1,11 +1,11 @@
 <template>
-  <div class="max-h-[70vh] overflow-auto rounded-xl border border-gray-200 bg-white">
+  <div class="max-h-[70vh] overflow-auto rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900">
     <table class="min-w-[980px] border-separate border-spacing-0 text-left text-sm sm:w-full sm:min-w-0 sm:border-collapse">
 
-      <thead class="sticky top-0 z-20 bg-gray-100 text-xs uppercase text-gray-600 shadow-sm">
+      <thead class="sticky top-0 z-20 bg-gray-100 dark:bg-slate-800 text-xs uppercase text-gray-600 dark:text-slate-300 shadow-sm">
       <tr>
 
-        <th class="sticky left-0 z-30 w-[190px] bg-gray-100 px-3 py-3 sm:static sm:w-auto">Player</th>
+        <th class="sticky left-0 z-30 w-[190px] bg-gray-100 dark:bg-slate-800 px-3 py-3 sm:static sm:w-auto">Player</th>
 
         <th @click="setSort('position')" class="cursor-pointer px-2 py-3">
           POS {{ sortArrow('position') }}
@@ -76,10 +76,10 @@
       <tr
           v-for="p in players"
           :key="p.PLAYER_ID"
-          class="group border-t hover:bg-gray-50"
+          class="group border-t hover:bg-gray-50 dark:hover:bg-slate-800"
       >
 
-        <td class="sticky left-0 z-10 w-[190px] bg-white px-3 py-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.7)] group-hover:bg-gray-50 sm:static sm:w-auto sm:shadow-none">
+        <td class="sticky left-0 z-10 w-[190px] bg-white dark:bg-slate-900 px-3 py-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.7)] group-hover:bg-gray-50 sm:static sm:w-auto sm:shadow-none">
           <router-link
               :to="{
                 name: 'PlayerPage',
@@ -91,38 +91,38 @@
                 :src="getPlayerImage(p)"
                 :data-player-id="p.PLAYER_ID"
                 @error="handleImageError"
-                class="h-8 w-8 shrink-0 rounded-full bg-gray-200 object-cover"
+                class="h-8 w-8 shrink-0 rounded-full bg-gray-200 dark:bg-slate-700 object-cover"
             />
-            <span class="min-w-0 truncate font-medium text-gray-700 no-underline hover:text-gray-700">{{ p.name }}</span>
+            <span class="min-w-0 truncate font-medium text-gray-700 dark:text-slate-200 no-underline hover:text-gray-700">{{ p.name }}</span>
           </router-link>
         </td>
 
         <td class="px-2 py-2">{{ p.position }}</td>
         <td class="px-2 py-2">{{ p.jerseyNum }}</td>
 
-        <td class="px-2 py-2">{{ p.minutes }}</td>
+        <td class="px-2 py-2">{{ stat(p, 'minutes') }}</td>
 
-        <td class="px-2 py-2" :class="statGold(p.points)">{{ p.points }}</td>
-        <td class="px-2 py-2" :class="statGold(p.assists)">{{ p.assists }}</td>
-        <td class="px-2 py-2" :class="statGold(p.rebounds)">{{ p.rebounds }}</td>
+        <td class="px-2 py-2" :class="statGold(p.points)">{{ stat(p, 'points') }}</td>
+        <td class="px-2 py-2" :class="statGold(p.assists)">{{ stat(p, 'assists') }}</td>
+        <td class="px-2 py-2" :class="statGold(p.rebounds)">{{ stat(p, 'rebounds') }}</td>
 
-        <td class="px-2 py-2">{{ p.steals }}</td>
-        <td class="px-2 py-2">{{ p.blocks }}</td>
+        <td class="px-2 py-2">{{ stat(p, 'steals') }}</td>
+        <td class="px-2 py-2">{{ stat(p, 'blocks') }}</td>
 
-        <td class="px-2 py-2">{{ p.fgM }}/{{ p.fgA }}</td>
-        <td class="px-2 py-2" :class="fgClass(p)">{{ p.fgPct }}%</td>
+        <td class="px-2 py-2">{{ stat(p, 'fgM') }}/{{ stat(p, 'fgA') }}</td>
+        <td class="px-2 py-2" :class="fgClass(p)">{{ stat(p, 'fgPct', '%') }}</td>
 
-        <td class="px-2 py-2">{{ p.tpM }}/{{ p.tpA }}</td>
-        <td class="px-2 py-2" :class="tpClass(p)">{{ p.tpPct }}%</td>
+        <td class="px-2 py-2">{{ stat(p, 'tpM') }}/{{ stat(p, 'tpA') }}</td>
+        <td class="px-2 py-2" :class="tpClass(p)">{{ stat(p, 'tpPct', '%') }}</td>
 
-        <td class="px-2 py-2">{{ p.ftM }}/{{ p.ftA }}</td>
-        <td class="px-2 py-2" :class="ftClass(p)">{{ p.ftPct }}%</td>
+        <td class="px-2 py-2">{{ stat(p, 'ftM') }}/{{ stat(p, 'ftA') }}</td>
+        <td class="px-2 py-2" :class="ftClass(p)">{{ stat(p, 'ftPct', '%') }}</td>
 
-        <td class="px-2 py-2">{{ p.fouls }}</td>
-        <td class="px-2 py-2">{{ p.turnovers }}</td>
+        <td class="px-2 py-2">{{ stat(p, 'fouls') }}</td>
+        <td class="px-2 py-2">{{ stat(p, 'turnovers') }}</td>
 
         <td class="px-2 py-2" :class="p.plusMinus >= 0 ? 'text-green-600' : 'text-red-500'">
-          {{ p.plusMinus }}
+          {{ stat(p, 'plusMinus') }}
         </td>
 
       </tr>
@@ -133,6 +133,8 @@
 </template>
 
 <script setup lang="ts">
+const stat = (player: any, key: string, suffix = '') => player.unavailableStats?.includes(key) ? '—' : `${player[key]}${suffix}`
+
 defineProps<{
   players: any[]
 

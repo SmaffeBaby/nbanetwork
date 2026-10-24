@@ -8,17 +8,19 @@ router.get('/daily-games', async (req, res) => {
         const dateStr = req.query.date
             ? String(req.query.date)
             : (() => {
-                const tomorrow = new Date()
-                tomorrow.setDate(tomorrow.getDate() + 1)
-                return tomorrow.toISOString().slice(0, 10)
+                return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow' }).format(new Date())
             })()
 
+        const { isAllowedDate } = require('./dailyGames')
+        if (!isAllowedDate(dateStr)) return res.status(400).json({ error: 'Invalid date' })
         const games = await getGamesByDate(dateStr)
 
+        res.set('Cache-Control', 'public, max-age=30')
         res.json(games)
     } catch (err) {
         console.error('Ошибка:', err)
-        res.status(500).json({ error: 'Не удалось загрузить игры' })
+        res.set('Cache-Control', 'no-store')
+        res.status(503).json({ error: 'Не удалось загрузить игры' })
     }
 })
 

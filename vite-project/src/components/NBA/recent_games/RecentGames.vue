@@ -1,28 +1,22 @@
 <template>
   <div>
-    <h1 class="text-[10px] leading-15 font-bold break-words text-center pl-0 md:text-left md:pl-10 max-w-md">
+    <h1 class="text-3xl leading-tight font-bold break-words text-center pl-0 md:text-left md:pl-10 ">
       Прошедшие игры
     </h1>
   </div>
 
-  <div class="bg-gray-50 p-6 rounded-xl shadow-lg">
+  <div class="bg-gray-50 dark:bg-slate-900 p-6 rounded-xl shadow-lg">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
       <div class="flex flex-col gap-2">
-        <h2
-            class="text-2xl font-bold flex items-center gap-2 cursor-pointer"
-            @click="openCalendar"
-        >
-          Игры за - {{ formatDateWithWeekday(currentDate) }}
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-slate-100">
+          Игры за {{ formatDateWithWeekday(currentDate) }}
         </h2>
-
-        <Datepicker
-            ref="datepickerRef"
-            v-model="currentDate"
-            :value-type="'date'"
-            :format="formatDateWithWeekday"
-            @change="selectDate"
-            class="hidden"
-        />
+        <label class="flex items-center gap-3 text-sm text-gray-700 dark:text-slate-200">
+          Выбрать дату
+          <input type="date" :value="getDateKey(currentDate)"
+                 class="rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2"
+                 @change="selectDate(dateKeyToDate(($event.target as HTMLInputElement).value))" />
+        </label>
       </div>
 
 
@@ -47,6 +41,7 @@
 
       <div v-if="error" class="text-red-500">
         {{ error }}
+        <button type="button" class="ml-3 underline" @click="retry">Повторить</button>
       </div>
 
       <div
@@ -76,13 +71,14 @@
         <li
             v-for="game in gamesList"
             :key="getGameId(game)"
-            class="bg-white p-4 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
+            class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
             @click="goToGame(game)"
         >
 
           <div class="flex justify-between">
-            <span class="text-gray-500">
-              {{ game.statusTime }} по МСК
+            <span class="text-gray-500 dark:text-slate-400">
+              {{ game.statusTime ? `${game.statusTime} МСК` : 'Время уточняется' }}
+              <span class="block">{{ game.status }}</span>
             </span>
 
 
@@ -93,6 +89,7 @@
             <div class="flex flex-col items-center">
               <img :src="getTeamLogo(game.away.abbr)" class="w-10 h-10 mb-1" />
               <div class="text-sm text-center">{{ game.away.name }}</div>
+              <strong v-if="game.away.score !== null">{{ hideScores ? '—' : game.away.score }}</strong>
             </div>
 
             <div class="text-gray-400 font-bold">vs</div>
@@ -100,6 +97,7 @@
             <div class="flex flex-col items-center">
               <img :src="getTeamLogo(game.home.abbr)" class="w-10 h-10 mb-1" />
               <div class="text-sm text-center">{{ game.home.name }}</div>
+              <strong v-if="game.home.score !== null">{{ hideScores ? '—' : game.home.score }}</strong>
             </div>
 
           </div>
@@ -114,14 +112,14 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import Datepicker from 'vue3-datepicker'
+import { dateKeyToDate } from '../../../composables/NBA/games/useGamesByDate'
+import { getDateKey } from '../../../composables/NBA/utils'
+import { openGame } from '../../../api/gameNavigation'
 
 import { useRecentGames } from '../../../composables/NBA/recent_games/useRecentGames'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
 import {
-  openCalendar,
   formatDateWithWeekday,
-  datepickerRef
 } from '../../../composables/NBA/recent_games/useGameHelpers'
 
 const router = useRouter()
@@ -134,7 +132,9 @@ const {
   prevDay,
   nextDay,
   collapsed,
-  selectDate
+  selectDate,
+  hideScores,
+  retry
 } = useRecentGames()
 
 const getGameId = (g: any) =>
@@ -143,6 +143,6 @@ const getGameId = (g: any) =>
 const goToGame = (game: any) => {
   const id = getGameId(game)
   if (!id) return
-  router.push(`/game/${id}`)
+  openGame(router, id)
 }
 </script>

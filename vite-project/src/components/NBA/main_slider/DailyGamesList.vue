@@ -1,14 +1,15 @@
 <template>
   <div>
-    <h1 class="text-[10px] leading-15 font-bold break-words text-center pl-0 md:text-left md:pl-10 max-w-md">Матчи сегодня</h1>
+    <h1 class="text-[10px] leading-15 font-bold break-words text-center pl-0 md:text-left md:pl-10 max-w-md">Матчи завтра</h1>
 
 
-    <p v-if="gamesList.length === 0 && !error" class="text-gray-500">
-      Сегодня игр нет
+    <p v-if="loading" class="text-gray-500 dark:text-slate-400">Загрузка игр…</p>
+    <p v-else-if="gamesList.length === 0 && !error" class="text-gray-500 dark:text-slate-400">
+      Завтра игр нет
     </p>
 
     <DailyGamesSlider
-        v-else
+        v-else-if="gamesList.length"
         :gamesList="gamesList"
         :formatGameTime="formatGameTime"
     />
@@ -30,5 +31,5 @@
 import { useDailyGames } from '../../../composables/NBA/main_slider/useDailyGames.ts'
 import DailyGamesSlider from './DailyGamesSlider.vue'
 
-const { gamesList, selectedTimezone, error, formatGameTime } = useDailyGames()
+const { gamesList, selectedTimezone, error, loading, formatGameTime } = useDailyGames()
 </script>

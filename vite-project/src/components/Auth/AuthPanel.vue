@@ -3,7 +3,7 @@
 
     <div
         v-if="user"
-        class="flex h-[48px] w-[224px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-2.5 py-2 shadow-sm transition hover:border-blue-100 hover:bg-slate-50 hover:shadow-md"
+        class="flex h-[48px] w-[224px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-2 shadow-sm transition hover:border-blue-100 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-md"
         @click="goToProfile"
     >
       <img
@@ -20,10 +20,10 @@
       </div>
 
       <div class="min-w-0 flex-1 text-left">
-        <p class="truncate text-sm font-extrabold leading-5 text-slate-950">
+        <p class="truncate text-sm font-extrabold leading-5 text-slate-950 dark:text-slate-100">
           {{ user.firstName }} {{ user.lastName }}
         </p>
-        <p class="truncate text-xs font-medium leading-4 text-slate-500">{{ user.email }}</p>
+        <p class="truncate text-xs font-medium leading-4 text-slate-500 dark:text-slate-400">{{ user.email }}</p>
       </div>
 
       <button
@@ -43,7 +43,7 @@
     <div v-if="showForm === ''" class="flex items-center gap-3">
       <button
           @click="showForm = 'login'"
-          class="inline-flex h-[48px] items-center justify-center rounded-lg px-[8px] text-[16px] font-bold text-slate-800 transition hover:text-blue-700 active:scale-95 2xl:px-[12px]"
+          class="inline-flex h-[48px] items-center justify-center rounded-lg px-[8px] text-[16px] font-bold text-slate-800 dark:text-slate-200 transition hover:text-blue-700 active:scale-95 2xl:px-[12px]"
       >
         Войти
       </button>
@@ -62,7 +62,7 @@
           @click.self="showForm = ''"
           class="fixed inset-0 flex items-center justify-center bg-black/50 z-[9999]"
       >
-        <div class="w-80 bg-white rounded-2xl shadow-xl border p-6 space-y-4">
+        <div class="w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border p-6 space-y-4">
 
           <h2 class="text-2xl font-bold text-center">Вход</h2>
 
@@ -90,7 +90,7 @@
 
             <button
                 @click="sendPasswordReset"
-                class="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 active:scale-95 transition"
+                class="flex-1 py-2 bg-gray-200 dark:bg-slate-700 rounded-lg hover:bg-gray-300 active:scale-95 transition"
             >
               Сброс
             </button>
@@ -105,7 +105,7 @@
 
           <button
               @click="showForm = ''"
-              class="w-full text-gray-500 hover:text-gray-700"
+              class="w-full text-gray-500 dark:text-slate-400 hover:text-gray-700"
           >
             Закрыть
           </button>
@@ -120,7 +120,7 @@
           @click.self="showForm = ''"
           class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
       >
-        <div class="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border bg-white p-6 shadow-xl">
+        <div class="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border bg-white dark:bg-slate-900 p-6 shadow-xl">
 
           <h2 class="text-2xl font-bold text-center">Регистрация</h2>
 
@@ -131,15 +131,15 @@
             <input v-model="password" type="password" placeholder="Пароль" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
           </div>
 
-          <div class="mt-5 space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-left">
+          <div class="mt-5 space-y-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 p-4 text-left">
             <p class="text-sm font-black text-gray-950">Перед регистрацией подтвердите согласие</p>
-            <p class="text-xs leading-5 text-gray-600">
+            <p class="text-xs leading-5 text-gray-600 dark:text-slate-300">
               NBA MOM держится на уважении к людям и баскетболу: без политической агитации, пропаганды,
               оскорблений, травли, дискриминации и провокационных материалов. Нарушения в новостях,
               комментариях и профиле могут привести к удалению контента и бану аккаунта.
             </p>
 
-            <label v-for="item in consentItems" :key="item.model" class="flex items-start gap-3 text-sm leading-5 text-gray-700">
+            <label v-for="item in consentItems" :key="item.model" class="flex items-start gap-3 text-sm leading-5 text-gray-700 dark:text-slate-200">
               <input
                   v-model="consentModels[item.model].value"
                   type="checkbox"

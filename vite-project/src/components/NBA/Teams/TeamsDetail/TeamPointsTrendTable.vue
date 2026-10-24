@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-4">
 
-    <div class="text-sm text-gray-500">
+    <div class="text-sm text-gray-500 dark:text-slate-400">
       Динамика очков: Общее / Дома / Выезд
     </div>
 
-    <div class="bg-white p-3 rounded-xl shadow sm:p-4">
+    <div class="bg-white dark:bg-slate-900 p-3 rounded-xl shadow sm:p-4">
       <div class="h-60 relative sm:h-72">
         <canvas ref="chartRef" class="w-full h-full"></canvas>
       </div>

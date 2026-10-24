@@ -7,7 +7,7 @@
         class="w-full rounded-lg border px-3 py-2 text-sm sm:w-52"
     />
 
-    <select v-model="model.period" class="w-full rounded-lg border px-3 py-2 text-sm sm:w-auto">
+    <select :disabled="periodStatsAvailable === false" v-model="model.period" class="w-full rounded-lg border px-3 py-2 text-sm sm:w-auto">
       <option :value="null">Весь матч</option>
       <option value="firstHalf">1-я половина</option>
       <option value="secondHalf">2-я половина</option>
@@ -17,6 +17,7 @@
       <option :value="3">Q3</option>
       <option :value="4">Q4</option>
     </select>
+    <p v-if="periodStatsAvailable === false" class="text-xs text-gray-500 dark:text-slate-400">Поквартальная статистика игроков для этого матча недоступна.</p>
 
   </div>
 </template>
@@ -29,6 +30,7 @@ type Filters = {
 
 defineProps<{
   hasOvertime?: boolean
+  periodStatsAvailable?: boolean
 }>()
 
 const model = defineModel<Filters>({

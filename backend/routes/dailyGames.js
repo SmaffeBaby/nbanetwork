@@ -13,7 +13,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const MIN_DATE_KEY = '2000-01-01'
 const MAX_FUTURE_DAYS = 370
 const RATE_LIMIT_WINDOW_MS = 60 * 1000
-const RATE_LIMIT_MAX_REQUESTS = 60
+const RATE_LIMIT_MAX_REQUESTS = 240
 const pendingDateRequests = new Map()
 const requestBuckets = new Map()
 
@@ -118,7 +118,8 @@ async function fetchAndCacheGames(date) {
     if (pending) return pending
 
     const request = axios.get(
-        `http://python-backend:8000/games/by-date/${date}`
+        `http://python-backend:8000/games/by-date/${date}`,
+        { timeout: 25000 }
     )
         .then(async (response) => {
             const games = sanitizeGamesForDate(date, response.data)
@@ -170,8 +171,11 @@ router.get('/games/by-date/:date', rateLimitGamesByDate, async (req, res) => {
         res.json(games)
     } catch (e) {
         console.error(e)
-        res.status(500).json([])
+        res.set('Cache-Control', 'no-store')
+        res.status(503).json({ error: 'Не удалось загрузить игры. Попробуйте ещё раз.' })
     }
 })
 
 module.exports = router
+module.exports.resolveGamesByDate = resolveGamesByDate
+module.exports.isAllowedDate = isAllowedDate

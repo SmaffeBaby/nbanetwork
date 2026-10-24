@@ -5,7 +5,7 @@
           class="absolute inset-0 bg-cover bg-top opacity-45"
           style="background-image: url('https://flowbite.s3.amazonaws.com/docs/jumbotron/hero-pattern.svg')"
       ></div>
-      <div class="absolute inset-0 bg-[radial-gradient(circle_at_12%_6%,rgba(239,68,68,0.15),transparent_30%),radial-gradient(circle_at_88%_10%,rgba(37,99,235,0.17),transparent_34%),linear-gradient(180deg,#ffffff_0%,#eff6ff_26%,#ffffff_62%)]"></div>
+      <div class="home-gradient absolute inset-0 bg-[radial-gradient(circle_at_12%_6%,rgba(239,68,68,0.15),transparent_30%),radial-gradient(circle_at_88%_10%,rgba(37,99,235,0.17),transparent_34%),linear-gradient(180deg,#ffffff_0%,#eff6ff_26%,#ffffff_62%)]"></div>
     </div>
 
     <Header />

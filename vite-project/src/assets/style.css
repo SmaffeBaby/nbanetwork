@@ -6,7 +6,7 @@ h1 {
     font-size: 56px;
     letter-spacing: -1.68px;
     margin: 32px 0;
-    color: black;
+    color: inherit;
 }
 .swiper-slide {
     display: flex;
@@ -298,4 +298,16 @@ h1 {
     .news-content h3 {
         font-size: 1.2rem;
     }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root { color-scheme: dark; color: #e2e8f0; background: #020617; }
+    body { color: #e2e8f0; background-color: #020617; }
+    .home-gradient { background: radial-gradient(circle at 12% 6%, #381e38, transparent 35%), radial-gradient(circle at 88% 10%, #152a53, transparent 40%), #020617; }
+    .match-card { background-color: #0f172a; border-color: #334155; }
+    .team-name, .game-status, .status-final { color: #e2e8f0; }
+    .status-upcoming, .match-start-time { color: #94a3b8; }
+    .news-content, .news-content h2, .news-content h3, .news-content h4 { color: #e2e8f0; }
+    .news-content .news-sources { background: #0f172a; border-color: #334155; }
+    .news-content blockquote { background: #172554; color: #bfdbfe; }
 }

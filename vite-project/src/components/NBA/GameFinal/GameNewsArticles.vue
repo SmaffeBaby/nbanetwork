@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between gap-3">
       <div>
         <div class="text-xs font-black uppercase text-red-600">NBA Dashboard News</div>
-        <h2 class="text-xl font-black text-gray-950">Материалы к игре</h2>
+        <h2 class="text-xl font-black text-gray-950 dark:text-slate-100">Материалы к игре</h2>
       </div>
       <RouterLink to="/news" class="text-sm font-bold text-blue-700 hover:text-blue-900">
         Все новости
@@ -14,7 +14,7 @@
       <article
         v-for="article in articles"
         :key="article.id"
-        class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+        class="overflow-hidden rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
       >
         <RouterLink :to="{ name: 'NewsArticle', params: { slug: article.slug || article.id } }" class="block w-full text-left hover:no-underline">
           <img
@@ -24,15 +24,15 @@
             class="h-40 w-full object-cover"
           />
           <div class="space-y-3 p-5">
-            <div class="text-xs font-bold text-gray-500">{{ formatNewsDate(article.created_at) }}</div>
-            <h3 class="text-lg font-black leading-tight text-gray-950">{{ article.title }}</h3>
-            <p class="line-clamp-3 text-sm leading-6 text-gray-600">{{ article.excerpt }}</p>
+            <div class="text-xs font-bold text-gray-500 dark:text-slate-400">{{ formatNewsDate(article.created_at) }}</div>
+            <h3 class="text-lg font-black leading-tight text-gray-950 dark:text-slate-100">{{ article.title }}</h3>
+            <p class="line-clamp-3 text-sm leading-6 text-gray-600 dark:text-slate-300">{{ article.excerpt }}</p>
             <div class="flex flex-wrap gap-2">
               <RouterLink
                 v-for="tag in article.hashtags"
                 :key="tag"
                 :to="{ path: '/news', query: { tag } }"
-                class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-700 hover:bg-gray-900 hover:text-white hover:no-underline"
+                class="rounded-full bg-gray-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-gray-700 dark:text-slate-200 hover:bg-gray-900 hover:text-white hover:no-underline"
                 @click.stop
               >
                 #{{ tag }}
