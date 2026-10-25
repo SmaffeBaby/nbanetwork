@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from upcoming_games import select_upcoming_games
 import json
 import re
 import threading
@@ -826,6 +827,28 @@ def data_frames_to_result_sets(data_frames, names):
         })
 
     return {"resultSets": result_sets}
+
+
+@app.get("/games/upcoming")
+def get_upcoming_games():
+    now = datetime.now(timezone.utc)
+    scheduled = fetch_schedule_games_by_id()
+    games = select_upcoming_games(scheduled.values(), now)
+    if games:
+        return games
+    # When the NBA schedule is unavailable or belongs to an older season,
+    # use the existing calendar fallback, stopping as soon as the list is full.
+    candidates = []
+    today = now.astimezone(MSK_TZ).date()
+    try:
+        for offset in range(-1, 15):
+            candidates.extend(calendar_provider.games_on_date(today + timedelta(days=offset)))
+            games = select_upcoming_games(candidates, now)
+            if len(games) >= 6:
+                break
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Upcoming games source unavailable") from exc
+    return games
 
 
 @app.get("/games/by-date/{date}")

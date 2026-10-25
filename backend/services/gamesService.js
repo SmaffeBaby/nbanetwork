@@ -10,6 +10,10 @@ async function getGamesByDate(dateStr) {
         ttl: 30000,
         fetcher: () => resolveGamesByDate(dateStr)
     })
+    return normalizeGames(games)
+}
+
+function normalizeGames(games) {
     const team = (id, abbr) => ({
         id, abbreviation: abbr || TEAM_MAP[id]?.abbr || '',
         full_name: TEAM_MAP[id]?.name || abbr || ''
@@ -21,8 +25,8 @@ async function getGamesByDate(dateStr) {
         home_team_score: game.HOME_TEAM_SCORE,
         visitor_team_score: game.VISITOR_TEAM_SCORE,
         status: game.GAME_STATUS,
-        period: game.GAME_STATUS_ID === 2 ? 1 : 0,
+        period: String(game.GAME_STATUS_ID) === '2' ? 1 : 0,
         datetime: game.GAME_TIME_UTC
     }))
 }
-module.exports = { getGamesByDate }
+module.exports = { getGamesByDate, normalizeGames }

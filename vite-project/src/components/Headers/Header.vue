@@ -1,5 +1,5 @@
 <template>
-  <header class="fixed left-0 top-0 z-50 hidden w-full border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 shadow-sm backdrop-blur-xl min-[1180px]:block">
+  <header ref="headerRef" :class="{ 'desktop-header-hidden': headerHidden }" @focusin="showHeader" class="desktop-header fixed left-0 top-0 z-50 hidden w-full border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 shadow-sm backdrop-blur-xl min-[1180px]:block">
     <div class="mx-auto flex h-[88px] w-full max-w-[1840px] items-center px-[20px] lg:px-[28px] 2xl:px-[48px]">
       <RouterLink to="/" class="flex shrink-0 items-center">
         <NbaMomLogo alt="NBA MOM Logo" class="h-[48px] w-[178px] 2xl:w-[210px]" />
@@ -168,12 +168,15 @@
 </template>
 
 <script setup lang="ts">
+import { useHeaderScroll } from '../../composables/Headers/useHeaderScroll'
 import { RouterLink } from 'vue-router'
 import AuthPanel from '../Auth/AuthPanel.vue'
 import HeaderBurger from './HeaderBurger.vue'
 import NotificationsBell from './NotificationsBell.vue'
 import NbaMomLogo from '../Logo/NbaMomLogo.vue'
 import { useHeader } from '../../composables/Headers/useHeader'
+
+const { headerRef, headerHidden, showHeader } = useHeaderScroll()
 
 const {
   categoryLinks,
@@ -189,3 +192,16 @@ const {
   teamsIsActive
 } = useHeader()
 </script>
+
+<style scoped>
+.desktop-header {
+  transition: transform 250ms ease;
+}
+.desktop-header-hidden {
+  transform: translateY(-110%);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .desktop-header { transition: none; }
+}
+</style>

@@ -16,9 +16,9 @@ export function useCountdowns(gamesList: MaybeRefOrGetter<Game[]>) {
                 const gameTime = dayjs(game.datetime)
                 if (gameTime.isAfter(now)) {
                     const diff = dayjs.duration(gameTime.diff(now))
-                    countdowns.value[game.id] = `${diff.hours()}ч ${diff.minutes()}м ${diff.seconds()}с`
+                    countdowns.value[game.id] = `${Math.floor(diff.asDays()) > 0 ? `${Math.floor(diff.asDays())}д ` : ''}${diff.hours()}ч ${diff.minutes()}м ${diff.seconds()}с`
                 } else {
-                    countdowns.value[game.id] = 'Началось!'
+                    countdowns.value[game.id] = 'Ожидаем начала'
                 }
             }
         })
