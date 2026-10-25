@@ -49,7 +49,7 @@ export function useNewsSlider() {
     queryKey: SLIDES_QUERY_KEY,
     queryFn: async ({ signal }): Promise<NewsSlide[]> => {
       // Revalidate HTTP caches too, especially immediately after an admin edit.
-      const response = await fetch('/api/news-slider', { signal, cache: 'no-cache' })
+      const response = await fetch('/api/news-slider', { signal: AbortSignal.any([signal, AbortSignal.timeout(12000)]), cache: 'no-cache' })
       if (!response.ok) throw new Error(`Не удалось загрузить слайды (${response.status}).`)
       const data = await response.json()
       if (!Array.isArray(data.slides) || !data.slides.every((slide: NewsSlide) =>
@@ -61,7 +61,7 @@ export function useNewsSlider() {
     },
     staleTime: SLIDES_STALE_TIME,
     gcTime: SLIDES_CACHE_TIME,
-    retry: 2,
+    retry: 1,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true
   })

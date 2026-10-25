@@ -31,10 +31,21 @@ async function readTable(page, expectedSeason) {
 }
 async function run(browser) {
     await record({ running: true, failures: [], cycleStartedAt: new Date().toISOString() })
-    const context = await browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 1000 } })
-    const page = await context.newPage()
-    page.setDefaultTimeout(30000)
-    await page.addLocatorHandler(page.getByRole('button', { name: 'Reject All', exact: true }), async button => { await button.click() })
+    let context, page
+    async function resetPage() {
+        if (context) await context.close()
+        context = await browser.newContext({ locale: 'en-US', viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' })
+        // Salary tables need the main document and scripts, not advertising frames or media.
+        await context.route('**/*', route => {
+            const request = route.request()
+            if (['image', 'font', 'media'].includes(request.resourceType()) ||
+                (request.isNavigationRequest() && request.frame().parentFrame())) return route.abort()
+            return route.continue()
+        })
+        page = await context.newPage()
+        page.setDefaultTimeout(30000)
+        await page.addLocatorHandler(page.getByRole('button', { name: 'Reject All', exact: true }), async button => { await button.click() })
+    }
     try {
         // On an empty installation every team gets a current table before any archive work.
         const jobs = [false, true].flatMap(archive => teams.map(entry => ({ entry, archive })))
@@ -49,6 +60,7 @@ async function run(browser) {
                 }
             }
             try {
+                await resetPage()
                 await record({ team, season: currentSeason(), phase: archive ? 'archive' : 'current' })
                 const response = await page.goto(`https://eu.hoopshype.com/salaries/teams/${slug}/${id}/`, { waitUntil: 'domcontentloaded', timeout: 45000 })
                 if (response && !response.ok()) throw new Error(`Source HTTP ${response.status()}`)
@@ -92,12 +104,12 @@ async function run(browser) {
                 await record({ completedTeam: team, importedPages: pages.length })
             } catch (error) {
                 status.failures.push({ team, error: error.message.slice(0, 200) })
-                console.error(JSON.stringify({ team, url: page.url(), error: error.message }))
+                console.error(JSON.stringify({ team, url: page?.url(), error: error.message }))
             }
             await sleep(1000)
         }
     } finally {
-        await context.close()
+        if (context) await context.close()
         await record({ running: false, nextRunAt: new Date(Date.now() + (status.failures.length ? 5 * 60_000 : INTERVAL)).toISOString() })
     }
 }

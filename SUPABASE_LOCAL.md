@@ -93,6 +93,20 @@ docker compose logs --tail=50 contracts-importer
 docker compose exec -T contracts-importer cat /data/status.json
 ```
 
+On small production hosts the browser must leave resources for the application and database.
+Compose limits the importer to 0.25 CPU, 512 MiB RAM, 768 MiB total RAM plus swap,
+and 192 processes. Each team uses a fresh browser context; images, fonts, media and
+advertising frame navigations are blocked while table documents and scripts remain enabled.
+The production deploy script stops the importer before application builds and restarts it
+after migrations. Existing snapshots remain readable throughout this pause.
+
+The 4 GiB production host also has a persistent 2 GiB swap file at
+`/swapfile-basketsfera`, registered in `/etc/fstab`, with `vm.swappiness=10` in
+`/etc/sysctl.d/90-basketsfera-memory.conf`. Swap is a reserve, not a replacement for
+the importer limits. Check `free -m`, `vmstat 1 5` and `docker stats --no-stream`
+when diagnosing latency. News slider database reads time out after five seconds;
+the browser request has a twelve-second timeout and keeps previously cached slides.
+
 The importer uses standard Chromium with its sandbox and the official Playwright seccomp profile.
 It stops on source access restrictions; saved salaries remain available through the application API.
 No login, CAPTCHA bypass, alternate salary provider, or invented fallback payroll is used.

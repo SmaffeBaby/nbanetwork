@@ -225,6 +225,7 @@ async function loadNewsSliderPayload(admin = getAdmin()) {
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false })
         .limit(12)
+        .abortSignal(AbortSignal.timeout(5000))
 
     if (error) throw error
 

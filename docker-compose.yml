@@ -36,8 +36,11 @@ services:
     init: true
     restart: unless-stopped
     networks: [contracts_ingest]
-    shm_size: 1gb
-    mem_limit: 2g
+    shm_size: 256mb
+    cpus: 0.25
+    mem_limit: 512m
+    memswap_limit: 768m
+    pids_limit: 192
     security_opt:
       - seccomp=./contracts-importer/seccomp_profile.json
     volumes:
