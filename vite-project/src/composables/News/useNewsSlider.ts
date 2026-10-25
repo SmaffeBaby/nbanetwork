@@ -1,4 +1,5 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { authFetch } from '../../api/authFetch'
 import { useAuthStore } from '../../stores/auth'
 
@@ -9,6 +10,10 @@ export type NewsSlide = {
   link_url: string | null
   sort_order: number
 }
+
+const SLIDES_QUERY_KEY = ['news-slider'] as const
+const SLIDES_STALE_TIME = 5 * 60 * 1000
+const SLIDES_CACHE_TIME = 30 * 60 * 1000
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 const MIN_SLIDE_INTERVAL = 9000
@@ -39,9 +44,32 @@ const isValidImageUrl = (value: string) => /^(https?:\/\/|\/)/i.test(value.trim(
 
 export function useNewsSlider() {
   const auth = useAuthStore()
-  const slides = ref<NewsSlide[]>([])
+  const queryClient = useQueryClient()
+  const slidesQuery = useQuery({
+    queryKey: SLIDES_QUERY_KEY,
+    queryFn: async ({ signal }): Promise<NewsSlide[]> => {
+      // Revalidate HTTP caches too, especially immediately after an admin edit.
+      const response = await fetch('/api/news-slider', { signal, cache: 'no-cache' })
+      if (!response.ok) throw new Error(`Не удалось загрузить слайды (${response.status}).`)
+      const data = await response.json()
+      if (!Array.isArray(data.slides) || !data.slides.every((slide: NewsSlide) =>
+        slide && typeof slide.id === 'string' && typeof slide.image_url === 'string' && slide.image_url.trim()
+      )) {
+        throw new Error('Сервер вернул некорректный список слайдов.')
+      }
+      return data.slides
+    },
+    staleTime: SLIDES_STALE_TIME,
+    gcTime: SLIDES_CACHE_TIME,
+    retry: 2,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true
+  })
+  const slides = computed(() => slidesQuery.data.value ?? [])
   const activeIndex = ref(0)
-  const loading = ref(false)
+  const loading = computed(() => slidesQuery.isPending.value && !slides.value.length)
+  const loadError = computed(() => slidesQuery.isError.value && !slides.value.length)
+  const retrySlides = () => slidesQuery.refetch()
   const saving = ref(false)
   const showForm = ref(false)
   const editingSlide = ref<NewsSlide | null>(null)
@@ -59,15 +87,10 @@ export function useNewsSlider() {
   const activeSlide = computed(() => slides.value[activeIndex.value] ?? slides.value[0])
   const hasDesktopImage = computed(() => Boolean(imageUpload.value || normalizeUrl(imageUrl.value)))
 
-  const fetchSlides = async () => {
-    loading.value = true
-    try {
-      const data = await fetch('/api/news-slider').then(response => response.json())
-      slides.value = data.slides ?? []
-      activeIndex.value = Math.min(activeIndex.value, Math.max(slides.value.length - 1, 0))
-    } finally {
-      loading.value = false
-    }
+  const refreshSlides = async () => {
+    // Cancel a pre-mutation request so it cannot overwrite the updated list.
+    await queryClient.cancelQueries({ queryKey: SLIDES_QUERY_KEY })
+    await queryClient.invalidateQueries({ queryKey: SLIDES_QUERY_KEY })
   }
 
   const attachImage = async (event: Event, target: 'desktop' | 'mobile') => {
@@ -189,7 +212,7 @@ export function useNewsSlider() {
       })
       resetForm()
       showForm.value = false
-      await fetchSlides()
+      await refreshSlides()
     } catch (error: any) {
       formError.value = error?.message || 'Не удалось сохранить слайд.'
     } finally {
@@ -198,8 +221,17 @@ export function useNewsSlider() {
   }
 
   const deleteSlide = async (slide: NewsSlide) => {
-    await authFetch(`/api/news-slider/${slide.id}`, { method: 'DELETE' })
-    await fetchSlides()
+    if (saving.value) return
+    saving.value = true
+    formError.value = ''
+    try {
+      await authFetch(`/api/news-slider/${slide.id}`, { method: 'DELETE' })
+      await refreshSlides()
+    } catch (error: any) {
+      formError.value = error?.message || 'Не удалось удалить слайд.'
+    } finally {
+      saving.value = false
+    }
   }
 
   const nextSlide = () => {
@@ -212,10 +244,14 @@ export function useNewsSlider() {
     activeIndex.value = (activeIndex.value - 1 + slides.value.length) % slides.value.length
   }
 
-  const startTimer = () => {
-    if (timer) window.clearInterval(timer)
+  const stopTimer = () => {
+    if (timer !== null) window.clearInterval(timer)
     timer = null
-    if (slides.value.length < 2) return
+  }
+
+  const startTimer = () => {
+    stopTimer()
+    if (document.hidden || showForm.value || slides.value.length < 2) return
     const interval = Math.min(
       MAX_SLIDE_INTERVAL,
       MIN_SLIDE_INTERVAL + Math.max(slides.value.length - 1, 0) * EXTRA_INTERVAL_PER_SLIDE
@@ -239,21 +275,22 @@ export function useNewsSlider() {
     startTimer()
   }
 
-  watch(() => slides.value.length, startTimer)
-
-  onMounted(async () => {
-    await auth.init()
-    await fetchSlides()
+  watch(slides, (items, previous) => {
+    const activeId = previous?.[activeIndex.value]?.id
+    const index = items.findIndex(slide => slide.id === activeId)
+    activeIndex.value = index >= 0 ? index : Math.min(activeIndex.value, Math.max(items.length - 1, 0))
     startTimer()
-    visibilityHandler = () => {
-      activeIndex.value = Math.min(activeIndex.value, Math.max(slides.value.length - 1, 0))
-      startTimer()
-    }
+  })
+  watch(showForm, startTimer)
+
+  onMounted(() => {
+    startTimer()
+    visibilityHandler = startTimer
     document.addEventListener('visibilitychange', visibilityHandler)
   })
 
   onUnmounted(() => {
-    if (timer) window.clearInterval(timer)
+    stopTimer()
     if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler)
   })
 
@@ -261,6 +298,8 @@ export function useNewsSlider() {
     slides,
     activeIndex,
     loading,
+    loadError,
+    retrySlides,
     saving,
     showForm,
     editingSlide,

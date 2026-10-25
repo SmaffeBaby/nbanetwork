@@ -183,7 +183,7 @@ function normalizeSliderItem(row) {
 }
 
 function setNewsSliderHeaders(res, status) {
-    res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=900')
+    res.set('Cache-Control', 'public, no-cache')
     res.set('X-Cache-Status', status)
 }
 
@@ -208,32 +208,20 @@ function getNewsSliderCacheState() {
         return { status: 'STALE', payload: newsSliderCache.payload }
     }
 
-    newsSliderCache = null
-    return { status: 'MISS', payload: null }
+    // Keep the last successful response available if revalidation fails.
+    return { status: 'MISS', payload: newsSliderCache.payload }
 }
 
 function invalidateNewsSliderCache() {
     newsSliderCache = null
+    // Detach older reads: their results must not repopulate the cache after a write.
+    newsSliderRefreshPromise = null
 }
 
 async function loadNewsSliderPayload(admin = getAdmin()) {
     const { data, error } = await admin
         .from('news_slider_items')
-        .select(`
-            id,
-            image_url,
-            mobile_image_url,
-            link_url,
-            sort_order,
-            created_by,
-            created_at,
-            updated_at,
-            profiles:created_by (
-                first_name,
-                last_name,
-                avatar_img
-            )
-        `)
+        .select('id, image_url, mobile_image_url, link_url, sort_order')
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false })
         .limit(12)
@@ -245,14 +233,15 @@ async function loadNewsSliderPayload(admin = getAdmin()) {
 
 async function refreshNewsSliderCache(admin = getAdmin()) {
     if (!newsSliderRefreshPromise) {
-        newsSliderRefreshPromise = loadNewsSliderPayload(admin)
+        const refresh = loadNewsSliderPayload(admin)
             .then(payload => {
-                setNewsSliderCache(payload)
+                if (newsSliderRefreshPromise === refresh) setNewsSliderCache(payload)
                 return payload
             })
             .finally(() => {
-                newsSliderRefreshPromise = null
+                if (newsSliderRefreshPromise === refresh) newsSliderRefreshPromise = null
             })
+        newsSliderRefreshPromise = refresh
     }
 
     return newsSliderRefreshPromise
@@ -445,6 +434,11 @@ router.get('/news-slider', async (_req, res) => {
         setNewsSliderHeaders(res, 'MISS')
         res.json(payload)
     } catch (error) {
+        if (cached.payload) {
+            setNewsSliderHeaders(res, 'STALE-IF-ERROR')
+            return res.json(cached.payload)
+        }
+        res.set('Cache-Control', 'no-store')
         res.status(500).json({ error: error.message || 'News slider service is unavailable' })
     }
 })

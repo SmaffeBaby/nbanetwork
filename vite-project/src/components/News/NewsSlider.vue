@@ -58,29 +58,41 @@
       Загружаем новости...
     </div>
 
-    <div v-else-if="slides.length" id="news-carousel" class="relative mx-auto w-full max-w-[1344px]">
+    <div v-else-if="loadError" role="alert" class="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 text-center text-sm text-gray-600 dark:text-slate-300">
+      Не удалось загрузить слайды.
+      <button type="button" class="ml-2 font-bold text-blue-600" @click="retrySlides">Повторить</button>
+    </div>
+
+    <p v-if="formError && !showForm" role="alert" class="text-sm font-semibold text-red-700">{{ formError }}</p>
+
+    <div v-if="slides.length && activeSlide" id="news-carousel" class="relative mx-auto w-full max-w-[1344px]">
       <div class="relative aspect-[616/747] overflow-hidden rounded-2xl bg-gray-950 shadow-xl sm:aspect-[1344/432]">
-        <Transition name="news-slide">
-          <component
-            :is="activeSlide.link_url ? 'a' : 'div'"
-            :key="activeSlide.id"
-            :href="activeSlide.link_url || undefined"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="absolute inset-0 block"
-          >
-            <picture>
-              <source v-if="activeSlide.mobile_image_url" :srcset="activeSlide.mobile_image_url" media="(max-width: 639px)" />
-              <img
-                :src="activeSlide.image_url"
-                class="absolute left-1/2 top-1/2 block h-full w-full -translate-x-1/2 -translate-y-1/2 sm:object-cover"
-                :class="activeSlide.mobile_image_url ? 'object-cover' : 'object-contain'"
-                alt="News slide"
-              />
-            </picture>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-transparent"></div>
-          </component>
-        </Transition>
+        <component
+          :is="slide.link_url ? 'a' : 'div'"
+          v-for="(slide, index) in slides"
+          :key="slide.id"
+          :href="slide.link_url || undefined"
+          :aria-hidden="index !== activeIndex"
+          :tabindex="index === activeIndex && slide.link_url ? 0 : -1"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="news-slide absolute inset-0 block"
+          :class="index === activeIndex ? 'news-slide-visible' : 'news-slide-hidden'"
+        >
+          <picture>
+            <source v-if="slide.mobile_image_url" :srcset="slide.mobile_image_url" media="(max-width: 639px)" />
+            <img
+              :src="slide.image_url"
+              :loading="index === activeIndex ? 'eager' : 'lazy'"
+              :fetchpriority="index === activeIndex ? 'high' : 'low'"
+              decoding="async"
+              class="absolute left-1/2 top-1/2 block h-full w-full -translate-x-1/2 -translate-y-1/2 sm:object-cover"
+              :class="slide.mobile_image_url ? 'object-cover' : 'object-contain'"
+              :alt="`Слайд ${index + 1}`"
+            />
+          </picture>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-transparent"></div>
+        </component>
 
         <div class="absolute bottom-3 left-1/2 z-30 flex max-w-[calc(100%-7rem)] -translate-x-1/2 gap-2 overflow-x-auto rounded-full bg-black/20 px-2 py-1.5 backdrop-blur-sm sm:bottom-5 sm:gap-3 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
           <button
@@ -127,7 +139,7 @@
       </div>
     </div>
 
-    <div v-else-if="isAdmin" class="rounded-2xl border border-dashed border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-6 text-center text-sm font-semibold text-gray-500 dark:text-slate-400">
+    <div v-else-if="!loading && !loadError && isAdmin" class="rounded-2xl border border-dashed border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-6 text-center text-sm font-semibold text-gray-500 dark:text-slate-400">
       Добавьте первый слайд с фото и ссылкой.
     </div>
   </section>
@@ -141,6 +153,8 @@ const {
   slides,
   activeIndex,
   loading,
+  loadError,
+  retrySlides,
   saving,
   showForm,
   editingSlide,
@@ -167,39 +181,26 @@ const {
 </script>
 
 <style scoped>
-.news-slide-enter-active,
-.news-slide-leave-active {
-  transition: opacity 420ms ease, transform 420ms ease;
+.news-slide {
+  transition: opacity 420ms ease;
 }
 
-.news-slide-enter-from {
-  opacity: 0;
-  transform: translateX(-32px);
-}
-
-.news-slide-leave-to {
-  opacity: 0;
-  transform: translateX(32px);
-}
-
-.news-slide-enter-active {
+.news-slide-visible {
+  opacity: 1;
+  visibility: visible;
   z-index: 2;
 }
 
-.news-slide-leave-active {
+.news-slide-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   z-index: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .news-slide-enter-active,
-  .news-slide-leave-active {
+  .news-slide {
     transition: none;
-  }
-
-  .news-slide-enter-from,
-  .news-slide-leave-to {
-    opacity: 1;
-    transform: none;
   }
 }
 </style>
