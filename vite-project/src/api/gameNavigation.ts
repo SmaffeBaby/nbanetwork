@@ -16,7 +16,10 @@ export function gameLocation(value: any) {
         Object.assign(query, { date: String(date), home, away })
         if (game.GAME_DATE) query.nbaDate = '1'
     }
-    return { name: 'GameDetail', params: { gameId: publicGameId(id) }, query }
+    const tipoff = Date.parse(game.dateUTC || game.datetime || game.GAME_TIME_UTC || game.date || game.GAME_DATE || '')
+    const status = String(game.status || game.GAME_STATUS || '')
+    const upcoming = !/final|live|cancel/i.test(status) && !Number(game.period) && (game.preGame || tipoff > Date.now())
+    return { name: upcoming ? 'PreGame' : 'GameDetail', params: { gameId: publicGameId(id) }, query }
 }
 export function openGame(router: Router, game: any) {
     return router.push(gameLocation(game))

@@ -1,6 +1,6 @@
-import { ref, onMounted, watch, type Ref } from 'vue'
+import { ref, onMounted, onUnmounted, watch, type Ref } from 'vue'
 import { internalGameId } from '../../../api/gameNavigation'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 type Filters = {
     search: string
@@ -9,6 +9,7 @@ type Filters = {
 
 export function useGameFinal(filters: Ref<Filters>) {
     const route = useRoute()
+    const router = useRouter()
     const gameId = internalGameId(String(route.params.gameId))
 
     const game = ref<any>(null)
@@ -139,7 +140,17 @@ export function useGameFinal(filters: Ref<Filters>) {
         }
     }
 
-    onMounted(fetchGame)
+    let timer: ReturnType<typeof setInterval>
+    onMounted(() => {
+        void fetchGame()
+        timer = setInterval(() => {
+            if (!document.hidden && !loading.value && !/final/i.test(game.value?.status || '')) void fetchGame()
+        }, 30000)
+    })
+    onUnmounted(() => clearInterval(timer))
+    watch(game, value => {
+        if (value?.status === 'Scheduled') void router.replace({ name:'PreGame', params:{gameId:String(route.params.gameId)} })
+    })
 
     watch(
         () => filters.value?.period,

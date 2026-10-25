@@ -118,3 +118,27 @@ Checks: `node --test backend/tests/game-identity.test.js`,
 `cd vite-project && node --test tests/game-identity.cjs`, and the rollback-only
 `backend/tests/game-marks.sql` database test. The optional local integration test
 `backend/tests/game-marks.integration.js` creates and removes its own temporary Auth user.
+
+## Pre-game pages and predictions
+
+`/pre-game/<ESPN ID>` shows a countdown, projected ESPN depth-chart lineups (confirmed starters
+when available), availability reports, season team averages and roster leaders in points,
+rebounds and steals. Current-season data is validated; missing data stays unavailable rather
+than falling back to a different season. Team resources and player statistics share server
+caches; the page uses TanStack Query and switches to `/game/<ID>` when ESPN reports live/final.
+
+Apply `supabase/migrations/20261025180000_game_predictions.sql` on existing databases.
+Predictions require a verified session and are stored in `game_predictions` with one vote per
+user/game. The server validates ESPN state and Postgres enforces the tipoff cutoff under a poll
+row lock. Public results expose only profile names, avatar URLs and links (up to 24 voters per
+side), never emails. Users may change or cancel votes until tipoff.
+
+Backend maintenance checks started polls every five minutes and records the first confirmed
+completion/cancellation. Postgres cron removes polls and their votes 24 hours later (up to a
+15-minute cleanup interval). Backend maintenance also runs the same cleanup as a fallback.
+It does not delete users' profile images, favorites, watched games or comments.
+
+Checks: `node --test backend/tests/game-preview.test.js`, `backend/tests/game-predictions.sql`
+(rollback-only), `cd vite-project && node --test tests/pre-game.cjs`.
+The optional local `backend/tests/game-predictions.integration.js` creates and removes only its
+own temporary test account and verifies real preview/voting API behavior.

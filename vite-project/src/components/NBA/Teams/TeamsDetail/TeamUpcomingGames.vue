@@ -33,8 +33,8 @@
           v-for="game in games"
           :key="game.GAME_ID"
           tabindex="0"
-          @click="openGame(router, game.GAME_ID)"
-          @keydown.enter="openGame(router, game.GAME_ID)"
+          @click="openGame(router, { ...game, preGame: true })"
+          @keydown.enter="openGame(router, { ...game, preGame: true })"
           class="cursor-pointer rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-sm"
       >
         <div class="flex items-center justify-between gap-3">
@@ -72,8 +72,8 @@
             v-for="game in games"
             :key="game.GAME_ID"
           tabindex="0"
-          @click="openGame(router, game.GAME_ID)"
-          @keydown.enter="openGame(router, game.GAME_ID)"
+          @click="openGame(router, { ...game, preGame: true })"
+          @keydown.enter="openGame(router, { ...game, preGame: true })"
             class="cursor-pointer border-t hover:bg-gray-50 dark:hover:bg-slate-800 transition"
         >
           <td class="px-3 py-2 whitespace-nowrap">

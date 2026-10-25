@@ -89,7 +89,7 @@
             <button
                 type="button"
                 class="flex h-full w-full flex-col gap-4 text-left"
-                @click="goToGame(game.id)"
+                @click="goToGame(game)"
             >
               <div class="flex items-center justify-between gap-3">
                 <span class="rounded-full bg-blue-50 dark:bg-blue-950 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300">

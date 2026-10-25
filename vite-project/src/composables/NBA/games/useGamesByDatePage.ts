@@ -66,7 +66,7 @@ export function useGamesByDatePage() {
 
     const goToToday = () => selectDate(getTodayDateKey())
 
-    const goToGame = (gameId: string) => {
+    const goToGame = (gameId: any) => {
         openGame(router, gameId)
     }
 

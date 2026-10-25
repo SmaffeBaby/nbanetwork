@@ -25,6 +25,7 @@ const routes = [
     { path: '/player-stats/playoffs', name: 'PlayerStatsPlayoffs', component: PlayerStats },
     { path: '/player/:name',name: 'PlayerPage', component: () => import('../views/PlayerPage.vue')},
     { path: '/team/:abbr/:section?', name: 'TeamDetail', component: () => import('../views/TeamDetail.vue')},
+    { path: '/pre-game/:gameId', name: 'PreGame', component: () => import('../views/PreGame.vue') },
     { path: '/game/:gameId', name: 'GameDetail', component: () => import('../views/GameDetail.vue')}
 ]
 
@@ -42,11 +43,11 @@ export const router = createRouter({
 
 // All game entry points, including old bookmarks and news links, resolve to ESPN.
 router.beforeEach(async to => {
-    if (to.name !== 'GameDetail') return
+    if (to.name !== 'GameDetail' && to.name !== 'PreGame') return
     const original = String(to.params.gameId)
     try {
         const gameId = await resolveGameNavigation(original, to.query)
-        if (original !== gameId) return { name: 'GameDetail', params: { gameId }, hash: to.hash, replace: true }
+        if (original !== gameId) return { name: to.name, params: { gameId }, hash: to.hash, replace: true }
     } catch {
         // Keep a failed legacy link visible; the detail API shows an error and never substitutes NBA data.
     }

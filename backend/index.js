@@ -36,6 +36,7 @@ app.get('/', (req, res) => {
 // routes
 app.use('/api', require('./routes/gameIdentity'))
 app.use('/api', require('./routes/profileGames'))
+app.use('/api', require('./routes/gamePreview'))
 app.use('/api', gamesRoutes)
 app.use('/api', standingsRoutes)
 app.use('/api', playerStatsRoutes)
@@ -70,3 +71,5 @@ app.listen(PORT, () => {
 })
 
 require('./services/contracts/importQueue').startImportQueue()
+
+require('./services/gamePredictions').startPredictionMaintenance()

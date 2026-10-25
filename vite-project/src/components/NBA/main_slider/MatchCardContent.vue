@@ -1,5 +1,5 @@
 <template>
-  <div role="link" tabindex="0" class="cursor-pointer" @click="openGame(router, String(game.id))" @keydown.enter="openGame(router, String(game.id))">
+  <div role="link" tabindex="0" class="cursor-pointer" @click="openGame(router, game)" @keydown.enter="openGame(router, game)">
     <div class="teams flex items-center justify-between mb-2">
       <div class="team team-visitor">
         <img :src="getTeamLogo(game.visitor_team.abbreviation)" class="team-logo" />

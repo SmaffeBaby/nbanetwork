@@ -111,7 +111,7 @@ function normalizeSummary(gameId, data) {
     }
     const dateUTC = new Date(competition.date).toISOString()
     const dateMSK = new Date(dateUTC).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-    const gameStatus = status.completed ? 'Final' : status.state === 'in' ? (status.shortDetail || 'Live') : 'Scheduled'
+    const gameStatus = /CANCEL/i.test(status.name || '') ? 'Cancelled' : /POSTPON/i.test(status.name || '') ? 'Postponed' : status.completed ? 'Final' : status.state === 'in' ? (status.shortDetail || 'Live') : 'Scheduled'
     const quarters = Array.from({ length: Math.max(sides.home.linescores.length, sides.away.linescores.length) }, (_, index) =>
         `${sides.away.linescores[index]?.value ?? sides.away.linescores[index]?.displayValue ?? '—'} - ${sides.home.linescores[index]?.value ?? sides.home.linescores[index]?.displayValue ?? '—'}`)
     return {
@@ -132,7 +132,7 @@ function normalizeSummary(gameId, data) {
         attendance: data.gameInfo?.attendance ?? null
     }
 }
-async function getEspnGame(gameId, periodFilter = null) {
+async function getEspnSummary(gameId) {
     if (!/^espn:\d+$/.test(gameId)) throw new Error('Invalid game identifier')
     const raw = await fetchWithCache({
         key: `espn-summary-raw-v2:${gameId}`, ttl: 30000,
@@ -144,10 +144,14 @@ async function getEspnGame(gameId, periodFilter = null) {
             return data
         }
     })
+    return raw
+}
+async function getEspnGame(gameId, periodFilter = null) {
+    const raw = await getEspnSummary(gameId)
     const recap = normalizeSummary(gameId, raw)
     if (!periodFilter) return recap
     if (!recap.supportsPeriodStats) throw new Error('Play-by-play is not available for this game yet')
     const { reconstructPeriods, applyPeriod } = require('./periodBoxscore')
     return applyPeriod(recap, reconstructPeriods(raw), periodFilter)
 }
-module.exports = { getEspnGame, normalizeSummary, normalizeStats, buildLeadTracker }
+module.exports = { getEspnSummary, getEspnGame, normalizeSummary, normalizeStats, buildLeadTracker }

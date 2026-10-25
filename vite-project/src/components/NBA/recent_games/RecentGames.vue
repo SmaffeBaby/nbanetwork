@@ -143,6 +143,6 @@ const getGameId = (g: any) =>
 const goToGame = (game: any) => {
   const id = getGameId(game)
   if (!id) return
-  openGame(router, id)
+  openGame(router, game)
 }
 </script>

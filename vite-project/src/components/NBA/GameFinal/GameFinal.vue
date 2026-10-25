@@ -7,6 +7,8 @@
         :error="error"
     />
 
+    <GamePrediction v-if="game" :game-id="gameId" :teams="{home:game.home,away:game.away}" hide-empty-closed />
+
     <TabsContent :comments-unread-count="commentsUnreadCount">
       <template #controls>
         <button
@@ -74,6 +76,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import GamePrediction from './GamePrediction.vue'
 import { useGameFinal } from '../../../composables/NBA/GameFinal/useGameFinal'
 import GameHeader from './GameHeader.vue'
 import GameRecapCard from './GameRecapCard.vue'

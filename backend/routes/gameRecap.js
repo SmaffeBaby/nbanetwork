@@ -1,6 +1,5 @@
 const express = require('express')
 const router = express.Router()
-const fetchWithCache = require('../utils/fetchWithCache')
 const fetchGameRecap = require('../utils/fetchGameRecap')
 
 router.get('/game-recap/:gameId', async (req, res) => {
@@ -15,15 +14,9 @@ router.get('/game-recap/:gameId', async (req, res) => {
         gameId = await require('../services/games/identity').resolveGameId(gameId)
         const periodFilter = parsePeriodFilter(period || quarter)
 
-        const data = await fetchWithCache({
-            key: `recap_v9_${gameId}_${periodFilter?.key || 'all'}`,
-            ttl: gameId.startsWith('espn:') ? 30000 : 1000 * 60 * 30,
-            fetcher: async () => {
-                const data = await fetchGameRecap(gameId, periodFilter)
-                if (!data) throw new Error('Game data unavailable')
-                return data
-            }
-        })
+        // ESPN raw summary is cached once by espnGameService, including live transitions.
+        const data = await fetchGameRecap(gameId, periodFilter)
+        if (!data) throw new Error('Game data unavailable')
 
         res.json(data)
     } catch (e) {
