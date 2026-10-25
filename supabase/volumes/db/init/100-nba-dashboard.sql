@@ -1059,8 +1059,8 @@ BEGIN
  SELECT * INTO STRICT p FROM public.profiles WHERE id=p_user_id FOR UPDATE;
  SELECT EXISTS(SELECT 1 FROM jsonb_array_elements(p.favorites_games) x WHERE x->>'id'=ANY(p_aliases)) INTO was_fav;
  SELECT EXISTS(SELECT 1 FROM jsonb_array_elements(p.watched_games) x WHERE x->>'id'=ANY(p_aliases)) INTO was_watched;
- SELECT coalesce(jsonb_agg(x),'[]'::jsonb) INTO fav FROM jsonb_array_elements(p.favorites_games) x WHERE NOT (x->>'id'=ANY(p_aliases));
- SELECT coalesce(jsonb_agg(x),'[]'::jsonb) INTO watched FROM jsonb_array_elements(p.watched_games) x WHERE NOT (x->>'id'=ANY(p_aliases));
+ SELECT coalesce(jsonb_agg(x),'[]'::jsonb) INTO fav FROM jsonb_array_elements(p.favorites_games) x WHERE NOT coalesce(x->>'id'=ANY(p_aliases),false);
+ SELECT coalesce(jsonb_agg(x),'[]'::jsonb) INTO watched FROM jsonb_array_elements(p.watched_games) x WHERE NOT coalesce(x->>'id'=ANY(p_aliases),false);
  IF (p_kind='favorite' AND p_active) OR (p_kind<>'favorite' AND was_fav) THEN fav := fav || jsonb_build_array(p_game); END IF;
  IF (p_kind='watched' AND p_active) OR (p_kind<>'watched' AND was_watched) THEN watched := watched || jsonb_build_array(p_game); END IF;
  UPDATE public.profiles SET favorites_games=fav,watched_games=watched WHERE id=p_user_id;

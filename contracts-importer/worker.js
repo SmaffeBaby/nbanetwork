@@ -36,12 +36,20 @@ async function run(browser) {
     page.setDefaultTimeout(30000)
     await page.addLocatorHandler(page.getByRole('button', { name: 'Reject All', exact: true }), async button => { await button.click() })
     try {
-        for (const [team, [slug, id]] of teams) {
+        // On an empty installation every team gets a current table before any archive work.
+        const jobs = [false, true].flatMap(archive => teams.map(entry => ({ entry, archive })))
+        for (const { entry: [team, [slug, id]], archive } of jobs) {
             const file = path.join(ROOT, 'snapshots', `${team}.json`)
             let pages = []
-            try { pages = JSON.parse(await fs.readFile(file, 'utf8')) } catch { /* New team. */ }
+            try { pages = JSON.parse(await fs.readFile(file, 'utf8')) } catch (error) {
+                if (error.code !== 'ENOENT') {
+                    status.failures.push({ team, error: `Cannot read saved snapshots: ${error.message}`.slice(0, 200) })
+                    console.error(JSON.stringify({ team, error: 'Cannot read saved snapshots; preserving existing file' }))
+                    continue
+                }
+            }
             try {
-                await record({ team, season: currentSeason() })
+                await record({ team, season: currentSeason(), phase: archive ? 'archive' : 'current' })
                 const response = await page.goto(`https://eu.hoopshype.com/salaries/teams/${slug}/${id}/`, { waitUntil: 'domcontentloaded', timeout: 45000 })
                 if (response && !response.ok()) throw new Error(`Source HTTP ${response.status()}`)
                 const rejectCookies = page.getByRole('button', { name: 'Reject All', exact: true })
@@ -54,6 +62,11 @@ async function run(browser) {
                 pages = pages.filter(p => p.season !== season)
                 pages.push({ team, season, html, fetchedAt: new Date().toISOString() })
                 await atomic(file, pages)
+                if (!archive) {
+                    await record({ completedCurrentTeam: team })
+                    await sleep(1000)
+                    continue
+                }
                 await seasonButton.click()
                 const seasons = await page.getByRole('link', { name: /^\d{4}-\d{2} season/ }).evaluateAll(links => links.map(link => ({ label: link.textContent.match(/\d{4}-\d{2}/)?.[0], url: link.href })))
                 const links = [...new Map(seasons.filter(link => link.label && new URL(link.url).hostname === 'eu.hoopshype.com').map(link => [link.label, link])).values()]

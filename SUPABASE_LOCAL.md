@@ -160,3 +160,23 @@ Checks: `cd vite-project && node --test tests/titles-and-patch-drafts.cjs` and
 `node --test backend/tests/patch-notes.test.js`. The optional local
 `backend/tests/patch-notes.integration.js` checks API permissions on a temporary test account
 using invalid payloads; it never publishes a test patch note.
+
+## First production contracts import and history recovery
+
+The contracts worker completes a current-season pass across all 30 teams before processing
+historical seasons. This prevents teams later in the list from being unavailable while an
+initial archive import runs. Existing snapshots that cannot be read are preserved and logged;
+a permission/read error is never treated as an empty team.
+
+For an explicitly authorized bootstrap from existing public HoopsHype snapshots, merge pages
+by team/season and retain the newest `fetchedAt`. Stop the worker during replacement and ensure
+`/data/snapshots` and its files belong to `pwuser` before restarting. Backend validates the
+files and imports them through its normal queue. Copying files as root without restoring
+ownership can otherwise force unnecessary downloads or prevent automatic refreshes.
+
+Application deployment does not copy local profile history into production. To recover an
+explicitly requested user's missing history, back up that production row, lock it during the
+merge, and append only missing game IDs/matches. Preserve existing production entries and
+unrelated fields (especially favorites); never replace the production profile/database with
+a local dump. `set_profile_game` also preserves unrelated legacy entries with absent IDs or
+null comparisons. Regression check: `backend/tests/preserve-legacy-game-marks.sql` (rollback).
