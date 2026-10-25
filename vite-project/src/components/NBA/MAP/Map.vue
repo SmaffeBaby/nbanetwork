@@ -5,6 +5,13 @@
     </h1>
   </div>
   <div class="w-full max-w-5xl mx-auto">
+    <p v-if="loading" role="status" class="mb-3 text-sm text-gray-500">Загружаем точки карты...</p>
+    <div v-if="loadError" role="alert" class="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+      {{ loadError }}
+      <button type="button" class="ml-2 font-semibold underline" @click="retry">Повторить</button>
+    </div>
+    <p v-if="!loading && !loadError && !teams.length" class="mb-3 text-sm text-gray-500">На карте пока нет точек команд.</p>
+    <p v-if="mutationError && !showModal" role="alert" class="mb-3 text-sm text-red-700">{{ mutationError }}</p>
     <div class="sm:hidden px-1">
       <button
           type="button"
@@ -33,6 +40,11 @@
         <img
             ref="mapRef"
             src="/CONF_MAP.svg"
+            width="1821"
+            height="842"
+            alt="Карта конференций NBA"
+            loading="lazy"
+            decoding="async"
             class="w-full pointer-events-none"
         />
 
@@ -58,11 +70,11 @@
               v-if="isAdmin && hoveredTeamId === team.id"
               class="flex gap-1 mt-1 justify-center bg-white/80 rounded shadow px-1 py-1"
           >
-            <button @click.stop="editPoint(team)">
+            <button :disabled="saving" aria-label="Редактировать точку" @click.stop="editPoint(team)">
               <PencilIcon class="w-4 h-4 text-blue-500" />
             </button>
 
-            <button @click.stop="removePoint(team.id)">
+            <button :disabled="saving" aria-label="Удалить точку" @click.stop="removePoint(team.id)">
               <TrashIcon class="w-4 h-4 text-red-500" />
             </button>
           </div>
@@ -97,13 +109,16 @@
         </div>
 
         <button
+            :disabled="saving || !isAdmin || !selectedLogo || !newLink.trim()"
             @click="savePoint"
             class="bg-blue-500 text-white p-2 rounded"
         >
-          Сохранить
+          {{ saving ? 'Сохраняем...' : 'Сохранить' }}
         </button>
 
-        <button @click="reset" class="text-gray-500 text-sm">
+        <p v-if="mutationError" role="alert" class="text-sm text-red-700">{{ mutationError }}</p>
+
+        <button :disabled="saving" @click="reset" class="text-gray-500 text-sm">
           Закрыть (ESC)
         </button>
 
@@ -139,6 +154,9 @@
             <div class="relative w-[1000px]">
               <img
                   src="/CONF_MAP.svg"
+                  width="1821"
+                  height="842"
+                  decoding="async"
                   class="block w-[1000px] max-w-none select-none"
                   alt="Карта конференций NBA"
               />
@@ -176,7 +194,7 @@ import { useMapModal } from '../../../composables/NBA/Map/useMapModal'
 import { nbaTeamLogos } from '../../../constants/nbaTeamLogo'
 import { MapIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/solid'
 
-const { teams, isAdmin, addTeam, updateTeam, deleteTeam } = useMap()
+const { teams, isAdmin, loading, loadError, mutationError, saving, retry, addTeam, updateTeam, deleteTeam } = useMap()
 const router = useRouter()
 
 const hoveredTeamId = ref<string | null>(null)
@@ -206,7 +224,8 @@ const {
 } = useMapModal()
 
 const openModal = (e: MouseEvent) => {
-  if (!isAdmin.value) return
+  if (!isAdmin.value || saving.value) return
+  mutationError.value = ''
 
   const coords = getClickCoords(e)
   if (!coords) return
@@ -228,31 +247,36 @@ const handleDoubleClick = (e: MouseEvent) => {
 }
 
 const editPoint = (team: any) => {
+  if (!isAdmin.value || saving.value) return
+  mutationError.value = ''
   openEdit(team)
 }
 
 const removePoint = async (id: string) => {
-  await deleteTeam(id)
+  if (saving.value) return
+  try { await deleteTeam(id) } catch { /* The composable exposes the error in the map. */ }
 }
 
 const savePoint = async () => {
-  if (!selectedLogo.value || !newLink.value) return
+  if (!selectedLogo.value || !newLink.value.trim() || saving.value || !isAdmin.value) return
 
-  if (selectedPoint.value) {
-    await updateTeam(selectedPoint.value.id, {
-      logo: selectedLogo.value,
-      link: newLink.value
-    })
-  } else {
-    await addTeam({
-      logo: selectedLogo.value,
-      x: clickX.value,
-      y: clickY.value,
-      link: newLink.value
-    })
-  }
+  try {
+    if (selectedPoint.value) {
+      await updateTeam(selectedPoint.value.id, {
+        logo: selectedLogo.value,
+        link: newLink.value.trim()
+      })
+    } else {
+      await addTeam({
+        logo: selectedLogo.value,
+        x: clickX.value,
+        y: clickY.value,
+        link: newLink.value.trim()
+      })
+    }
 
-  reset()
+    reset()
+  } catch { /* Keep the form open and display the mutation error. */ }
 }
 
 const goTo = (link: string) => router.push(link)
@@ -273,8 +297,12 @@ const handleMobileTeamClick = (link: string) => {
 const handleKey = (e: KeyboardEvent) => {
   if (e.key !== 'Escape') return
   closeMobileMap()
-  reset()
+  if (!saving.value) reset()
 }
+
+watch(isAdmin, (admin) => {
+  if (!admin) reset()
+})
 
 watch(showMobileMap, (isOpen) => {
   document.body.style.overflow = isOpen ? 'hidden' : ''

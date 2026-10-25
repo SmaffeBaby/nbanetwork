@@ -1,4 +1,3 @@
-import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { supabase } from '../lib/supabase'
 
@@ -10,85 +9,57 @@ export interface TeamMapItem {
     link: string
 }
 
+const MAP_FIELDS = 'id, logo, x, y, link'
+const requestSignal = (signal?: AbortSignal) => signal
+    ? AbortSignal.any([signal, AbortSignal.timeout(10000)])
+    : AbortSignal.timeout(10000)
+
+// TanStack Query owns the data cache. This store only performs database requests.
 export const useMapStore = defineStore('map', () => {
-
-    const teams = ref<TeamMapItem[]>([])
-    const isAdmin = ref(false)
-    const loaded = ref(false)
-    const adminChecked = ref(false)
-
-    const fetchTeams = async () => {
-        if (loaded.value) return
-
-        const { data } = await supabase
+    const fetchTeams = async (signal?: AbortSignal): Promise<TeamMapItem[]> => {
+        const { data, error } = await supabase
             .from('map_points')
-            .select('*')
-
-        if (data) {
-            teams.value = data
-            loaded.value = true
-        }
+            .select(MAP_FIELDS)
+            .order('id')
+            .abortSignal(requestSignal(signal))
+        if (error) throw new Error('Не удалось загрузить точки карты. Попробуйте ещё раз.')
+        if (!Array.isArray(data)) throw new Error('Сервер вернул некорректный список точек карты.')
+        return data
     }
 
-    const checkAdmin = async () => {
-        adminChecked.value = false
-        isAdmin.value = false
-
-        const { data: userData } = await supabase.auth.getUser()
-        if (!userData.user) return
-
-        const { data } = await supabase
-            .from('profiles')
-            .select('admin')
-            .eq('id', userData.user.id)
-            .single()
-
-        isAdmin.value = !!data?.admin
-        adminChecked.value = true
-    }
-
-    const addTeam = async (team: Omit<TeamMapItem, 'id'>) => {
-        const { data } = await supabase
+    const addTeam = async (team: Omit<TeamMapItem, 'id'>): Promise<TeamMapItem> => {
+        const { data, error } = await supabase
             .from('map_points')
             .insert([team])
-            .select()
-
-        if (data?.length) {
-            teams.value.push(data[0])
-        }
+            .select(MAP_FIELDS)
+            .abortSignal(requestSignal())
+            .single()
+        if (error || !data) throw new Error('Не удалось добавить точку карты.')
+        return data
     }
 
-    const updateTeam = async (id: string, updates: Partial<TeamMapItem>) => {
-        await supabase
+    const updateTeam = async (id: string, updates: Partial<Omit<TeamMapItem, 'id'>>): Promise<TeamMapItem> => {
+        const { data, error } = await supabase
             .from('map_points')
             .update(updates)
             .eq('id', id)
-
-        const i = teams.value.findIndex(t => t.id === id)
-        if (i !== -1) {
-            teams.value[i] = { ...teams.value[i], ...updates }
-        }
+            .select(MAP_FIELDS)
+            .abortSignal(requestSignal())
+            .single()
+        if (error || !data) throw new Error('Не удалось сохранить точку карты.')
+        return data
     }
 
-    const deleteTeam = async (id: string) => {
-        await supabase
+    const deleteTeam = async (id: string): Promise<void> => {
+        const { data, error } = await supabase
             .from('map_points')
             .delete()
             .eq('id', id)
-
-        teams.value = teams.value.filter(t => t.id !== id)
+            .select('id')
+            .abortSignal(requestSignal())
+            .single()
+        if (error || !data) throw new Error('Не удалось удалить точку карты.')
     }
 
-    return {
-        teams,
-        isAdmin,
-        loaded,
-        adminChecked,
-
-        fetchTeams,
-        checkAdmin,
-        addTeam,
-        updateTeam,
-        deleteTeam
-    }
+    return { fetchTeams, addTeam, updateTeam, deleteTeam }
 })
