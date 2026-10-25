@@ -142,3 +142,21 @@ Checks: `node --test backend/tests/game-preview.test.js`, `backend/tests/game-pr
 (rollback-only), `cd vite-project && node --test tests/pre-game.cjs`.
 The optional local `backend/tests/game-predictions.integration.js` creates and removes only its
 own temporary test account and verifies real preview/voting API behavior.
+
+## Page titles and patch-note editor
+
+The router sets `Basketsfera` for home and content titles ending in `| Basketsfera.ru` elsewhere.
+Async article, profile, game and pre-game titles use scoped watchers so an old request cannot
+replace the title after navigation. The initial HTML title is also branded.
+
+Patch notes load through `/api/patch-notes`. Writes use authenticated API requests; the server
+checks the current profile's admin flag and validates content/links. New drafts retain a UUID
+across retries, so uncertain responses do not create duplicate notes. The editor always exits
+its saving state after failure and retains text and links. Newer typing is preserved when a
+previous save finishes. Per-account `sessionStorage` drafts survive focus loss, route changes
+and reloads in the same tab; successful save or explicit close clears the draft.
+
+Checks: `cd vite-project && node --test tests/titles-and-patch-drafts.cjs` and
+`node --test backend/tests/patch-notes.test.js`. The optional local
+`backend/tests/patch-notes.integration.js` checks API permissions on a temporary test account
+using invalid payloads; it never publishes a test patch note.

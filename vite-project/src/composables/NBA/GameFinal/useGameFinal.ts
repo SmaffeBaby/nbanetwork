@@ -1,3 +1,4 @@
+import { usePageTitle } from '../../usePageTitle'
 import { ref, onMounted, onUnmounted, watch, type Ref } from 'vue'
 import { internalGameId } from '../../../api/gameNavigation'
 import { useRoute, useRouter } from 'vue-router'
@@ -14,6 +15,7 @@ export function useGameFinal(filters: Ref<Filters>) {
 
     const game = ref<any>(null)
     const recap = ref<any>(null)
+    usePageTitle(() => game.value ? `${game.value.away.name} — ${game.value.home.name}` : null)
 
     const loading = ref(true)
     const error = ref<string | null>(null)

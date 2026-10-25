@@ -22,8 +22,10 @@
 </template>
 
 <script setup lang="ts">
+import { usePageTitle } from '../composables/usePageTitle'
 import Header from '../components/Headers/Header.vue'
 import { useLegalPage } from '../composables/Legal/useLegalPage'
 
 const { page } = useLegalPage()
+usePageTitle(() => page.value.title)
 </script>

@@ -1,3 +1,4 @@
+import { routeTitle } from '../utils/pageTitles'
 import { resolveGameNavigation } from '../api/gameNavigation'
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
@@ -52,3 +53,5 @@ router.beforeEach(async to => {
         // Keep a failed legacy link visible; the detail API shows an error and never substitutes NBA data.
     }
 })
+
+router.afterEach(to => { document.title = routeTitle(to) })

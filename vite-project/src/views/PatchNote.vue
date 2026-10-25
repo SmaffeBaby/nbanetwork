@@ -85,6 +85,8 @@
             {{ formError }}
           </div>
 
+          <p v-if="draftStatus" role="status" class="text-xs text-gray-500">{{ draftStatus }}</p>
+
           <div class="flex justify-end">
             <button
               type="button"
@@ -123,15 +125,15 @@
         </div>
       </section>
 
-      <div v-if="loading" class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm font-bold text-gray-500">
+      <div v-if="loading && !patchNotes.length" class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm font-bold text-gray-500">
         Загружаем патчи...
       </div>
 
-      <div v-else-if="error" class="rounded-2xl border border-red-100 bg-red-50 p-8 text-center text-sm font-bold text-red-700">
+      <div v-if="error" class="rounded-2xl border border-red-100 bg-red-50 p-8 text-center text-sm font-bold text-red-700">
         {{ error }}
       </div>
 
-      <div v-else-if="paginatedPatchNotes.length" class="space-y-4">
+      <div v-if="paginatedPatchNotes.length" class="space-y-4">
         <article v-for="note in paginatedPatchNotes" :key="note.id" class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div class="gap-4 sm:flex sm:items-start sm:justify-between">
             <div>
@@ -219,11 +221,11 @@
         </nav>
       </div>
 
-      <div v-else-if="patchNotes.length" class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm font-bold text-gray-500">
+      <div v-else-if="!loading && patchNotes.length" class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm font-bold text-gray-500">
         За выбранную дату патчей нет.
       </div>
 
-      <div v-else class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm font-bold text-gray-500">
+      <div v-else-if="!loading && !error" class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm font-bold text-gray-500">
         Патч ноут пока пуст.
       </div>
     </main>
@@ -245,6 +247,7 @@ const {
   deletingId,
   error,
   formError,
+  draftStatus,
   showForm,
   editingId,
   selectedPatchDate,

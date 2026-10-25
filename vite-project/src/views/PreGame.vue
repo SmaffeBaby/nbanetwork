@@ -59,6 +59,7 @@
 </template>
 <script setup lang="ts">
 import {computed} from 'vue'
+import {usePageTitle} from '../composables/usePageTitle'
 import {useRoute,useRouter} from 'vue-router'
 import Header from '../components/Headers/Header.vue'
 import PreGameLineup from '../components/NBA/GameFinal/PreGameLineup.vue'
@@ -68,6 +69,7 @@ import {statLabels,statValue,statusLabel} from '../composables/NBA/GameFinal/pre
 const route=useRoute(),router=useRouter()
 const {preview,loading,error,countdown,remaining,retry}=useGamePreview(computed(()=>String(route.params.gameId)))
 const bySide=computed(()=>Object.fromEntries((preview.value?.teams || []).map((team:any)=>[team.side,team])))
+usePageTitle(()=>bySide.value.away && bySide.value.home ? `${bySide.value.away.name} — ${bySide.value.home.name} — Перед матчем` : null)
 const updatedLabel=computed(()=>preview.value?.updatedAt?new Date(preview.value.updatedAt).toLocaleTimeString('ru-RU',{timeZone:'Europe/Moscow',hour:'2-digit',minute:'2-digit'})+' МСК':'—')
 const teamValue=(side:string,key:string)=>bySide.value[side]?.statistics.values.find((s:any)=>s.key===key)?.value ?? null
 const injuryGroups=[{key:'out',label:'Не сыграют / маловероятное участие'},{key:'uncertain',label:'Под вопросом / решение перед матчем'}]

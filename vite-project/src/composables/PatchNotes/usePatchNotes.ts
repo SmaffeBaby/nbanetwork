@@ -1,5 +1,5 @@
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { supabase } from '../../lib/supabase'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { authFetch } from '../../api/authFetch'
 import { useAuthStore } from '../../stores/auth'
 
 export type PatchLink = {
@@ -30,6 +30,12 @@ export function usePatchNotes() {
   const selectedPatchDate = ref('')
   const currentPage = ref(1)
   const pageSize = 5
+  const draftId = ref('')
+  const draftOwner = ref('')
+  const draftStatus = ref('')
+  let revision = 0
+  let restoring = false
+  let fetchRevision = 0
 
   const form = reactive({
     title: '',
@@ -64,32 +70,52 @@ export function usePatchNotes() {
     return `${year}-${month}-${day}`
   }
 
+  const draftKey = (owner: string) => `basketsfera:patch-draft:v1:${owner}`
+  const persistDraft = () => {
+    if (restoring || !showForm.value || !draftOwner.value || !draftId.value) return
+    try {
+      sessionStorage.setItem(draftKey(draftOwner.value), JSON.stringify({ id:draftId.value, editingId:editingId.value, title:form.title, body:form.body, links:form.links }))
+      draftStatus.value = 'Черновик сохранён в этой вкладке'
+    } catch { draftStatus.value = 'Не удалось сохранить черновик в браузере. Не закрывайте вкладку до публикации.' }
+  }
+  const restoreDraft = (owner: string) => {
+    if (showForm.value && draftOwner.value === owner) return
+    restoring = true
+    try {
+      const raw = sessionStorage.getItem(draftKey(owner))
+      const draft = raw ? JSON.parse(raw) : null
+      resetForm()
+      showForm.value = false
+      draftOwner.value = owner
+      if (draft && typeof draft.id === 'string' && typeof draft.title === 'string' && typeof draft.body === 'string' && Array.isArray(draft.links)) {
+        draftId.value = draft.id
+        editingId.value = typeof draft.editingId === 'string' ? draft.editingId : ''
+        form.title = draft.title
+        form.body = draft.body
+        form.links = draft.links.filter((link: any) => typeof link?.label === 'string' && typeof link?.url === 'string')
+        showForm.value = true
+        draftStatus.value = 'Черновик восстановлен'
+      }
+    } catch { /* An unavailable/corrupt draft must not block the editor. */ }
+    finally { restoring = false }
+  }
+  watch(form, () => { revision++; persistDraft() }, { deep:true, flush:'sync' })
+
+
   const fetchPatchNotes = async () => {
+    const request = ++fetchRevision
     loading.value = true
     error.value = ''
-
-    const { data, error: fetchError } = await supabase
-      .from('patch_notes')
-      .select('id, title, body, links, created_at')
-      .eq('published', true)
-      .order('created_at', { ascending: false })
-
-    loading.value = false
-
-    if (fetchError) {
-      error.value = fetchError.message
-      patchNotes.value = []
-      return
-    }
-
-    patchNotes.value = (data ?? []).map(note => ({
-      ...note,
-      links: Array.isArray(note.links) ? note.links as PatchLink[] : []
-    }))
-
-    if (selectedPatchDate.value && !patchDateSet.value.has(selectedPatchDate.value)) {
-      selectedPatchDate.value = ''
-    }
+    try {
+      const response = await fetch('/api/patch-notes', { signal:AbortSignal.timeout(10000),cache:'no-cache' })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Не удалось загрузить патчи')
+      if (request !== fetchRevision) return
+      patchNotes.value = (data.notes ?? []).map((note: PatchNote) => ({ ...note,links:Array.isArray(note.links)?note.links:[] }))
+      if (selectedPatchDate.value && !patchDateSet.value.has(selectedPatchDate.value)) selectedPatchDate.value = ''
+    } catch (failure: any) {
+      if (request === fetchRevision) error.value = failure?.name === 'TimeoutError' ? 'Сервер отвечает дольше обычного. Повторите загрузку.' : failure.message || 'Не удалось загрузить патчи'
+    } finally { if (request === fetchRevision) loading.value = false }
   }
 
   const addLink = () => {
@@ -106,29 +132,40 @@ export function usePatchNotes() {
     form.links = []
     formError.value = ''
     editingId.value = ''
+    draftId.value = ''
+    draftStatus.value = ''
   }
 
   const closeForm = () => {
-    resetForm()
+    if (draftOwner.value) { try { sessionStorage.removeItem(draftKey(draftOwner.value)) } catch { /* Storage is optional. */ } }
     showForm.value = false
+    resetForm()
   }
 
   const openCreateForm = () => {
     if (!auth.user?.isAdmin) return
 
+    showForm.value = false
     resetForm()
+    draftOwner.value = auth.user.id
+    draftId.value = crypto.randomUUID()
     showForm.value = true
+    persistDraft()
   }
 
   const startEditPatchNote = (note: PatchNote) => {
     if (!auth.user?.isAdmin) return
 
+    showForm.value = false
+    draftOwner.value = auth.user.id
+    draftId.value = note.id
     editingId.value = note.id
     form.title = note.title
     form.body = note.body
     form.links = note.links.map(link => ({ ...link }))
     formError.value = ''
     showForm.value = true
+    persistDraft()
   }
 
   const savePatchNote = async () => {
@@ -148,65 +185,40 @@ export function usePatchNotes() {
       return
     }
 
+    if (saving.value) return
+    const owner = auth.user.id, id = draftId.value || editingId.value || crypto.randomUUID()
+    draftId.value = id
+    const savedRevision = revision
+    persistDraft()
     saving.value = true
     formError.value = ''
-
-    const payload = {
-      title,
-      body,
-      links,
-      published: true
-    }
-
-    const { error: saveError } = editingId.value
-      ? await supabase
-        .from('patch_notes')
-        .update(payload)
-        .eq('id', editingId.value)
-      : await supabase
-        .from('patch_notes')
-        .insert({
-          ...payload,
-          author_id: auth.user.id
-        })
-
-    saving.value = false
-
-    if (saveError) {
-      formError.value = saveError.message
-      return
-    }
-
-    closeForm()
-    await fetchPatchNotes()
+    try {
+      const result = await authFetch(`/api/patch-notes/${id}`, { method:'PUT', body:JSON.stringify({title,body,links}) })
+      if (auth.user?.id !== owner || draftOwner.value !== owner || draftId.value !== id) return
+      if (result.note) patchNotes.value = [result.note, ...patchNotes.value.filter(note => note.id !== id)].sort((a,b) => Date.parse(b.created_at)-Date.parse(a.created_at))
+      if (revision === savedRevision) closeForm()
+      else { editingId.value = id; persistDraft() }
+      await fetchPatchNotes()
+    } catch (failure: any) {
+      if (draftOwner.value === owner && draftId.value === id) {
+        formError.value = failure.message || 'Не удалось сохранить патч. Черновик сохранён, попробуйте ещё раз.'
+        persistDraft()
+      }
+    } finally { saving.value = false }
   }
 
   const deletePatchNote = async (note: PatchNote) => {
-    if (!auth.user?.isAdmin) return
-
-    const confirmed = window.confirm(`Удалить патч "${note.title}"?`)
-    if (!confirmed) return
-
+    if (!auth.user?.isAdmin || deletingId.value) return
+    if (!window.confirm(`Удалить патч "${note.title}"?`)) return
+    const owner = auth.user.id
     deletingId.value = note.id
-    formError.value = ''
-
-    const { error: deleteError } = await supabase
-      .from('patch_notes')
-      .delete()
-      .eq('id', note.id)
-
-    deletingId.value = ''
-
-    if (deleteError) {
-      error.value = deleteError.message
-      return
-    }
-
-    if (editingId.value === note.id) {
-      closeForm()
-    }
-
-    await fetchPatchNotes()
+    try {
+      await authFetch(`/api/patch-notes/${note.id}`, { method:'DELETE' })
+      if (auth.user?.id !== owner) return
+      if (editingId.value === note.id) closeForm()
+      await fetchPatchNotes()
+    } catch (failure: any) { error.value = failure.message || 'Не удалось удалить патч' }
+    finally { deletingId.value = '' }
   }
 
   const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', {
@@ -299,9 +311,22 @@ export function usePatchNotes() {
     }
   })
 
-  onMounted(async () => {
-    await auth.init()
-    await fetchPatchNotes()
+  watch(() => [auth.user?.id, auth.user?.isAdmin] as const, ([owner, admin]) => {
+    if (owner && admin) restoreDraft(owner)
+  }, { immediate:true, flush:'post' })
+
+  const onVisibility = () => { if (document.hidden) persistDraft() }
+  onMounted(() => {
+    void auth.init()
+    void fetchPatchNotes()
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', persistDraft)
+  })
+  onUnmounted(() => {
+    persistDraft()
+    document.removeEventListener('visibilitychange', onVisibility)
+    window.removeEventListener('pagehide', persistDraft)
+    fetchRevision++
   })
 
   return {
@@ -315,6 +340,7 @@ export function usePatchNotes() {
     deletingId,
     error,
     formError,
+    draftStatus,
     showForm,
     editingId,
     selectedPatchDate,

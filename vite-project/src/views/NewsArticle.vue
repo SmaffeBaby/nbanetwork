@@ -55,6 +55,7 @@
 </template>
 
 <script setup lang="ts">
+import { usePageTitle } from '../composables/usePageTitle'
 import { RouterLink } from 'vue-router'
 import Header from '../components/Headers/Header.vue'
 import ArticleComments from '../components/News/ArticleComments.vue'
@@ -72,4 +73,5 @@ const {
   toggleLike,
   copyLink
 } = useNewsArticle()
+usePageTitle(() => article.value?.title)
 </script>

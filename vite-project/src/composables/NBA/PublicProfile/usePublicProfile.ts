@@ -1,3 +1,4 @@
+import { usePageTitle } from '../../usePageTitle'
 import { normalizeFavoriteGames } from '../../../api/gameIdentity'
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
@@ -56,6 +57,8 @@ export const usePublicProfile = () => {
         const name = `${profile.value?.first_name ?? ''} ${profile.value?.last_name ?? ''}`.trim()
         return name || 'Пользователь'
     })
+
+    usePageTitle(() => profile.value ? `${fullName.value} — Профиль` : null)
 
     const initials = computed(() => {
         const first = profile.value?.first_name?.trim().charAt(0) ?? ''
