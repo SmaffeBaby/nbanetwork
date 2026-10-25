@@ -9,6 +9,7 @@ import {
     UserCircleIcon,
     UserGroupIcon
 } from '@heroicons/vue/24/outline'
+import { useProfileNavigation } from '../useProfileNavigation'
 import { supabase } from '../../lib/supabase'
 import { teamsFullNames } from '../../constants/TeamFullName'
 import { getPlayerImage, handleImageError } from '../../utils/playerImage'
@@ -173,6 +174,7 @@ const teamResults: SearchResult[] = Object.entries(teamsFullNames).map(([abbr, n
 
 export function useHomeSearch() {
     const router = useRouter()
+    const { profilePath } = useProfileNavigation()
     const searchRoot = ref<HTMLElement | null>(null)
     const search = ref('')
     const isOpen = ref(false)
@@ -245,7 +247,7 @@ export function useHomeSearch() {
         const query = normalizedSearch.value
         if (!query) return []
 
-        const localResults = [...teamResults, ...pageResults].filter(item =>
+        const localResults = [...teamResults, ...pageResults.map(item => item.id === 'page-profile' ? { ...item, to: profilePath.value } : item)].filter(item =>
             `${item.title} ${item.subtitle}`.toLowerCase().includes(query)
         )
         const playerResults = players.value.filter(item =>

@@ -47,7 +47,7 @@
     </div>
 
     <div v-if="user" class="mt-5 rounded-xl border border-white/60 bg-white/50 p-3 shadow-sm shadow-slate-900/5 backdrop-blur-xl">
-      <RouterLink to="/profile" class="flex min-w-0 items-center gap-3" @click="closeDrawer">
+      <RouterLink :to="{ name: 'PublicProfile', params: { id: user.id } }" class="flex min-w-0 items-center gap-3" @click="closeDrawer">
         <img
             v-if="user.avatarImg"
             :src="user.avatarImg"

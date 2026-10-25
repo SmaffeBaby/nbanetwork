@@ -59,13 +59,14 @@ type CachedUser = AppUser & {
 const CACHE_KEY = 'auth_user_cache'
 const CACHE_TTL = 1000 * 60 * 10
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | void> {
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    let timer: ReturnType<typeof setTimeout>
     return Promise.race([
         promise,
-        new Promise<void>((resolve) => {
-            setTimeout(resolve, ms)
-        }),
-    ])
+        new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Превышено время ожидания авторизации.')), ms)
+        })
+    ]).finally(() => clearTimeout(timer))
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -75,10 +76,15 @@ export const useAuthStore = defineStore('auth', () => {
     let profileChannel: ReturnType<typeof supabase.channel> | null = null
     let authSubscription: { data: { subscription: { unsubscribe: () => void } } } | null = null
     let initPromise: Promise<void> | null = null
+    let initialized = false
+    let authGeneration = 0
+    const followingRevision = ref(0)
+    const followingPending = ref<string[]>([])
+    const followingRequests = new Map<string, Promise<void>>()
 
     const saveToCache = (userData: AppUser) => {
         const cached: CachedUser = { ...userData, cachedAt: Date.now() }
-        localStorage.setItem(CACHE_KEY, JSON.stringify(cached))
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(cached)) } catch { /* Storage may be unavailable or full. */ }
     }
 
     const getFromCache = (): AppUser | null => {
@@ -121,34 +127,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const fetchProfile = async (userId: string, email: string): Promise<AppUser> => {
+        const revision = followingRevision.value
         const [{ data, error }, followingProfiles] = await Promise.all([
             supabase
             .from('profiles')
             .select('first_name, last_name, avatar_img, hide_scores, favorites_teams, favorites_players, favorites_games, watched_games, notify_followed_comments, notifications, admin, created_at')
             .eq('id', userId)
+            .abortSignal(AbortSignal.timeout(10000))
             .single(),
-            fetchFollowingProfiles(userId)
+            fetchFollowingProfiles(userId).catch(() => user.value?.id === userId ? user.value.followingProfiles : [])
         ])
 
-        if (error || !data) {
-            return {
-                id: userId,
-                email,
-                firstName: '',
-                lastName: '',
-                avatarImg: null,
-                hideScores: true,
-                favoriteTeams: [],
-                favoritePlayers: [],
-                favoriteGames: [],
-                watchedGames: [],
-                followingProfiles: [],
-                notifyFollowedComments: false,
-                notifications: [],
-                isAdmin: false,
-                createdAt: null
-            }
-        }
+        if (error || !data) throw new Error(error?.message || 'Профиль не найден')
 
         return {
             id: userId,
@@ -161,7 +151,8 @@ export const useAuthStore = defineStore('auth', () => {
             favoritePlayers: normalizeFavoritePlayers(data.favorites_players),
             favoriteGames: normalizeFavoriteGames(data.favorites_games),
             watchedGames: normalizeFavoriteGames(data.watched_games),
-            followingProfiles,
+            followingProfiles: user.value?.id === userId && revision !== followingRevision.value
+                ? user.value.followingProfiles : followingProfiles,
             notifyFollowedComments: data.notify_followed_comments ?? false,
             notifications: normalizeNotifications(data.notifications),
             isAdmin: data.admin ?? false,
@@ -207,7 +198,7 @@ export const useAuthStore = defineStore('auth', () => {
                         created_at?: string
                         email?: string
                     }
-                    if (!user.value) return
+                    if (user.value?.id !== userId) return
 
                     user.value = {
                         ...user.value,
@@ -246,7 +237,9 @@ export const useAuthStore = defineStore('auth', () => {
         const cached = getFromCache()
         if (cached) user.value = cached
 
-        const { data } = await supabase.auth.getSession()
+        const generation = authGeneration
+        const { data } = await withTimeout(supabase.auth.getSession(), 5000)
+        if (generation !== authGeneration) return
         const session = data.session
         setAccessToken(session?.access_token)
 
@@ -264,6 +257,7 @@ export const useAuthStore = defineStore('auth', () => {
         await subscribeToProfile(userId)
 
         const fresh = await fetchProfile(userId, email)
+        if (generation !== authGeneration) return
         user.value = fresh
         saveToCache(fresh)
 
@@ -272,8 +266,14 @@ export const useAuthStore = defineStore('auth', () => {
 
     const init = async () => {
         if (initPromise) return initPromise
+        if (initialized) return
 
-        initPromise = runInit().finally(() => {
+        initPromise = runInit().then(() => {
+            initialized = true
+        }).catch(error => {
+            console.error('Auth initialization failed:', error)
+        }).finally(() => {
+            loading.value = false
             initPromise = null
         })
 
@@ -445,47 +445,62 @@ export const useAuthStore = defineStore('auth', () => {
         await updateWatchedGames(watchedGames)
     }
 
-    const updateFollowingProfiles = async (profiles: string[]) => {
-        if (!user.value) return
-
-        const userId = user.value.id
-        const normalized = Array.from(new Set(profiles.map(id => id.trim()).filter(Boolean)))
-        const previous = user.value.followingProfiles
-
+    const syncFollowingProfiles = (ids: string[], ownerId: string, revision: number) => {
+        if (user.value?.id !== ownerId || followingRevision.value !== revision || followingPending.value.length) return
+        const normalized = [...new Set(ids)]
+        if (normalized.join('|') === user.value.followingProfiles.join('|')) return
         user.value.followingProfiles = normalized
         saveToCache(user.value)
+    }
 
-        const removed = previous.filter(id => !normalized.includes(id))
-        const added = normalized.filter(id => !previous.includes(id))
-
-        try {
-            await Promise.all([
-                ...removed.map(id => authFetch(`/api/profile-follows/${id}`, { method: 'DELETE' })),
-                ...added.map(id => authFetch(`/api/profile-follows/${id}`, { method: 'POST' }))
-            ])
-        } catch (error) {
-            console.error('update profile_follows error:', error)
-            user.value.followingProfiles = previous
+    const setProfileFollowing = (profileId: string, following: boolean): Promise<void> => {
+        const ownerId = user.value?.id
+        if (!ownerId || !profileId || profileId === ownerId) return Promise.resolve()
+        const generation = authGeneration
+        const key = `${generation}:${ownerId}:${profileId}`
+        const pending = followingRequests.get(key)
+        if (pending) return pending
+        const previous = user.value!.followingProfiles.includes(profileId)
+        const update = (value: boolean) => {
+            if (user.value?.id !== ownerId || generation !== authGeneration) return
+            user.value.followingProfiles = value
+                ? [...new Set([...user.value.followingProfiles, profileId])]
+                : user.value.followingProfiles.filter(id => id !== profileId)
             saveToCache(user.value)
-            return
         }
-
-        const fresh = await fetchFollowingProfiles(userId)
-        if (!user.value || user.value.id !== userId) return
-
-        user.value.followingProfiles = fresh
-        saveToCache(user.value)
+        followingPending.value = [...followingPending.value, profileId]
+        followingRevision.value++
+        update(following)
+        const request = (async () => {
+            try {
+                await authFetch(`/api/profile-follows/${encodeURIComponent(profileId)}`, { method: following ? 'POST' : 'DELETE' })
+            } catch (error) {
+                update(previous)
+                throw error
+            } finally {
+                followingRequests.delete(key)
+                if (user.value?.id === ownerId && generation === authGeneration) {
+                    followingPending.value = followingPending.value.filter(id => id !== profileId)
+                    followingRevision.value++
+                }
+            }
+        })()
+        followingRequests.set(key, request)
+        return request
     }
 
-    const toggleFollowProfile = async (profileId: string) => {
-        if (!user.value || !profileId || profileId === user.value.id) return
-
-        const followingProfiles = user.value.followingProfiles.includes(profileId)
-            ? user.value.followingProfiles.filter(id => id !== profileId)
-            : [...user.value.followingProfiles, profileId]
-
-        await updateFollowingProfiles(followingProfiles)
+    const updateFollowingProfiles = async (profiles: string[]) => {
+        if (!user.value) return
+        const normalized = [...new Set(profiles.map(id => id.trim()).filter(Boolean))]
+        const previous = user.value.followingProfiles
+        await Promise.all([
+            ...previous.filter(id => !normalized.includes(id)).map(id => setProfileFollowing(id, false)),
+            ...normalized.filter(id => !previous.includes(id)).map(id => setProfileFollowing(id, true))
+        ])
     }
+
+    const toggleFollowProfile = (profileId: string) =>
+        setProfileFollowing(profileId, !user.value?.followingProfiles.includes(profileId))
 
     const updateNotifyFollowedComments = async (value: boolean) => {
         if (!user.value) return
@@ -554,8 +569,10 @@ export const useAuthStore = defineStore('auth', () => {
         if (error) throw error
         setAccessToken(data.session?.access_token)
 
+        const generation = authGeneration
         const fresh = await fetchProfile(data.user.id, data.user.email ?? '')
-
+        if (generation !== authGeneration) return
+        initialized = true
         user.value = fresh
         saveToCache(fresh)
         await subscribeToProfile(data.user.id)
@@ -634,6 +651,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const logout = async () => {
+        authGeneration++
         try {
             await withTimeout(supabase.auth.signOut(), 2500)
         } catch (e) {
@@ -646,25 +664,51 @@ export const useAuthStore = defineStore('auth', () => {
         clearCache()
         clearAccessToken()
         user.value = null
+        followingPending.value = []
+        followingRevision.value++
         loading.value = false
     }
 
     const subscribeAuthState = () => {
         if (authSubscription) return
 
-        authSubscription = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (session?.user) {
-                setAccessToken(session.access_token)
-                const fresh = await fetchProfile(session.user.id, session.user.email ?? '')
-                user.value = fresh
-                saveToCache(fresh)
-                await subscribeToProfile(session.user.id)
-            } else if (event === 'SIGNED_OUT') {
-                await unsubscribeProfile()
+        // Supabase holds its auth lock while invoking this callback. Never await
+        // another Supabase call here; schedule profile requests after it returns.
+        authSubscription = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT') {
+                authGeneration++
                 clearAccessToken()
                 clearCache()
                 user.value = null
+                followingPending.value = []
+                followingRevision.value++
+                loading.value = false
+                void unsubscribeProfile()
+                return
             }
+            if (!session?.user) return
+            setAccessToken(session.access_token)
+            if (user.value?.id === session.user.id && event !== 'USER_UPDATED') return
+            if (user.value?.id !== session.user.id) {
+                user.value = null
+                followingPending.value = []
+                followingRevision.value++
+                loading.value = true
+            }
+            const generation = ++authGeneration
+            setTimeout(() => {
+                if (generation !== authGeneration) return
+                void fetchProfile(session.user.id, session.user.email ?? '').then(async fresh => {
+                    if (generation !== authGeneration) return
+                    user.value = fresh
+                    saveToCache(fresh)
+                    await subscribeToProfile(session.user.id)
+                }).catch(error => {
+                    console.error('Failed to refresh authenticated profile:', error)
+                }).finally(() => {
+                    if (generation === authGeneration) loading.value = false
+                })
+            }, 0)
         })
     }
 
@@ -685,6 +729,10 @@ export const useAuthStore = defineStore('auth', () => {
         toggleFavoriteGame,
         updateWatchedGames,
         toggleWatchedGame,
+        followingPending,
+        followingRevision,
+        syncFollowingProfiles,
+        setProfileFollowing,
         updateFollowingProfiles,
         toggleFollowProfile,
         updateNotifyFollowedComments,
@@ -707,16 +755,10 @@ function normalizeFavoritePlayers(value: unknown): FavoritePlayer[] {
     return [...byId.values()]
 }
 
-async function fetchFollowingProfiles(userId: string): Promise<string[]> {
-    try {
-        const data = await authFetch('/api/profile-follows')
-        return (data.follows ?? [])
-            .map((row: { following_id?: string }) => row.following_id)
-            .filter(Boolean)
-    } catch (error) {
-        console.error('fetch profile_follows error:', error)
-        return []
-    }
+async function fetchFollowingProfiles(_userId: string): Promise<string[]> {
+    const data = await authFetch('/api/profile-follows')
+    if (!Array.isArray(data.follows)) throw new Error('Некорректный список подписок')
+    return data.follows.map((row: { following_id: string }) => row.following_id).filter(Boolean)
 }
 
 function normalizeFavoritePlayer(value: unknown): FavoritePlayer | null {

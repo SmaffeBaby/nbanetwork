@@ -8,6 +8,7 @@ import {
   NewspaperIcon,
   SparklesIcon
 } from '@heroicons/vue/24/solid'
+import { useProfileNavigation } from '../useProfileNavigation'
 import { getTodayDateKey } from '../NBA/games/useGamesByDate'
 import { teamsFullNames } from '../../constants/TeamFullName'
 
@@ -54,6 +55,7 @@ const categoryLinks = [
 
 export function useHeader() {
   const route = useRoute()
+  const { profilePath } = useProfileNavigation()
   const gamesPath = computed(() => `/games/${getTodayDateKey()}`)
 
   const newsLink = computed<HeaderLink>(() => ({
@@ -125,15 +127,15 @@ export function useHeader() {
     {
       label: 'Профиль',
       description: 'Избранное, подписки и прогресс',
-      to: '/profile',
+      to: profilePath.value,
       icon: ArchiveBoxIcon,
-      isActive: route.path === '/profile'
+      isActive: route.path.startsWith('/profile')
     }
   ])
 
   const teamsIsActive = computed(() => route.path.startsWith('/teams') || route.path.startsWith('/team/'))
   const seasonIsActive = computed(() => route.path === '/standings' || route.path.startsWith('/playoffs'))
-  const moreIsActive = computed(() => route.path === '/patch-note' || route.path === '/profile')
+  const moreIsActive = computed(() => route.path === '/patch-note' || route.path.startsWith('/profile'))
 
   return {
     categoryLinks,

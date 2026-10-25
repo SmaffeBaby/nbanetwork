@@ -1,4 +1,5 @@
 import { reactive, ref, watch, onMounted } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { supabase } from '../../lib/supabase'
@@ -7,7 +8,8 @@ import { useAuthPanel } from '../Auth/useAuthPanel'
 export function useProfile() {
     const toast = useToast()
     const router = useRouter()
-    const { user, handleLogout } = useAuthPanel()
+    const queryClient = useQueryClient()
+    const { user, loadingUser, handleLogout } = useAuthPanel()
 
     const activeTab = ref<'main' | 'likedArticles' | 'security'>('main')
     const isEditing = ref(false)
@@ -48,6 +50,7 @@ export function useProfile() {
         user.value.firstName = form.firstName
         user.value.lastName = form.lastName
 
+        void queryClient.invalidateQueries({ queryKey: ['public-profile', user.value.id] })
         toast.success('Профиль обновлён')
         isEditing.value = false
     }
@@ -96,6 +99,7 @@ export function useProfile() {
             }
 
             user.value.avatarImg = avatarImg
+            void queryClient.invalidateQueries({ queryKey: ['public-profile', user.value.id] })
             toast.success('Аватарка обновлена')
         } catch {
             toast.error('Не удалось прочитать файл')
@@ -110,13 +114,13 @@ export function useProfile() {
     }
 
     onMounted(async () => {
-        if (!user.value) {
+        if (!user.value && !loadingUser.value) {
             await router.replace('/')
         }
     })
 
-    watch(user, async (newVal) => {
-        if (!newVal) {
+    watch([user, loadingUser], async ([newVal, pending]) => {
+        if (!newVal && !pending) {
             await router.replace('/')
         }
     })

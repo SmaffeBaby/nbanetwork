@@ -5,6 +5,12 @@
       <p class="text-sm leading-5 text-gray-500">Профили, по комментариям которых можно получать уведомления.</p>
     </div>
 
+    <div v-if="error" role="alert" class="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+      {{ error }}
+      <button type="button" class="ml-2 font-semibold underline" @click="retry">Повторить</button>
+    </div>
+    <p v-if="loading" class="text-sm text-gray-500">Загружаем подписки...</p>
+
     <div
         v-if="profiles.length"
         class="space-y-2"
@@ -21,7 +27,7 @@
             class="h-10 w-10 rounded-full object-cover"
         />
         <div
-            v-else
+            v-else-if="!loading && !error"
             class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-600"
         >
           {{ getInitials(profile) }}
@@ -40,15 +46,16 @@
         <button
             type="button"
             class="w-full rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-200 active:scale-95 sm:w-auto"
+            :disabled="pending.includes(profile.id)"
             @click="unfollow(profile.id)"
         >
-          Отписаться
+          {{ pending.includes(profile.id) ? 'Сохраняем...' : 'Отписаться' }}
         </button>
       </div>
     </div>
 
     <div
-        v-else
+        v-else-if="!loading && !error"
         class="rounded-2xl border border-dashed border-gray-300 bg-white p-5 text-center text-sm text-gray-500"
     >
       Вы пока ни на кого не подписаны.
@@ -57,134 +64,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { storeToRefs } from 'pinia'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { supabase } from '../../lib/supabase'
-import { isRealtimeEnabled } from '../../lib/realtime'
-import { authFetch } from '../../api/authFetch'
-import { useAuthStore } from '../../stores/auth'
+import { useProfileFollows, type SubscriptionProfile } from '../../composables/Profile/useProfileFollows'
 
-type SubscriptionProfile = {
-  id: string
-  first_name: string
-  last_name: string
-  avatar_img: string | null
-}
-
-const auth = useAuthStore()
-const { user } = storeToRefs(auth)
-const queryClient = useQueryClient()
-const userId = computed(() => user.value?.id ?? '')
-let channel: ReturnType<typeof supabase.channel> | null = null
-
-const profilesQuery = useQuery({
-  queryKey: computed(() => ['profile-subscriptions', userId.value]),
-  enabled: computed(() => Boolean(userId.value)),
-  refetchInterval: 5000,
-  queryFn: async () => {
-    const data = await authFetch('/api/profile-follows')
-
-    return ((data.follows ?? []) as unknown as { profiles: SubscriptionProfile | SubscriptionProfile[] | null }[])
-        .map(row => Array.isArray(row.profiles) ? row.profiles[0] ?? null : row.profiles)
-        .filter((profile): profile is SubscriptionProfile => Boolean(profile))
-  }
-})
-
-const profiles = computed(() => profilesQuery.data.value ?? [])
-
-const subscribe = () => {
-  if (!isRealtimeEnabled()) return
-  if (!userId.value || channel) return
-
-  channel = supabase
-      .channel(`profile-follows-${userId.value}`)
-      .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'profile_follows',
-            filter: `follower_id=eq.${userId.value}`
-          },
-          () => {
-            void profilesQuery.refetch()
-          }
-      )
-      .subscribe()
-}
-
-const unsubscribe = async () => {
-  if (!channel) return
-
-  await supabase.removeChannel(channel)
-  channel = null
-}
-
-const getName = (profile: SubscriptionProfile) => {
-  const name = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim()
-  return name || 'Пользователь'
-}
-
-const getInitials = (profile: SubscriptionProfile) => {
-  const first = profile.first_name?.trim().charAt(0) ?? ''
-  const last = profile.last_name?.trim().charAt(0) ?? ''
-  return `${first}${last}`.trim() || 'U'
-}
-
-const unfollowMutation = useMutation({
-  mutationFn: async (profileId: string) => {
-    await auth.toggleFollowProfile(profileId)
-  },
-  onMutate: async (profileId) => {
-    await queryClient.cancelQueries({ queryKey: ['profile-subscriptions', userId.value] })
-    const previous = profiles.value
-
-    queryClient.setQueryData(
-        ['profile-subscriptions', userId.value],
-        previous.filter(profile => profile.id !== profileId)
-    )
-
-    return { previous }
-  },
-  onError: (_error, _variables, context) => {
-    if (context?.previous) {
-      queryClient.setQueryData(['profile-subscriptions', userId.value], context.previous)
-    }
-  },
-  onSettled: () => {
-    void profilesQuery.refetch()
-  }
-})
-
-const unfollow = (profileId: string) => {
-  unfollowMutation.mutate(profileId)
-}
-
-watch(
-    userId,
-    async () => {
-      await unsubscribe()
-      await profilesQuery.refetch()
-      subscribe()
-    },
-    { immediate: true }
-)
-
-watch(
-    () => user.value?.followingProfiles.join('|'),
-    () => {
-      void profilesQuery.refetch()
-    }
-)
-
-onMounted(() => {
-  void profilesQuery.refetch()
-  subscribe()
-})
-
-onUnmounted(() => {
-  void unsubscribe()
-})
+const { profiles, loading, error, retry, pending, setFollowing } = useProfileFollows()
+const unfollow = (id: string) => setFollowing(id, false)
+const getName = (profile: SubscriptionProfile) => `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'Пользователь'
+const getInitials = (profile: SubscriptionProfile) => `${profile.first_name?.trim().charAt(0) ?? ''}${profile.last_name?.trim().charAt(0) ?? ''}` || 'U'
 </script>

@@ -9,12 +9,13 @@ const SESSION_TIMEOUT_MS = 1200
 const REQUEST_TIMEOUT_MS = 10000
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+    let timer: ReturnType<typeof setTimeout>
     return Promise.race([
         promise,
         new Promise<T>((_, reject) => {
-            window.setTimeout(() => reject(new Error(message)), ms)
+            timer = setTimeout(() => reject(new Error(message)), ms)
         })
-    ])
+    ]).finally(() => clearTimeout(timer))
 }
 
 async function getAccessToken() {
@@ -62,13 +63,21 @@ async function requestJson(path: string, options: RequestInit, token: string | n
         headers.set('Authorization', `Bearer ${token}`)
     }
 
+    const abort = () => controller.abort()
+    if (options.signal?.aborted) controller.abort()
+    options.signal?.addEventListener('abort', abort, { once: true })
     let response: Response
+    let json: any
 
     try {
         response = await fetch(path, {
             ...options,
             headers,
-            signal: options.signal ?? controller.signal
+            signal: controller.signal
+        })
+        json = await response.json().catch(error => {
+            if (controller.signal.aborted) throw error
+            return null
         })
     } catch (error: any) {
         if (error?.name === 'AbortError') {
@@ -78,9 +87,8 @@ async function requestJson(path: string, options: RequestInit, token: string | n
         throw error
     } finally {
         window.clearTimeout(timeoutId)
+        options.signal?.removeEventListener('abort', abort)
     }
-
-    const json = await response.json().catch(() => null)
 
     if (!response.ok) {
         if (response.status === 413) {

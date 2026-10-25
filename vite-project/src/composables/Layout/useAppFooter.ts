@@ -1,3 +1,5 @@
+import { computed } from 'vue'
+import { useProfileNavigation } from '../useProfileNavigation'
 import { getTodayDateKey } from '../NBA/games/useGamesByDate'
 
 export function useAppFooter() {
@@ -15,9 +17,10 @@ export function useAppFooter() {
     { label: 'Новости', to: '/news' }
   ]
 
-  const accountLinks = [
-    { label: 'Профиль', to: '/profile' }
-  ]
+  const { profilePath } = useProfileNavigation()
+  const accountLinks = computed(() => [
+    { label: 'Профиль', to: profilePath.value }
+  ])
 
   const legalLinks = [
     { label: 'Пользовательское соглашение', to: '/legal/terms-of-use' },

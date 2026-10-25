@@ -6,6 +6,7 @@
 
     <div v-else-if="error" class="min-h-screen text-center text-red-500">
       {{ error }}
+      <button v-if="auth.user" type="button" class="ml-2 font-semibold underline" @click="retryProfile">Повторить</button>
     </div>
 
     <div v-else-if="profile" class="mx-auto max-w-6xl space-y-5 sm:space-y-8 md:space-y-10">
@@ -40,11 +41,18 @@
             type="button"
             class="inline-flex w-full items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-95 sm:w-auto"
             :class="isFollowing ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-blue-600 text-white hover:bg-blue-700'"
+            :disabled="followPending"
             @click="toggleFollow"
         >
-          {{ isFollowing ? 'Вы подписаны' : 'Подписаться' }}
+          {{ followPending ? 'Сохраняем...' : isFollowing ? 'Вы подписаны' : 'Подписаться' }}
         </button>
       </section>
+
+      <p v-if="canFollow && followError" role="alert" class="text-sm text-red-600">{{ followError }}</p>
+      <div v-if="isOwnProfile" class="flex justify-end">
+        <RouterLink to="/profile" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Настройки профиля</RouterLink>
+      </div>
+      <ProfileSubscriptions v-if="isOwnProfile" />
 
       <PublicProfileProgressSummary
           :watched-count="watchedGames.length"
@@ -77,6 +85,9 @@
 </template>
 
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
+import { useAuthStore } from '../../../stores/auth'
+import ProfileSubscriptions from '../../Profile/ProfileSubscriptions.vue'
 import FavoriteTeam from './FavoriteTeam.vue'
 import FavoritePlayers from './FavoritePlayers.vue'
 import PublicProfileGameList from './PublicProfileGameList.vue'
@@ -89,6 +100,9 @@ import { computed, onMounted } from 'vue'
 
 const {
   profile,
+  retryProfile,
+  followPending,
+  followError,
   loading,
   error,
   fullName,
@@ -111,6 +125,9 @@ const {
   saveRule: saveProgressRule,
   deleteRule: deleteProgressRule
 } = useProfileProgressRules()
+
+const auth = useAuthStore()
+const isOwnProfile = computed(() => Boolean(profile.value && auth.user?.id === profile.value.id))
 
 const topWatchedTeam = computed(() => {
   const teams = new Map<string, { abbr: string, count: number }>()
