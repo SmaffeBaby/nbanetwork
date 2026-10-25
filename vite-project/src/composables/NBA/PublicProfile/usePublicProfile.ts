@@ -1,3 +1,4 @@
+import { normalizeFavoriteGames } from '../../../api/gameIdentity'
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useProfileFollows } from '../../Profile/useProfileFollows'
@@ -23,6 +24,7 @@ export const usePublicProfile = () => {
     const router = useRouter()
     const auth = useAuthStore()
 
+    const isOwnProfile = computed(() => String(route.params.id ?? '') === auth.user?.id)
     const userId = computed(() => String(route.params.id ?? ''))
     const profileQuery = useQuery({
         queryKey: computed(() => ['public-profile', userId.value, auth.user?.id ?? '']),
@@ -83,11 +85,11 @@ export const usePublicProfile = () => {
     }
 
     const favoriteGames = computed(() =>
-        sortGamesByDate(profile.value?.favorites_games ?? [])
+        sortGamesByDate(normalizeFavoriteGames(isOwnProfile.value ? auth.user?.favoriteGames : profile.value?.favorites_games))
     )
 
     const watchedGames = computed(() =>
-        sortGamesByDate(profile.value?.watched_games ?? [])
+        sortGamesByDate(normalizeFavoriteGames(isOwnProfile.value ? auth.user?.watchedGames : profile.value?.watched_games))
     )
 
     const canFollow = computed(() =>

@@ -1,3 +1,4 @@
+import { normalizeFavoriteGame, normalizeFavoriteGames, sameGame } from '../api/gameIdentity'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../lib/supabase'
@@ -31,6 +32,7 @@ export type FavoritePlayer = {
 
 export type FavoriteGame = {
     id: string
+    source?: 'espn' | 'nba'
     date: string | null
     homeName: string
     homeAbbr: string
@@ -108,8 +110,8 @@ export const useAuthStore = defineStore('auth', () => {
                 hideScores: cached.hideScores ?? true,
                 favoriteTeams: cached.favoriteTeams ?? [],
                 favoritePlayers: cached.favoritePlayers ?? [],
-                favoriteGames: cached.favoriteGames ?? [],
-                watchedGames: cached.watchedGames ?? [],
+                favoriteGames: normalizeFavoriteGames(cached.favoriteGames),
+                watchedGames: normalizeFavoriteGames(cached.watchedGames),
                 followingProfiles: cached.followingProfiles ?? [],
                 notifyFollowedComments: cached.notifyFollowedComments ?? false,
                 notifications: cached.notifications ?? [],
@@ -210,10 +212,10 @@ export const useAuthStore = defineStore('auth', () => {
                         favoritePlayers: updated.favorites_players
                             ? normalizeFavoritePlayers(updated.favorites_players)
                             : user.value.favoritePlayers,
-                        favoriteGames: updated.favorites_games
+                        favoriteGames: !pendingGameWrites && updated.favorites_games
                             ? normalizeFavoriteGames(updated.favorites_games)
                             : user.value.favoriteGames,
-                        watchedGames: updated.watched_games
+                        watchedGames: !pendingGameWrites && updated.watched_games
                             ? normalizeFavoriteGames(updated.watched_games)
                             : user.value.watchedGames,
                         followingProfiles: user.value.followingProfiles,
@@ -375,75 +377,44 @@ export const useAuthStore = defineStore('auth', () => {
         await updateFavoritePlayers(favoritePlayers)
     }
 
-    const updateFavoriteGames = async (games: FavoriteGame[]) => {
-        if (!user.value) return
-
-        const normalized = normalizeFavoriteGames(games)
-        const previous = user.value.favoriteGames
-
-        user.value.favoriteGames = normalized
-        saveToCache(user.value)
-
-        const { data, error } = await supabase
-            .from('profiles')
-            .update({ favorites_games: normalized })
-            .eq('id', user.value.id)
-            .select()
-
-        if (error || !data || data.length === 0) {
-            console.error('update favorites_games error:', error)
-            user.value.favoriteGames = previous
+    let gameWrites: Promise<unknown> = Promise.resolve()
+    let pendingGameWrites = 0
+    const setGameMark = (kind: 'favorite' | 'watched', game: FavoriteGame, active: boolean) => {
+        const ownerId = user.value?.id
+        if (!ownerId) return Promise.reject(new Error('Войдите, чтобы отмечать матчи'))
+        pendingGameWrites++
+        const write = gameWrites.catch(() => {}).then(async () => {
+            if (user.value?.id !== ownerId) throw new Error('Аккаунт изменился. Повторите действие.')
+            const result = await authFetch(`/api/profile-games/${kind}`, {
+                method: 'PUT', body: JSON.stringify({ game, active })
+            })
+            if (user.value?.id !== ownerId) return
+            user.value.favoriteGames = normalizeFavoriteGames(result.favoriteGames)
+            user.value.watchedGames = normalizeFavoriteGames(result.watchedGames)
             saveToCache(user.value)
-        }
+        }).finally(() => { pendingGameWrites-- })
+        gameWrites = write
+        return write
     }
-
     const toggleFavoriteGame = async (game: FavoriteGame) => {
-        if (!user.value) return
-
         const normalized = normalizeFavoriteGame(game)
-        if (!normalized) return
-
-        const favoriteGames = user.value.favoriteGames.some(item => item.id === normalized.id)
-            ? user.value.favoriteGames.filter(item => item.id !== normalized.id)
-            : [...user.value.favoriteGames, normalized]
-
-        await updateFavoriteGames(favoriteGames)
+        if (!normalized || !user.value) throw new Error('Не удалось определить матч')
+        await setGameMark('favorite', normalized, !user.value.favoriteGames.some(item => sameGame(item, normalized)))
     }
-
-    const updateWatchedGames = async (games: FavoriteGame[]) => {
-        if (!user.value) return
-
-        const normalized = normalizeFavoriteGames(games)
-        const previous = user.value.watchedGames
-
-        user.value.watchedGames = normalized
-        saveToCache(user.value)
-
-        const { data, error } = await supabase
-            .from('profiles')
-            .update({ watched_games: normalized })
-            .eq('id', user.value.id)
-            .select()
-
-        if (error || !data || data.length === 0) {
-            console.error('update watched_games error:', error)
-            user.value.watchedGames = previous
-            saveToCache(user.value)
-        }
-    }
-
     const toggleWatchedGame = async (game: FavoriteGame) => {
-        if (!user.value) return
-
         const normalized = normalizeFavoriteGame(game)
-        if (!normalized) return
-
-        const watchedGames = user.value.watchedGames.some(item => item.id === normalized.id)
-            ? user.value.watchedGames.filter(item => item.id !== normalized.id)
-            : [...user.value.watchedGames, normalized]
-
-        await updateWatchedGames(watchedGames)
+        if (!normalized || !user.value) throw new Error('Не удалось определить матч')
+        await setGameMark('watched', normalized, !user.value.watchedGames.some(item => sameGame(item, normalized)))
     }
+    const replaceGameMarks = async (kind: 'favorite' | 'watched', games: FavoriteGame[]) => {
+        if (!user.value) return
+        const next = normalizeFavoriteGames(games)
+        const previous = kind === 'favorite' ? user.value.favoriteGames : user.value.watchedGames
+        for (const game of previous) if (!next.some(item => sameGame(item, game))) await setGameMark(kind, game, false)
+        for (const game of next) if (!previous.some(item => sameGame(item, game))) await setGameMark(kind, game, true)
+    }
+    const updateFavoriteGames = (games: FavoriteGame[]) => replaceGameMarks('favorite', games)
+    const updateWatchedGames = (games: FavoriteGame[]) => replaceGameMarks('watched', games)
 
     const syncFollowingProfiles = (ids: string[], ownerId: string, revision: number) => {
         if (user.value?.id !== ownerId || followingRevision.value !== revision || followingPending.value.length) return
@@ -772,39 +743,6 @@ function normalizeFavoritePlayer(value: unknown): FavoritePlayer | null {
     if (!Number.isFinite(id) || !name) return null
 
     return { id, name, teamAbbr }
-}
-
-function normalizeFavoriteGames(value: unknown): FavoriteGame[] {
-    if (!Array.isArray(value)) return []
-
-    const byId = new Map<string, FavoriteGame>()
-
-    value.forEach((game) => {
-        const normalized = normalizeFavoriteGame(game)
-        if (normalized) byId.set(normalized.id, normalized)
-    })
-
-    return [...byId.values()]
-}
-
-function normalizeFavoriteGame(value: unknown): FavoriteGame | null {
-    if (!value || typeof value !== 'object') return null
-
-    const raw = value as Partial<FavoriteGame>
-    const id = String(raw.id ?? '').trim()
-
-    if (!id) return null
-
-    return {
-        id,
-        date: raw.date ? String(raw.date) : null,
-        homeName: String(raw.homeName ?? ''),
-        homeAbbr: String(raw.homeAbbr ?? '').trim().toUpperCase(),
-        homeScore: raw.homeScore == null ? null : Number(raw.homeScore),
-        awayName: String(raw.awayName ?? ''),
-        awayAbbr: String(raw.awayAbbr ?? '').trim().toUpperCase(),
-        awayScore: raw.awayScore == null ? null : Number(raw.awayScore)
-    }
 }
 
 function normalizeNotifications(value: unknown): UserNotification[] {

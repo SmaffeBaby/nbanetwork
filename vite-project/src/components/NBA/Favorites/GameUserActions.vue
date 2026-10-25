@@ -28,6 +28,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { canonicalGameId, sameGame } from '../../../api/gameIdentity'
 import { storeToRefs } from 'pinia'
 import { CheckCircleIcon as CheckCircleOutlineIcon, StarIcon as StarOutlineIcon } from '@heroicons/vue/24/outline'
 import { CheckCircleIcon as CheckCircleSolidIcon, StarIcon as StarSolidIcon } from '@heroicons/vue/24/solid'
@@ -48,8 +49,8 @@ const gameSnapshot = computed<FavoriteGame | null>(() => {
   if (!props.game?.gameId) return null
 
   return {
-    id: String(props.game.gameId),
-    date: props.game.dateMSK ?? props.game.dateUTC ?? null,
+    id: canonicalGameId(props.game.gameId),
+    date: props.game.dateUTC ?? props.game.dateMSK ?? null,
     homeName: props.game.home?.name ?? '',
     homeAbbr: props.game.home?.abbr ?? '',
     homeScore: props.game.home?.score ?? null,
@@ -60,10 +61,10 @@ const gameSnapshot = computed<FavoriteGame | null>(() => {
 })
 
 const isWatched = computed(() =>
-    Boolean(gameSnapshot.value && user.value?.watchedGames.some(game => game.id === gameSnapshot.value?.id))
+    Boolean(gameSnapshot.value && user.value?.watchedGames.some(game => sameGame(game, gameSnapshot.value)))
 )
 const isFavorite = computed(() =>
-    Boolean(gameSnapshot.value && user.value?.favoriteGames.some(game => game.id === gameSnapshot.value?.id))
+    Boolean(gameSnapshot.value && user.value?.favoriteGames.some(game => sameGame(game, gameSnapshot.value)))
 )
 
 const ensureUser = () => {
@@ -76,15 +77,17 @@ const toggleWatched = async () => {
   if (!ensureUser() || !gameSnapshot.value) return
 
   pendingWatched.value = true
-  await auth.toggleWatchedGame(gameSnapshot.value)
-  pendingWatched.value = false
+  try { await auth.toggleWatchedGame(gameSnapshot.value) }
+  catch (error: any) { toast.error(error?.message || 'Не удалось сохранить просмотр') }
+  finally { pendingWatched.value = false }
 }
 
 const toggleFavorite = async () => {
   if (!ensureUser() || !gameSnapshot.value) return
 
   pendingFavorite.value = true
-  await auth.toggleFavoriteGame(gameSnapshot.value)
-  pendingFavorite.value = false
+  try { await auth.toggleFavoriteGame(gameSnapshot.value) }
+  catch (error: any) { toast.error(error?.message || 'Не удалось сохранить избранное') }
+  finally { pendingFavorite.value = false }
 }
 </script>

@@ -4,7 +4,7 @@ const fetchWithCache = require('../utils/fetchWithCache')
 const fetchGameRecap = require('../utils/fetchGameRecap')
 
 router.get('/game-recap/:gameId', async (req, res) => {
-    const { gameId } = req.params
+    let { gameId } = req.params
     const { quarter, period } = req.query
 
     const requestedPeriod = period || quarter
@@ -12,6 +12,7 @@ router.get('/game-recap/:gameId', async (req, res) => {
         return res.status(400).json({ error: 'Invalid period' })
     }
     try {
+        gameId = await require('../services/games/identity').resolveGameId(gameId)
         const periodFilter = parsePeriodFilter(period || quarter)
 
         const data = await fetchWithCache({

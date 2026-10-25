@@ -1,3 +1,4 @@
+import { resolveGameNavigation } from '../api/gameNavigation'
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Profile from '../views/Profile.vue'
@@ -39,9 +40,14 @@ export const router = createRouter({
     }
 })
 
-// Keep saved links valid while using provider-neutral public URLs.
-router.beforeEach(to => {
-    if (to.name === 'GameDetail' && String(to.params.gameId).startsWith('espn:')) {
-        return { name: 'GameDetail', params: { gameId: String(to.params.gameId).slice(5) }, query: to.query, hash: to.hash, replace: true }
+// All game entry points, including old bookmarks and news links, resolve to ESPN.
+router.beforeEach(async to => {
+    if (to.name !== 'GameDetail') return
+    const original = String(to.params.gameId)
+    try {
+        const gameId = await resolveGameNavigation(original, to.query)
+        if (original !== gameId) return { name: 'GameDetail', params: { gameId }, hash: to.hash, replace: true }
+    } catch {
+        // Keep a failed legacy link visible; the detail API shows an error and never substitutes NBA data.
     }
 })

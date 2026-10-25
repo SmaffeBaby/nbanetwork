@@ -99,3 +99,22 @@ No login, CAPTCHA bypass, alternate salary provider, or invented fallback payrol
 If the publisher restricts the server's browser as well, retry after access is restored.
 Validated HTML exports from the public page can also be imported with
 `node scripts/import-contracts.js --directory /path/to/exports` inside the backend container.
+
+## Canonical game IDs and profile marks
+
+Calendars, upcoming fixtures and game detail data use ESPN. Public links use the numeric ESPN
+ID; API and profile records use `espn:<id>`. Legacy NBA links are resolved using date and both
+oriented teams from their table row, saved calendars or NBA metadata. An ambiguous ESPN match
+is rejected rather than falling back to a different provider's detail data.
+
+Apply `supabase/migrations/20261025170000_canonical_game_marks.sql` on existing databases.
+The authenticated `/api/profile-games/favorite` and `/api/profile-games/watched` endpoints
+accept an explicit active state and store an ESPN-verified snapshot. The restricted
+`set_profile_game` function locks the profile row, updates one mark atomically and consolidates
+legacy NBA/unprefixed ESPN duplicates in both lists. Repeated requests are idempotent.
+Old saved snapshots remain readable and are consolidated when that game is marked again.
+
+Checks: `node --test backend/tests/game-identity.test.js`,
+`cd vite-project && node --test tests/game-identity.cjs`, and the rollback-only
+`backend/tests/game-marks.sql` database test. The optional local integration test
+`backend/tests/game-marks.integration.js` creates and removes its own temporary Auth user.

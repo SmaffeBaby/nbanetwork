@@ -37,7 +37,7 @@
           :key="g.Game_ID || i"
           type="button"
           class="w-full rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]"
-          @click="goToGame(g.Game_ID)"
+          @click="goToGame(g)"
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
@@ -131,7 +131,7 @@
             v-for="(g, i) in filteredGames"
             :key="g.Game_ID || i"
             class="border-b hover:bg-gray-50 transition cursor-pointer active:scale-[0.99]"
-            @click="goToGame(g.Game_ID)"
+            @click="goToGame(g)"
         >
 
           <td class="px-3 py-2 whitespace-nowrap">
@@ -205,6 +205,7 @@
 <script setup lang="ts">
 import { computed, ref, toRef } from 'vue'
 import { useRouter } from 'vue-router'
+import { openGame } from '../../../../api/gameNavigation'
 import { getTeamLogo } from '../../../../utils/getTeamLogo.ts'
 import type { GameRaw, SortKey } from '../../../../composables/NBA/player_stats/usePlayerRecentGames.ts'
 import { usePlayerRecentGames } from '../../../../composables/NBA/player_stats/usePlayerRecentGames.ts'
@@ -231,9 +232,9 @@ const getArrow = (field: SortKey) =>
 const getWinLossClass = (g: GameRaw) =>
     getWinLoss(g) === 'W' ? 'text-green-600' : 'text-red-500'
 
-const goToGame = (gameId: string | number) => {
-  if (!gameId) return
-  router.push(`/game/${gameId}`)
+const goToGame = (game: any) => {
+  if (!game?.Game_ID) return
+  return openGame(router, game)
 }
 
 const filteredGames = computed(() => {

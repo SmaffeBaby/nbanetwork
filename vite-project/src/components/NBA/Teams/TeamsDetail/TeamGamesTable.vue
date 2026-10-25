@@ -39,7 +39,7 @@
           :key="game.Game_ID"
           type="button"
           class="w-full rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-left shadow-sm transition active:scale-[0.99]"
-          @click="goToGame(game.Game_ID)"
+          @click="goToGame(game)"
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
@@ -122,7 +122,7 @@
         <tr
             v-for="game in sortedGames"
             :key="game.Game_ID"
-            @click="goToGame(game.Game_ID)"
+            @click="goToGame(game)"
             class="border-t hover:bg-gray-50 dark:hover:bg-slate-800 transition cursor-pointer"
         >
 
@@ -204,6 +204,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { openGame } from '../../../../api/gameNavigation'
 import { toRef } from 'vue'
 import { useTeamGameTable } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamGameTable'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
@@ -226,9 +227,9 @@ const {
   getSortIcon,
 } = useTeamGameTable(teamIdRef, seasonRef)
 
-const goToGame = (gameId: string | number) => {
-  if (!gameId) return
-  router.push(`/game/${gameId}`)
+const goToGame = (game: any) => {
+  if (!game?.Game_ID) return
+  return openGame(router, game)
 }
 
 const mobileStats = (game: any) => [

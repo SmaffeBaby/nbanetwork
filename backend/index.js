@@ -34,6 +34,8 @@ app.get('/', (req, res) => {
 })
 
 // routes
+app.use('/api', require('./routes/gameIdentity'))
+app.use('/api', require('./routes/profileGames'))
 app.use('/api', gamesRoutes)
 app.use('/api', standingsRoutes)
 app.use('/api', playerStatsRoutes)

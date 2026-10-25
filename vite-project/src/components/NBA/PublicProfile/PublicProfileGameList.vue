@@ -64,7 +64,7 @@
           <EyeIcon v-else class="h-4 w-4" />
         </button>
 
-        <RouterLink :to="`/game/${game.id}`" class="block pr-7 sm:pr-8">
+        <RouterLink :to="gameLocation(game)" class="block pr-7 sm:pr-8">
           <div class="mb-3 text-xs font-medium text-gray-500">
             {{ game.date || 'Дата матча' }}
           </div>
@@ -144,6 +144,7 @@
 </template>
 
 <script setup lang="ts">
+import { gameLocation } from '../../../api/gameNavigation'
 import { watch, toRef } from 'vue'
 import { RouterLink } from 'vue-router'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'

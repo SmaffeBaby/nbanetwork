@@ -1,3 +1,4 @@
+import { openGame } from '../../../api/gameNavigation'
 import { useRouter } from 'vue-router'
 
 export function usePlayoffNavigation() {
@@ -8,9 +9,9 @@ export function usePlayoffNavigation() {
         router.push(`/team/${abbr}`)
     }
 
-    function goToGame(gameId: string) {
+    function goToGame(gameId: any) {
         if (!gameId) return
-        router.push(`/game/${gameId}`)
+        return openGame(router, gameId)
     }
 
     return {

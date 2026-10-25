@@ -12,6 +12,7 @@ type RawGame = {
 type Game = {
     GAME_ID: string
     GAME_DATE: string
+    MATCHUP?: string
     home: { team: string; pts: number; wl: string }
     away: { team: string; pts: number; wl: string }
 }
@@ -160,6 +161,7 @@ export function usePlayoffGames() {
                 map.set(g.GAME_ID, {
                     GAME_ID: g.GAME_ID,
                     GAME_DATE: g.GAME_DATE,
+                    MATCHUP: g.MATCHUP,
                     home: { team: t.home, pts: 0, wl: '' },
                     away: { team: t.away, pts: 0, wl: '' },
                     teams: {}

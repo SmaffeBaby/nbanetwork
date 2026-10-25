@@ -1,4 +1,4 @@
-"""ESPN fallback for calendar data when the NBA schedule is unavailable.
+"""ESPN is the authoritative source for game calendars and event IDs.
 
 Provider IDs are namespaced: they must never be passed to NBA boxscore APIs.
 All timestamps are UTC; grouping into calendar days is explicitly Moscow time.

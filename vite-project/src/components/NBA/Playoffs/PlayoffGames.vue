@@ -159,8 +159,8 @@
               role="button"
               tabindex="0"
               class="grid cursor-pointer gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-emerald-300 hover:shadow-md sm:grid-cols-[1fr_auto] sm:items-center"
-              @click="goToGame(g.GAME_ID)"
-              @keydown.enter="goToGame(g.GAME_ID)"
+              @click="goToGame(g)"
+              @keydown.enter="goToGame(g)"
           >
             <div class="min-w-0">
               <div class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">

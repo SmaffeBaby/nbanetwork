@@ -734,16 +734,12 @@ def get_team_games(team_id: int, season: str, season_type: str = "all"):
 @app.get("/team-upcoming-games/{team_id}")
 def get_team_upcoming_games(team_id: int):
     now = datetime.now(timezone.utc)
-    scheduled = fetch_schedule_games_by_id()
-    if scheduled:
-        games = list(scheduled.values())
-    else:
-        try:
-            games = calendar_provider.team_games(team_id)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
-        except Exception as exc:
-            raise HTTPException(status_code=503, detail="Schedule source unavailable") from exc
+    try:
+        games = calendar_provider.team_games(team_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="ESPN schedule unavailable") from exc
 
     upcoming = []
     for game in games:
@@ -832,12 +828,7 @@ def data_frames_to_result_sets(data_frames, names):
 @app.get("/games/upcoming")
 def get_upcoming_games():
     now = datetime.now(timezone.utc)
-    scheduled = fetch_schedule_games_by_id()
-    games = select_upcoming_games(scheduled.values(), now)
-    if games:
-        return games
-    # When the NBA schedule is unavailable or belongs to an older season,
-    # use the existing calendar fallback, stopping as soon as the list is full.
+    # ESPN supplies both calendar IDs and live/final status; midnight never changes identity.
     candidates = []
     today = now.astimezone(MSK_TZ).date()
     try:
@@ -875,12 +866,6 @@ def get_games_by_date(date: str):
         GAMES_BY_DATE_FETCH_SEMAPHORE.release()
 
 def fetch_games_by_date_uncached(date, target_msk_date):
-    scheduled = fetch_schedule_games_by_id()
-    games = [game for game in scheduled.values() if game.get("GAME_DATE_MSK") == date]
-    # The schedule can cover a different season. Never mistake that for an empty day.
-    covered = [game.get("GAME_DATE_MSK", "") for game in scheduled.values()]
-    if covered and min(covered) <= date <= max(covered):
-        return cache_games_by_date(date, games)
     try:
         games = calendar_provider.games_on_date(target_msk_date)
     except Exception as exc:

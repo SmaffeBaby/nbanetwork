@@ -16,9 +16,10 @@ const NBA_CDN_HEADERS = {
 }
 
 router.get('/game-broadcast/:gameId', async (req, res) => {
-    const { gameId } = req.params
+    let { gameId } = req.params
 
     try {
+        gameId = await require('../services/games/identity').resolveGameId(gameId)
         const tokenHash = process.env.VK_ACCESS_TOKEN
             ? crypto
                 .createHash('sha1')
