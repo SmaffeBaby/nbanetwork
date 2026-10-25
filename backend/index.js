@@ -66,3 +66,5 @@ app.use((error, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`)
 })
+
+require('./services/contracts/importQueue').startImportQueue()

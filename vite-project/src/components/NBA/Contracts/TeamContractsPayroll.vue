@@ -8,11 +8,14 @@
         <p class="mt-1 text-sm font-medium text-gray-500">
           {{ teamAbbr }} контракты из источника {{ sourceLabel }}
         </p>
+        <p v-if="contracts?.archive?.importRunning" class="mt-2 text-xs font-semibold text-gray-500">
+          Архив загружается. Сохранено сезонов команды: {{ contracts.archive.importedSeasons }}.
+        </p>
         <p
-            v-if="contracts?.sourceStatus === 'fallback'"
+            v-if="contracts?.stale"
             class="mt-2 inline-flex rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700"
         >
-          Источник временно недоступен, показана резервная копия
+          Показана последняя сохранённая копия HoopsHype; обновление выполняется в фоне
         </p>
       </div>
 
@@ -63,11 +66,11 @@
       Загружаем контракты...
     </div>
 
-    <div v-else-if="error" class="rounded-xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-600">
-      {{ error }}
+    <div v-if="error" class="rounded-xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-600">
+      {{ error }} <button type="button" class="ml-2 underline" @click="fetchContracts">Повторить</button>
     </div>
 
-    <template v-else-if="contracts && playersForYear.length">
+    <template v-if="contracts && playersForYear.length">
       <div class="rounded-xl bg-white shadow-sm">
         <div class="grid gap-4 p-3 lg:grid-cols-[minmax(320px,1fr)_280px] lg:gap-5 lg:p-6">
           <div class="overflow-visible pr-0">
@@ -156,9 +159,8 @@
             <div class="mt-1 text-xl font-black text-gray-950 sm:text-2xl">
               {{ formatMoney(totalSalary) }}
             </div>
-            <div class="text-sm font-semibold text-gray-500">
-              {{ selectedYear }}
-            </div>
+            <div class="text-sm font-semibold text-gray-500">{{ selectedYear }}</div>
+            <p class="mt-2 text-xs text-gray-500">Итог HoopsHype может не включать Team Option и Qualifying Offer.</p>
           </div>
 
           <SalaryCapRulesList
@@ -167,7 +169,7 @@
           />
 
           <a
-              :href="contracts.source"
+              :href="contracts.sourcesByYear?.[selectedYear] || contracts.source"
               target="_blank"
               rel="noreferrer"
               class="inline-flex w-full items-center justify-center rounded-lg bg-gray-950 px-3 py-2 text-sm font-bold text-white transition hover:bg-gray-800"
@@ -179,12 +181,12 @@
     </div>
 
       <TeamContractsTable
-          :contracts="contracts"
+          :contracts="tableContracts"
           :format-money="formatMoney"
       />
     </template>
 
-    <div v-else class="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-center text-sm text-gray-500">
+    <div v-else-if="!loading && !error" class="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-center text-sm text-gray-500">
       Нет контрактов для выбранного сезона.
     </div>
   </section>
@@ -204,8 +206,10 @@ const props = defineProps<{
 const {
   contracts,
   selectedYear,
+  tableContracts,
   loading,
   error,
+  fetchContracts,
   playersForYear,
   totalSalary,
   capLines,

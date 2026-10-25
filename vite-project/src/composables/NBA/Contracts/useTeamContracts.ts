@@ -1,4 +1,7 @@
 import { computed, ref, watch } from 'vue'
+import { useQuery } from '@tanstack/vue-query'
+import { getCurrentNbaSeason } from '../../../utils/generateNbaSeasons'
+import { useCurrentSeason } from '../useCurrentSeason'
 import type { Ref } from 'vue'
 import { useSalaryCapRules } from './useSalaryCapRules'
 
@@ -22,6 +25,11 @@ export type ContractCapKey = 'salaryCap' | 'luxuryTax' | 'firstApron' | 'secondA
 export type TeamContracts = {
     source: string
     sourceStatus?: 'live' | 'hoopshype' | 'fallback'
+    stale?: boolean
+    fetchedAt?: string
+    archive?: { firstSeason: string; importedSeasons: number; importRunning: boolean }
+    sourcesByYear?: Record<string, string>
+    fetchedAtByYear?: Record<string, string>
     fallbackReason?: string
     teamAbbr: string
     years: string[]
@@ -52,59 +60,38 @@ export const getPlayerImage = (playerId?: string | number | null, slug?: string 
 }
 
 export function useTeamContracts(teamAbbr: Ref<string>) {
-    const contracts = ref<TeamContracts | null>(null)
     const selectedYear = ref('')
-    const currentSeason = ref('')
-    const loading = ref(false)
-    const error = ref<string | null>(null)
+    const { currentSeason } = useCurrentSeason()
     const { getCapLabel, getCapColor } = useSalaryCapRules()
-
-    const fetchCurrentSeason = async () => {
-        if (currentSeason.value) return currentSeason.value
-
-        try {
-            const response = await fetch(`${API_BASE}/api/current-season`)
+    const query = useQuery({
+        queryKey: computed(() => ['team-contracts', teamAbbr.value]),
+        enabled: computed(() => Boolean(teamAbbr.value)),
+        queryFn: async ({ queryKey: [, team], signal }): Promise<TeamContracts> => {
+            const response = await fetch(`${API_BASE}/api/team-contracts/${team}`, {
+                signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]), cache: 'no-cache'
+            })
             const data = await response.json()
-
-            currentSeason.value = data?.season || ''
-        } catch {
-            currentSeason.value = ''
+            if (!response.ok) throw new Error(data.message || 'Не удалось загрузить контракты')
+            if (!Array.isArray(data.players) || !Array.isArray(data.years)) throw new Error('Некорректные данные контрактов')
+            return data
+        },
+        staleTime: 5 * 60_000,
+        refetchInterval: 60_000,
+        gcTime: 60 * 60_000,
+        retry: 1,
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true
+    })
+    const contracts = computed(() => query.data.value ?? null)
+    const loading = computed(() => query.isPending.value)
+    const error = computed(() => query.error.value?.message ?? null)
+    const fetchContracts = () => query.refetch()
+    watch([contracts, currentSeason], ([data, season]) => {
+        if (!data) return
+        if (!selectedYear.value || !data.years.includes(selectedYear.value)) {
+            selectedYear.value = data.years.includes(season) ? season : data.years[0] || ''
         }
-
-        return currentSeason.value
-    }
-
-    const fetchContracts = async () => {
-        if (!teamAbbr.value) return
-
-        loading.value = true
-        error.value = null
-
-        try {
-            const [response, season] = await Promise.all([
-                fetch(`${API_BASE}/api/team-contracts/${teamAbbr.value}`),
-                fetchCurrentSeason()
-            ])
-            const data = await response.json()
-
-            if (!response.ok) {
-                throw new Error(data?.message || 'Failed to load contracts')
-            }
-
-            contracts.value = data
-
-            if (!selectedYear.value || !data.years?.includes(selectedYear.value)) {
-                selectedYear.value = data.years?.includes(season)
-                    ? season
-                    : data.years?.[0] || ''
-            }
-        } catch (e: any) {
-            error.value = e?.message || 'Не удалось загрузить контракты'
-            contracts.value = null
-        } finally {
-            loading.value = false
-        }
-    }
+    }, { immediate: true })
 
     const playersForYear = computed<SalaryStackItem[]>(() => {
         const year = selectedYear.value
@@ -118,6 +105,15 @@ export function useTeamContracts(teamAbbr: Ref<string>) {
             }))
             .filter(player => player.salary > 0)
             .sort((a, b) => b.salary - a.salary)
+    })
+
+    const tableContracts = computed<TeamContracts | null>(() => {
+        if (!contracts.value || !selectedYear.value) return null
+        const years = selectedYear.value < getCurrentNbaSeason()
+            ? [selectedYear.value]
+            : contracts.value.years.filter(year => year >= selectedYear.value).sort()
+        return { ...contracts.value, years,
+            players: contracts.value.players.filter(player => years.some(year => (player.salaries[year] ?? 0) > 0)) }
     })
 
     const totalSalary = computed(() =>
@@ -167,11 +163,10 @@ export function useTeamContracts(teamAbbr: Ref<string>) {
         return colors[index % colors.length]
     }
 
-    watch(teamAbbr, fetchContracts, { immediate: true })
-
     return {
         contracts,
         selectedYear,
+        tableContracts,
         loading,
         error,
         playersForYear,

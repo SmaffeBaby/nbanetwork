@@ -1,0 +1,7 @@
+{
+  "name": "hoopshype-contract-importer",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": { "start": "node worker.js" },
+  "dependencies": { "playwright": "1.64.0" }
+}

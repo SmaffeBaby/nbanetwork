@@ -67,3 +67,35 @@ cd supabase
 docker compose down -v
 docker compose up -d
 ```
+
+
+## HoopsHype contracts
+
+`nba_team_contract_seasons` stores one validated HoopsHype snapshot per NBA team and salary season.
+The browser importer has no database credentials. It exports public salary tables into the
+`contract-imports` volume; backend validates them and writes through its existing service role.
+The current season is checked every six hours. Historical seasons are discovered from the
+site's selector, imported once, and resumed from saved snapshots after restart. Failed or empty
+pages never replace successful records. Future contract years are stored with their source season.
+An incomplete cycle retries missing pages after five minutes; successful historical pages are skipped.
+
+Apply the additive migration to an existing installation:
+
+```sh
+docker compose exec -T db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/migrations/20261025153000_hoopshype_contract_seasons.sql
+docker compose up -d --build contracts-importer backend frontend
+```
+
+Check browser import progress:
+
+```sh
+docker compose logs --tail=50 contracts-importer
+docker compose exec -T contracts-importer cat /data/status.json
+```
+
+The importer uses standard Chromium with its sandbox and the official Playwright seccomp profile.
+It stops on source access restrictions; saved salaries remain available through the application API.
+No login, CAPTCHA bypass, alternate salary provider, or invented fallback payroll is used.
+If the publisher restricts the server's browser as well, retry after access is restored.
+Validated HTML exports from the public page can also be imported with
+`node scripts/import-contracts.js --directory /path/to/exports` inside the backend container.

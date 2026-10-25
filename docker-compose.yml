@@ -18,11 +18,30 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     environment:
+      - CONTRACT_IMPORT_DIR=/var/lib/nba-contracts/snapshots
       - NODE_ENV=production
       - SUPABASE_URL=http://kong:8000
       - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-}
       - VK_VIDEO_OWNER_ID=${VK_VIDEO_OWNER_ID:--202211208}
       - VK_VIDEO_PLAYLIST_ID=${VK_VIDEO_PLAYLIST_ID:-8}
+
+    networks: [default, contracts_ingest]
+    volumes:
+      - contract-imports:/var/lib/nba-contracts:ro
+
+  contracts-importer:
+    build:
+      context: .
+      dockerfile: ./contracts-importer/Dockerfile
+    init: true
+    restart: unless-stopped
+    networks: [contracts_ingest]
+    shm_size: 1gb
+    mem_limit: 2g
+    security_opt:
+      - seccomp=./contracts-importer/seccomp_profile.json
+    volumes:
+      - contract-imports:/data
 
   python-backend:
     build:
@@ -30,3 +49,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "127.0.0.1:8000:8000"
+
+volumes:
+  contract-imports:
+
+networks:
+  contracts_ingest:

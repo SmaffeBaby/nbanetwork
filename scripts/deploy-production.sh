@@ -30,5 +30,7 @@ if docker inspect "$DB_CONTAINER" >/dev/null 2>&1; then
   fi
 fi
 
-docker compose up -d --build frontend backend python-backend
-docker compose ps frontend backend python-backend
+docker compose up -d --build frontend backend python-backend contracts-importer
+docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+  < supabase/migrations/20261025153000_hoopshype_contract_seasons.sql
+docker compose ps frontend backend python-backend contracts-importer
