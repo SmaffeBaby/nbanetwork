@@ -11,7 +11,6 @@
 
     <select
         v-model="selectedSeason"
-        @change="fetchStandings"
         class="bg-gray-800 border border-gray-600 px-3 py-2 rounded mb-4"
     >
       <option v-for="s in seasons" :key="s" :value="s">
@@ -19,9 +18,9 @@
       </option>
     </select>
 
-    <div v-if="teams.length === 0" class="text-gray-400">
-      Loading...
-    </div>
+    <p v-if="loading" class="text-gray-500">Загружаем таблицу...</p>
+    <p v-if="error" role="alert" class="text-red-600">{{ error }} <button type="button" class="underline" @click="fetchStandings">Повторить</button></p>
+    <p v-else-if="!loading && !teams.length" class="text-gray-500">Таблица выбранного сезона пока недоступна.</p>
 
     <div v-for="conf in conferences" :key="conf.name" class="mb-8">
 
@@ -131,6 +130,8 @@ import { TEAM_ID_MAP } from '../../../constants/nbaTeams'
 
 const {
   teams,
+  loading,
+  error,
   selectedSeason,
   seasons,
   getLogo,

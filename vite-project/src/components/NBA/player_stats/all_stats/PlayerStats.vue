@@ -97,7 +97,9 @@
       </transition>
     </div>
 
-    <div v-if="loading" class="text-center">Loading...</div>
+    <div v-if="loading" class="text-center">Загружаем статистику...</div>
+    <p v-if="error" role="alert" class="text-center text-red-600">{{ error }} <button type="button" class="underline" @click="fetchPlayerStats">Повторить</button></p>
+    <p v-else-if="!loading && !filteredPlayers.length" class="text-center text-gray-500">Статистика за выбранный сезон пока недоступна.</p>
 
     <div v-else class="space-y-3 md:hidden">
       <button
@@ -200,8 +202,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useCurrentSeason } from '../../../../composables/NBA/useCurrentSeason'
 import { usePlayerStats } from '../../../../composables/NBA/player_stats/usePlayerStats.ts'
 import { getPlayerImage, handleImageError } from '../../../../utils/playerImage.ts'
 import { useSorting } from '../../../../utils/useSorting.ts'
@@ -221,15 +224,7 @@ type Player = {
   BLK: number
   TOV: number
 }
-const seasons = [
-  '2025-26',
-  '2024-25',
-  '2023-24',
-  '2022-23',
-  '2021-22'
-]
-
-const season = ref(seasons[0])
+const { season, seasons } = useCurrentSeason(2021)
 
 const router = useRouter()
 const route = useRoute()
@@ -247,6 +242,7 @@ const switchMode = (newMode: 'regular' | 'playoffs') => {
 }
 const {
   loading,
+  error,
   fetchPlayerStats,
   search,
   team,
@@ -256,18 +252,6 @@ const {
 
 const showTeams = ref(false)
 
-
-watch(
-    () => route.path,
-    () => {
-      fetchPlayerStats()
-    },
-    { immediate: true }
-)
-
-watch(season, () => {
-  fetchPlayerStats()
-})
 
 const players = computed<Player[]>(() => filteredPlayers.value)
 

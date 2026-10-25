@@ -19,8 +19,7 @@ import Teams from '../components/NBA/Teams/Teams.vue'
 import { useTeams } from '../composables/NBA/Teams/useTeams'
 import Header from "../components/Headers/Header.vue";
 
-const season = '2025-26'
-const { easternTeams, westernTeams, loading, error } = useTeams(season)
+const { easternTeams, westernTeams, loading, error } = useTeams()
 </script>
 
 <style scoped>

@@ -1,5 +1,7 @@
-import { ref, computed, watch, type Ref } from 'vue'
-import axios from 'axios'
+import { ref, computed, type Ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { useQuery } from '@tanstack/vue-query'
+import { fetchNbaStatsRows } from '../../../utils/nbaStatsRows'
 
 export interface PlayerStats {
     PLAYER_ID: number
@@ -17,43 +19,31 @@ export interface PlayerStats {
 export type StatKey = 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV' | 'MIN'
 
 export function usePlayerStats(season: Ref<string>) {
-    const players = ref<PlayerStats[]>([])
-    const loading = ref(false)
+    const route = useRoute()
+    const mode = computed(() => {
+        const segment = route.path.split('/')[2]
+        return segment === 'playoffs' || segment === 'all' ? segment : 'regular'
+    })
+    const query = useQuery({
+        queryKey: ['player-stats', season, mode],
+        enabled: computed(() => Boolean(season.value)),
+        queryFn: ({ queryKey: [, selected, type], signal }) => {
+            const url = type === 'regular' ? `/api/player-stats/${selected}` : `/api/player-stats/${type}/${selected}`
+            return fetchNbaStatsRows<PlayerStats>(url, signal)
+        },
+        staleTime: 5 * 60_000,
+        gcTime: 30 * 60_000,
+        retry: 1
+    })
+    const players = computed(() => query.data.value ?? [])
+    const loading = computed(() => query.isPending.value)
+    const error = computed(() => query.error.value?.message ?? '')
 
     const search = ref('')
     const team = ref('')
     const sortBy = ref<StatKey>('PTS')
 
-    const fetchPlayerStats = async () => {
-        loading.value = true
-
-        const segment = window.location.pathname.split('/')[2]
-
-        const allowedTypes = ['playoffs', 'all', 'regular']
-
-        const type = allowedTypes.includes(segment) ? segment : null
-
-        const url = type
-            ? `/api/player-stats/${type}/${season.value}`
-            : `/api/player-stats/${season.value}`
-
-        const res = await axios.get(url)
-
-        const rows = res.data.resultSets[0].rowSet
-        const headers = res.data.resultSets[0].headers
-
-        players.value = rows.map((row: any[]) => {
-            const obj: any = {}
-            headers.forEach((h: string, i: number) => {
-                obj[h] = row[i]
-            })
-            return obj as PlayerStats
-        })
-
-        loading.value = false
-    }
-
-    watch(season, fetchPlayerStats)
+    const fetchPlayerStats = () => query.refetch()
 
     const teams = computed(() =>
         [...new Set(players.value.map(p => p.TEAM_ABBREVIATION))]
@@ -73,6 +63,7 @@ export function usePlayerStats(season: Ref<string>) {
     return {
         players,
         loading,
+        error,
         fetchPlayerStats,
         search,
         team,

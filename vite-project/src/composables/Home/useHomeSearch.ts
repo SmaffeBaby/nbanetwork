@@ -10,6 +10,7 @@ import {
     UserGroupIcon
 } from '@heroicons/vue/24/outline'
 import { useProfileNavigation } from '../useProfileNavigation'
+import { getCurrentNbaSeason } from '../../utils/generateNbaSeasons'
 import { supabase } from '../../lib/supabase'
 import { teamsFullNames } from '../../constants/TeamFullName'
 import { getPlayerImage, handleImageError } from '../../utils/playerImage'
@@ -267,12 +268,7 @@ export function useHomeSearch() {
         playersLoading.value || allTimePlayersLoading.value || profilesLoading.value || newsLoading.value
     )
 
-    const currentSeason = () => {
-        const now = new Date()
-        const year = now.getFullYear()
-        const start = now.getMonth() >= 9 ? year : year - 1
-        return `${start}-${String(start + 1).slice(-2)}`
-    }
+    const currentSeason = getCurrentNbaSeason
 
     const mapPlayers = (rows: unknown[], headers: string[]) => {
         const playerIdIndex = headers.indexOf('PLAYER_ID')

@@ -129,7 +129,7 @@ import FavoriteTeamButton from '../../Favorites/FavoriteTeamButton.vue'
 import Categories from '../../../Categories/Categories.vue'
 
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
-import { generateNbaSeasons } from '../../../../utils/generateNbaSeasons'
+import { useCurrentSeason } from '../../../../composables/NBA/useCurrentSeason'
 import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
 import type { CategoryOption } from '../../../../types/categories'
 
@@ -209,7 +209,5 @@ const showSeasonTypeSwitcher = computed(() =>
     ['Команда', 'Статистика', 'Форма'].includes(activeTab.value)
 )
 
-const seasons = generateNbaSeasons(2000, 2025)
-
-const season = ref(seasons[0])
+const { season, seasons } = useCurrentSeason(2000)
 </script>

@@ -1,11 +1,16 @@
-import { ref, computed, onMounted } from 'vue'
+import { computed } from 'vue'
+import { useCurrentSeason } from '../useCurrentSeason'
+import { useStandingsQuery } from '../Standings/useStandingsQuery'
 import { teamsFullNames } from '../../../constants/TeamFullName'
 
 export function useTeams(season?: string) {
-    const teams = ref<any[]>([])
-    const loading = ref(false)
-    const error = ref<string | null>(null)
-    const selectedSeason = ref(season || '2025-26')
+    const { season: selectedSeason } = useCurrentSeason()
+    if (season) selectedSeason.value = season
+    const query = useStandingsQuery(selectedSeason)
+    const teams = computed(() => query.data.value ?? [])
+    const loading = computed(() => query.isPending.value)
+    const error = computed(() => query.error.value?.message ?? null)
+    const fetchTeams = () => query.refetch()
 
     const reverseMap = Object.fromEntries(
         Object.entries(teamsFullNames).map(([k, v]) => [v, k])
@@ -36,34 +41,8 @@ export function useTeams(season?: string) {
         return '-'
     }
 
-    const fetchTeams = async () => {
-        loading.value = true
-        error.value = null
-        try {
-            const res = await fetch(`/api/standings/${selectedSeason.value}`)
-            const data = await res.json()
-            const rs = data.resultSet || data.resultSets?.[0]
-            if (!rs) return
-
-            teams.value = rs.rowSet.map((row: any[]) => {
-                const obj: Record<string, any> = {}
-                rs.headers.forEach((h: string, i: number) => (obj[h] = row[i]))
-                return obj
-            })
-        } catch (err: any) {
-            error.value = err.message || 'Failed to fetch teams'
-        } finally {
-            loading.value = false
-        }
-    }
-
     const easternTeams = computed(() => getTeams('East'))
     const westernTeams = computed(() => getTeams('West'))
-
-    onMounted(() => {
-        fetchTeams()
-        setInterval(fetchTeams, 100000)
-    })
 
     return {
         teams,
