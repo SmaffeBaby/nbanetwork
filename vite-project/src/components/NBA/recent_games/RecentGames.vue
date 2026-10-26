@@ -5,16 +5,16 @@
     </h1>
   </div>
 
-  <div class="bg-gray-50 dark:bg-slate-900 p-6 rounded-xl shadow-lg">
+  <div class="bg-gray-50 p-6 rounded-xl shadow-lg">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
       <div class="flex flex-col gap-2">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-slate-100">
+        <h2 class="text-2xl font-bold text-gray-900">
           Игры за {{ formatDateWithWeekday(currentDate) }}
         </h2>
-        <label class="flex items-center gap-3 text-sm text-gray-700 dark:text-slate-200">
+        <label class="flex items-center gap-3 text-sm text-gray-700">
           Выбрать дату
           <input type="date" :value="getDateKey(currentDate)"
-                 class="rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2"
+                 class="rounded-lg border border-gray-300 bg-white px-3 py-2"
                  @change="selectDate(dateKeyToDate(($event.target as HTMLInputElement).value))" />
         </label>
       </div>
@@ -71,12 +71,12 @@
         <li
             v-for="game in gamesList"
             :key="getGameId(game)"
-            class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
+            class="bg-white p-4 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
             @click="goToGame(game)"
         >
 
           <div class="flex justify-between">
-            <span class="text-gray-500 dark:text-slate-400">
+            <span class="text-gray-500">
               {{ game.statusTime ? `${game.statusTime} МСК` : 'Время уточняется' }}
               <span class="block">{{ game.status }}</span>
             </span>

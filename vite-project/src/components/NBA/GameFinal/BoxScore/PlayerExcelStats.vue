@@ -1,14 +1,14 @@
 <template>
-  <section class="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm">
-    <div class="mb-4 flex flex-col gap-3 border-b border-gray-200 dark:border-slate-700 pb-3 md:flex-row md:items-center md:justify-between">
-      <h2 class="text-2xl font-black uppercase leading-none tracking-normal text-gray-950 dark:text-slate-100 sm:text-3xl">
+  <section class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div class="mb-4 flex flex-col gap-3 border-b border-gray-200 pb-3 md:flex-row md:items-center md:justify-between">
+      <h2 class="text-2xl font-black uppercase leading-none tracking-normal text-gray-950 sm:text-3xl">
         Детальная статистика игрока
       </h2>
 
       <div class="relative w-full md:w-96">
         <button
             type="button"
-            class="flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-left shadow-sm transition hover:bg-gray-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-gray-100"
+            class="flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-100"
             @click="isOpen = !isOpen"
         >
           <span class="flex min-w-0 items-center gap-3">
@@ -17,14 +17,14 @@
                 :src="getPlayerImage(selectedPlayer)"
                 :data-player-id="selectedPlayer.PLAYER_ID"
                 @error="handleImageError"
-                class="h-9 w-9 shrink-0 rounded-full bg-gray-100 dark:bg-slate-800 object-cover"
+                class="h-9 w-9 shrink-0 rounded-full bg-gray-100 object-cover"
                 alt=""
             />
             <span class="min-w-0">
-              <strong class="block truncate text-sm font-black text-gray-950 dark:text-slate-100">
+              <strong class="block truncate text-sm font-black text-gray-950">
                 {{ selectedPlayer?.name || 'Выберите игрока' }}
               </strong>
-              <span v-if="selectedPlayer" class="block text-xs font-bold text-gray-500 dark:text-slate-400">
+              <span v-if="selectedPlayer" class="block text-xs font-bold text-gray-500">
                 #{{ selectedPlayer.jerseyNum || '-' }} {{ selectedPlayer.position || '' }}
               </span>
             </span>
@@ -44,14 +44,14 @@
 
         <div
             v-if="isOpen"
-            class="absolute right-0 z-20 mt-2 w-full overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl"
+            class="absolute right-0 z-20 mt-2 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl"
         >
-          <div class="border-b border-gray-200 dark:border-slate-700 p-2">
+          <div class="border-b border-gray-200 p-2">
             <input
                 v-model="search"
                 type="search"
                 placeholder="Найти игрока"
-                class="w-full rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-100 outline-none transition focus:border-gray-400 focus:ring-4 focus:ring-gray-100"
+                class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 outline-none transition focus:border-gray-400 focus:ring-4 focus:ring-gray-100"
             />
           </div>
 
@@ -62,7 +62,7 @@
             >
               <div
                   v-if="group.players.length"
-                  class="sticky top-0 z-10 bg-gray-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-black uppercase text-gray-600 dark:text-slate-300"
+                  class="sticky top-0 z-10 bg-gray-100 px-3 py-1.5 text-xs font-black uppercase text-gray-600"
               >
                 {{ group.label }}
               </div>
@@ -71,19 +71,19 @@
                   v-for="player in group.players"
                   :key="player.PLAYER_ID"
                   type="button"
-                  class="flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-gray-50 dark:hover:bg-slate-800"
+                  class="flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-gray-50"
                   @click="selectPlayer(player.PLAYER_ID)"
               >
                 <img
                     :src="getPlayerImage(player)"
                     :data-player-id="player.PLAYER_ID"
                     @error="handleImageError"
-                    class="h-9 w-9 shrink-0 rounded-full bg-gray-100 dark:bg-slate-800 object-cover"
+                    class="h-9 w-9 shrink-0 rounded-full bg-gray-100 object-cover"
                     alt=""
                 />
                 <span class="min-w-0">
-                  <strong class="block truncate text-sm font-black text-gray-950 dark:text-slate-100">{{ player.name }}</strong>
-                  <span class="block text-xs font-bold text-gray-500 dark:text-slate-400">
+                  <strong class="block truncate text-sm font-black text-gray-950">{{ player.name }}</strong>
+                  <span class="block text-xs font-bold text-gray-500">
                     {{ player.unavailableStats?.includes('minutes') ? '—' : player.minutes }} MIN · {{ player.points }} PTS
                   </span>
                 </span>
@@ -92,7 +92,7 @@
 
             <div
                 v-if="!filteredPlayers.length"
-                class="px-3 py-8 text-center text-sm font-semibold text-gray-500 dark:text-slate-400"
+                class="px-3 py-8 text-center text-sm font-semibold text-gray-500"
             >
               Игрок не найден.
             </div>
@@ -105,9 +105,9 @@
       <div
           v-for="group in selectedDetails.groups"
           :key="group.key"
-          class="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 p-3"
+          class="rounded-lg border border-gray-200 bg-gray-50 p-3"
       >
-        <div class="mb-3 text-center text-sm font-black uppercase text-gray-950 dark:text-slate-100">
+        <div class="mb-3 text-center text-sm font-black uppercase text-gray-950">
           {{ group.title }}
         </div>
 
@@ -124,7 +124,7 @@
       </div>
     </div>
 
-    <div v-else class="flex min-h-32 items-center justify-center rounded-lg border border-dashed border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-sm text-gray-500 dark:text-slate-400">
+    <div v-else class="flex min-h-32 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-500">
       Нет игроков для детальной статистики.
     </div>
   </section>

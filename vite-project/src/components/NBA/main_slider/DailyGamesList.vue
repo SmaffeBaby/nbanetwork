@@ -3,8 +3,8 @@
     <h1 class="text-[10px] leading-15 font-bold break-words text-center pl-0 md:text-left md:pl-10 max-w-md">Ближайшие матчи</h1>
 
 
-    <p v-if="loading" class="text-gray-500 dark:text-slate-400">Загрузка игр…</p>
-    <p v-else-if="gamesList.length === 0 && !error" class="text-gray-500 dark:text-slate-400">
+    <p v-if="loading" class="text-gray-500">Загрузка игр…</p>
+    <p v-else-if="gamesList.length === 0 && !error" class="text-gray-500">
       В расписании пока нет ближайших матчей.
     </p>
 

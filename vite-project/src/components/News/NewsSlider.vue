@@ -4,36 +4,36 @@
       <button
         v-if="isAdmin"
         type="button"
-        class="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-bold text-gray-700 dark:text-slate-200 shadow-sm transition hover:border-gray-900 hover:text-gray-950"
+        class="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 shadow-sm transition hover:border-gray-900 hover:text-gray-950"
         @click="startCreate"
       >
         {{ showForm && !editingSlide ? 'Закрыть' : 'Добавить слайд' }}
       </button>
     </div>
 
-    <form v-if="isAdmin && showForm" class="grid gap-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm md:grid-cols-[1fr_1fr_1fr_9rem_auto]" @submit.prevent="saveSlide">
-      <h2 class="m-0 text-lg font-black text-gray-950 dark:text-slate-100 md:col-span-5">
+    <form v-if="isAdmin && showForm" class="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_1fr_1fr_9rem_auto]" @submit.prevent="saveSlide">
+      <h2 class="m-0 text-lg font-black text-gray-950 md:col-span-5">
         {{ editingSlide ? 'Редактировать слайд' : 'Добавить слайд' }}
       </h2>
       <label class="block space-y-2">
-        <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">Фото ПК 1344x432</span>
-        <input type="file" accept="image/*" class="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm" @change="attachImage($event, 'desktop')" />
-        <input v-model="imageUrl" type="text" class="w-full rounded-xl border border-gray-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="или /storage/v1/object/public/123/main-slider/news.png" />
+        <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">Фото ПК 1344x432</span>
+        <input type="file" accept="image/*" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm" @change="attachImage($event, 'desktop')" />
+        <input v-model="imageUrl" type="text" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="или /storage/v1/object/public/123/main-slider/news.png" />
         <span v-if="imageUpload" class="block truncate text-xs font-semibold text-gray-400">Файл выбран, будет загружен в Storage</span>
       </label>
       <label class="block space-y-2">
-        <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">Фото мобильное 616x747</span>
-        <input type="file" accept="image/*" class="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm" @change="attachImage($event, 'mobile')" />
-        <input v-model="mobileImageUrl" type="text" class="w-full rounded-xl border border-gray-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="или /storage/v1/object/public/123/main-slider/mobile.png" />
+        <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">Фото мобильное 616x747</span>
+        <input type="file" accept="image/*" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm" @change="attachImage($event, 'mobile')" />
+        <input v-model="mobileImageUrl" type="text" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="или /storage/v1/object/public/123/main-slider/mobile.png" />
         <span v-if="mobileImageUpload" class="block truncate text-xs font-semibold text-gray-400">Файл выбран, будет загружен в Storage</span>
       </label>
       <label class="block">
-        <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">Ссылка</span>
-        <input v-model="linkUrl" type="url" class="w-full rounded-xl border border-gray-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="https://..." />
+        <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">Ссылка</span>
+        <input v-model="linkUrl" type="url" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="https://..." />
       </label>
       <label class="block">
-        <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">Сортировка</span>
-        <input v-model.number="sortOrder" type="number" min="1" step="1" class="w-full rounded-xl border border-gray-200 dark:border-slate-700 px-3 py-2 text-sm font-bold outline-none focus:border-blue-500" />
+        <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">Сортировка</span>
+        <input v-model.number="sortOrder" type="number" min="1" step="1" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold outline-none focus:border-blue-500" />
       </label>
       <div class="flex gap-2 self-end">
         <button
@@ -45,7 +45,7 @@
         </button>
         <button
           type="button"
-          class="rounded-xl border border-gray-200 dark:border-slate-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-slate-200 transition hover:border-gray-900"
+          class="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700 transition hover:border-gray-900"
           @click="cancelForm"
         >
           Отмена
@@ -54,11 +54,11 @@
       <p v-if="formError" class="md:col-span-5 rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700">{{ formError }}</p>
     </form>
 
-    <div v-if="loading" class="grid aspect-[616/747] place-items-center rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-semibold text-gray-500 dark:text-slate-400 sm:aspect-[1344/432]">
+    <div v-if="loading" class="grid aspect-[616/747] place-items-center rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-500 sm:aspect-[1344/432]">
       Загружаем новости...
     </div>
 
-    <div v-else-if="loadError" role="alert" class="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 text-center text-sm text-gray-600 dark:text-slate-300">
+    <div v-else-if="loadError" role="alert" class="rounded-2xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-600">
       Не удалось загрузить слайды.
       <button type="button" class="ml-2 font-bold text-blue-600" @click="retrySlides">Повторить</button>
     </div>
@@ -100,7 +100,7 @@
             :key="index"
             type="button"
             class="h-2.5 w-2.5 shrink-0 rounded-full transition sm:h-3 sm:w-3"
-            :class="index === activeIndex ? 'bg-white dark:bg-slate-900' : 'bg-white/45 hover:bg-white/75'"
+            :class="index === activeIndex ? 'bg-white' : 'bg-white/45 hover:bg-white/75'"
             :aria-current="index === activeIndex"
             :aria-label="`Slide ${index + 1}`"
             @click="goToSlide(index)"
@@ -108,13 +108,13 @@
         </div>
 
         <button type="button" class="group absolute start-0 top-0 z-30 flex h-full cursor-pointer items-center justify-center px-2 focus:outline-none sm:px-4" @click="prevSlide">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-slate-900 text-gray-950 dark:text-slate-100 shadow-lg shadow-black/20 ring-1 ring-black/5 transition group-hover:scale-105 group-hover:bg-gray-50 group-focus:outline-none group-focus:ring-4 group-focus:ring-white/80 sm:h-10 sm:w-10">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-gray-950 shadow-lg shadow-black/20 ring-1 ring-black/5 transition group-hover:scale-105 group-hover:bg-gray-50 group-focus:outline-none group-focus:ring-4 group-focus:ring-white/80 sm:h-10 sm:w-10">
             <ChevronLeftIcon class="h-5 w-5" aria-hidden="true" />
             <span class="sr-only">Previous</span>
           </span>
         </button>
         <button type="button" class="group absolute end-0 top-0 z-30 flex h-full cursor-pointer items-center justify-center px-2 focus:outline-none sm:px-4" @click="nextSlide">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-slate-900 text-gray-950 dark:text-slate-100 shadow-lg shadow-black/20 ring-1 ring-black/5 transition group-hover:scale-105 group-hover:bg-gray-50 group-focus:outline-none group-focus:ring-4 group-focus:ring-white/80 sm:h-10 sm:w-10">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-gray-950 shadow-lg shadow-black/20 ring-1 ring-black/5 transition group-hover:scale-105 group-hover:bg-gray-50 group-focus:outline-none group-focus:ring-4 group-focus:ring-white/80 sm:h-10 sm:w-10">
             <ChevronRightIcon class="h-5 w-5" aria-hidden="true" />
             <span class="sr-only">Next</span>
           </span>
@@ -123,14 +123,14 @@
         <div v-if="isAdmin" class="absolute right-4 top-4 z-30 flex flex-wrap gap-2">
           <button
             type="button"
-            class="rounded-xl bg-white/90 dark:bg-slate-900/90 px-3 py-2 text-xs font-black text-gray-800 dark:text-slate-200 shadow-sm transition hover:bg-white dark:hover:bg-slate-800"
+            class="rounded-xl bg-white/90 px-3 py-2 text-xs font-black text-gray-800 shadow-sm transition hover:bg-white"
             @click="startEdit(activeSlide)"
           >
             Редактировать
           </button>
           <button
             type="button"
-            class="rounded-xl bg-white/90 dark:bg-slate-900/90 px-3 py-2 text-xs font-black text-red-700 shadow-sm transition hover:bg-white dark:hover:bg-slate-800"
+            class="rounded-xl bg-white/90 px-3 py-2 text-xs font-black text-red-700 shadow-sm transition hover:bg-white"
             @click="deleteSlide(activeSlide)"
           >
             Удалить
@@ -139,7 +139,7 @@
       </div>
     </div>
 
-    <div v-else-if="!loading && !loadError && isAdmin" class="rounded-2xl border border-dashed border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-6 text-center text-sm font-semibold text-gray-500 dark:text-slate-400">
+    <div v-else-if="!loading && !loadError && isAdmin" class="rounded-2xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm font-semibold text-gray-500">
       Добавьте первый слайд с фото и ссылкой.
     </div>
   </section>

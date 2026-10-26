@@ -33,14 +33,14 @@
 
       <button
           @click="prev"
-          class="absolute top-1/2 left-0 -translate-y-1/2 bg-white/70 hover:bg-white dark:hover:bg-slate-800 px-3 py-2 rounded-r-xl shadow md:-left-3"
+          class="absolute top-1/2 left-0 -translate-y-1/2 bg-white/70 hover:bg-white px-3 py-2 rounded-r-xl shadow md:-left-3"
       >
         ‹
       </button>
 
       <button
           @click="next"
-          class="absolute top-1/2 right-0 -translate-y-1/2 bg-white/70 hover:bg-white dark:hover:bg-slate-800 px-3 py-2 rounded-l-xl shadow md:-right-3"
+          class="absolute top-1/2 right-0 -translate-y-1/2 bg-white/70 hover:bg-white px-3 py-2 rounded-l-xl shadow md:-right-3"
       >
         ›
       </button>
@@ -59,10 +59,10 @@
     <input
         v-model="search"
         placeholder="Search player..."
-        class="mb-4 w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-sm shadow-sm"
+        class="mb-4 w-full rounded-xl border border-gray-200 bg-white p-3 text-sm shadow-sm"
     />
 
-    <div v-if="loading" class="rounded-2xl bg-white dark:bg-slate-900 p-8 text-center text-gray-500 dark:text-slate-400 shadow-sm">Loading...</div>
+    <div v-if="loading" class="rounded-2xl bg-white p-8 text-center text-gray-500 shadow-sm">Loading...</div>
 
     <PlayerTable
         v-else

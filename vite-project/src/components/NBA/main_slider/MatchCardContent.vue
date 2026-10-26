@@ -12,7 +12,7 @@
 
     <div v-if="isLiveGame(game)" class="mb-2 flex items-center justify-center gap-2 text-sm font-bold text-red-600">
       <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-red-600 motion-safe:animate-pulse"></span>LIVE</span>
-      <span class="text-gray-600 dark:text-slate-300">{{ game.status }}</span>
+      <span class="text-gray-600">{{ game.status }}</span>
     </div>
     <div v-else-if="game.datetime" class="game-status mb-2">
       <span class="status-upcoming inline-flex items-center gap-1">
@@ -21,7 +21,7 @@
       </span>
     </div>
 
-    <div class="match-start-time text-sm text-gray-500 dark:text-slate-400 inline-flex items-center gap-1">
+    <div class="match-start-time text-sm text-gray-500 inline-flex items-center gap-1">
       <BellAlertIcon class="h-4 w-4" />
       <span>{{ formatStart(game.datetime) }} МСК</span>
     </div>

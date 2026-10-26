@@ -1,11 +1,11 @@
 <template>
-  <div class="max-h-[70vh] overflow-auto rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+  <div class="max-h-[70vh] overflow-auto rounded-xl border border-gray-200 bg-white">
     <table class="min-w-[980px] border-separate border-spacing-0 text-left text-sm sm:w-full sm:min-w-0 sm:border-collapse">
 
-      <thead class="sticky top-0 z-20 bg-gray-100 dark:bg-slate-800 text-xs uppercase text-gray-600 dark:text-slate-300 shadow-sm">
+      <thead class="sticky top-0 z-20 bg-gray-100 text-xs uppercase text-gray-600 shadow-sm">
       <tr>
 
-        <th class="sticky left-0 z-30 w-[190px] bg-gray-100 dark:bg-slate-800 px-3 py-3 sm:static sm:w-auto">Player</th>
+        <th class="sticky left-0 z-30 w-[190px] bg-gray-100 px-3 py-3 sm:static sm:w-auto">Player</th>
 
         <th @click="setSort('position')" class="cursor-pointer px-2 py-3">
           POS {{ sortArrow('position') }}
@@ -76,10 +76,10 @@
       <tr
           v-for="p in players"
           :key="p.PLAYER_ID"
-          class="group border-t hover:bg-gray-50 dark:hover:bg-slate-800"
+          class="group border-t hover:bg-gray-50"
       >
 
-        <td class="sticky left-0 z-10 w-[190px] bg-white dark:bg-slate-900 px-3 py-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.7)] group-hover:bg-gray-50 sm:static sm:w-auto sm:shadow-none">
+        <td class="sticky left-0 z-10 w-[190px] bg-white px-3 py-2 shadow-[8px_0_12px_-12px_rgba(15,23,42,0.7)] group-hover:bg-gray-50 sm:static sm:w-auto sm:shadow-none">
           <router-link
               :to="{
                 name: 'PlayerPage',
@@ -91,9 +91,9 @@
                 :src="getPlayerImage(p)"
                 :data-player-id="p.PLAYER_ID"
                 @error="handleImageError"
-                class="h-8 w-8 shrink-0 rounded-full bg-gray-200 dark:bg-slate-700 object-cover"
+                class="h-8 w-8 shrink-0 rounded-full bg-gray-200 object-cover"
             />
-            <span class="min-w-0 truncate font-medium text-gray-700 dark:text-slate-200 no-underline hover:text-gray-700">{{ p.name }}</span>
+            <span class="min-w-0 truncate font-medium text-gray-700 no-underline hover:text-gray-700">{{ p.name }}</span>
           </router-link>
         </td>
 

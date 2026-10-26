@@ -1,23 +1,23 @@
 <template>
-  <article class="overflow-hidden rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+  <article class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
     <button v-if="!isRevealed" type="button" class="block w-full p-5 text-left" @click="revealArticle">
-      <div class="grid min-h-48 place-items-center rounded-xl border border-dashed border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 px-5 py-8 text-center">
+      <div class="grid min-h-48 place-items-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-8 text-center">
         <div class="space-y-4">
-          <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 shadow-sm">
+          <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white text-gray-700 shadow-sm">
             <EyeIcon class="h-7 w-7" />
           </div>
           <div class="space-y-1">
-            <p class="text-base font-black text-gray-950 dark:text-slate-100">Осторожно, может быть спойлер</p>
-            <p class="text-sm font-semibold text-gray-500 dark:text-slate-400">Нажмите, чтобы раскрыть статью</p>
+            <p class="text-base font-black text-gray-950">Осторожно, может быть спойлер</p>
+            <p class="text-sm font-semibold text-gray-500">Нажмите, чтобы раскрыть статью</p>
           </div>
         </div>
       </div>
 
       <div class="space-y-4 p-5">
-        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-500 dark:text-slate-400">
+        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-500">
           <span>{{ formatNewsDate(article.created_at) }}</span>
           <span v-if="authorName">• {{ authorName }}</span>
-          <span v-if="article.game_ids.length" class="rounded-full bg-blue-50 dark:bg-blue-950 px-2.5 py-1 text-blue-700 dark:text-blue-300">
+          <span v-if="article.game_ids.length" class="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700">
             {{ article.game_ids.length }} game
           </span>
         </div>
@@ -33,19 +33,19 @@
       />
 
       <div class="space-y-4 p-5">
-        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-500 dark:text-slate-400">
+        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-500">
           <span>{{ formatNewsDate(article.created_at) }}</span>
           <span v-if="authorName">• {{ authorName }}</span>
-          <span v-if="article.game_ids.length" class="rounded-full bg-blue-50 dark:bg-blue-950 px-2.5 py-1 text-blue-700 dark:text-blue-300">
+          <span v-if="article.game_ids.length" class="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700">
             {{ article.game_ids.length }} game
           </span>
         </div>
 
         <div class="space-y-2">
-          <h2 class="text-xl font-black leading-tight text-gray-950 dark:text-slate-100">
+          <h2 class="text-xl font-black leading-tight text-gray-950">
             {{ article.title }}
           </h2>
-          <p class="line-clamp-3 text-sm leading-6 text-gray-600 dark:text-slate-300">
+          <p class="line-clamp-3 text-sm leading-6 text-gray-600">
             {{ article.excerpt }}
           </p>
         </div>
@@ -55,7 +55,7 @@
             v-for="tag in article.hashtags"
             :key="tag"
             type="button"
-            class="rounded-full bg-gray-100 dark:bg-slate-800 px-3 py-1 text-xs font-bold text-gray-700 dark:text-slate-200 transition hover:bg-gray-900 hover:text-white"
+            class="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-700 transition hover:bg-gray-900 hover:text-white"
             @click.stop="$emit('tag', tag)"
           >
             #{{ tag }}
@@ -64,10 +64,10 @@
       </div>
     </button>
 
-    <div v-if="canEdit" class="flex gap-2 border-t border-gray-100 dark:border-slate-800 p-4">
+    <div v-if="canEdit" class="flex gap-2 border-t border-gray-100 p-4">
       <button
         type="button"
-        class="rounded-xl border border-gray-200 dark:border-slate-700 px-3 py-2 text-xs font-bold text-gray-700 dark:text-slate-200 transition hover:border-gray-900 hover:text-gray-950"
+        class="rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 transition hover:border-gray-900 hover:text-gray-950"
         @click="$emit('edit', article)"
       >
         Редактировать

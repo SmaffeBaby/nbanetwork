@@ -7,9 +7,9 @@
         :period-stats-available="recap?.supportsPeriodStats !== false"
     />
 
-    <p v-if="loading" role="status" class="text-sm text-gray-500 dark:text-slate-400">Загружаем статистику…</p>
+    <p v-if="loading" role="status" class="text-sm text-gray-500">Загружаем статистику…</p>
     <p v-if="error" role="alert" class="text-sm text-red-500">{{ error }}</p>
-    <p v-if="recap?.periodNotice" class="text-xs text-gray-500 dark:text-slate-400">{{ recap.periodNotice }}</p>
+    <p v-if="recap?.periodNotice" class="text-xs text-gray-500">{{ recap.periodNotice }}</p>
     <GameTeamsTabs
         :teams="teams"
         v-model:activeTeam="activeTeam"

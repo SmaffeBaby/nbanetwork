@@ -1,8 +1,8 @@
 <template>
   <div class="mx-auto grid max-w-6xl gap-5 text-left">
-    <section class="overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-sm sm:p-4">
-      <div class="mb-4 border-b border-gray-200 dark:border-slate-700 pb-3">
-        <h2 class="text-xl font-black uppercase leading-none tracking-normal text-gray-950 dark:text-slate-100 sm:text-3xl">
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
+      <div class="mb-4 border-b border-gray-200 pb-3">
+        <h2 class="text-xl font-black uppercase leading-none tracking-normal text-gray-950 sm:text-3xl">
           Высшие показатели
         </h2>
       </div>
@@ -11,13 +11,13 @@
         <article
             v-for="row in leaderRows"
             :key="row.key"
-            class="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 p-3 shadow-sm sm:p-4"
+            class="rounded-lg border border-gray-200 bg-gray-50 p-3 shadow-sm sm:p-4"
         >
           <div class="mb-3 flex items-center justify-between gap-3">
             <span class="rounded-md bg-gray-900 px-2.5 py-1 text-xs font-black text-white">
               {{ row.label }}
             </span>
-            <strong class="truncate text-xs font-extrabold uppercase text-gray-600 dark:text-slate-300">
+            <strong class="truncate text-xs font-extrabold uppercase text-gray-600">
               {{ row.title }}
             </strong>
           </div>
@@ -26,7 +26,7 @@
             <div
                 v-for="leader in row.leaders"
                 :key="leader.key"
-                class="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3"
+                class="rounded-lg border border-gray-200 bg-white p-3"
             >
               <div class="grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[46px_minmax(0,1fr)_auto] sm:gap-3">
                 <router-link
@@ -38,7 +38,7 @@
                       :data-player-id="leader.player.PLAYER_ID"
                       @error="handleImageError"
                       :style="{ borderColor: leader.color }"
-                      class="h-11 w-11 rounded-full border-[3px] bg-gray-100 dark:bg-slate-800 object-cover"
+                      class="h-11 w-11 rounded-full border-[3px] bg-gray-100 object-cover"
                       alt=""
                   />
                 </router-link>
@@ -46,7 +46,7 @@
                 <div class="min-w-0">
                   <router-link
                       :to="{ name: 'PlayerPage', params: { name: encodeURIComponent(leader.player.name) } }"
-                      class="block truncate text-sm font-extrabold leading-tight text-gray-950 dark:text-slate-100 hover:underline"
+                      class="block truncate text-sm font-extrabold leading-tight text-gray-950 hover:underline"
                   >
                     {{ leader.player.name }}
                   </router-link>
@@ -60,7 +60,7 @@
                 </div>
               </div>
 
-              <div class="mt-3 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
+              <div class="mt-3 h-2 overflow-hidden rounded-full bg-gray-200">
                 <div
                     class="h-full rounded-full"
                     :style="{ width: `${leader.percent}%`, backgroundColor: leader.color }"
@@ -71,14 +71,14 @@
         </article>
       </div>
 
-      <div v-else class="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-sm text-gray-500 dark:text-slate-400">
+      <div v-else class="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-500">
         Нет данных по игрокам для этой игры.
       </div>
     </section>
 
-    <section class="overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-sm sm:p-4">
-      <div class="mb-4 border-b border-gray-200 dark:border-slate-700 pb-3">
-        <h2 class="text-xl font-black uppercase leading-none tracking-normal text-gray-950 dark:text-slate-100 sm:text-3xl">
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
+      <div class="mb-4 border-b border-gray-200 pb-3">
+        <h2 class="text-xl font-black uppercase leading-none tracking-normal text-gray-950 sm:text-3xl">
           Командная статистика
         </h2>
       </div>
@@ -86,20 +86,20 @@
       <div class="mb-4 grid items-center gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-4">
         <router-link
             :to="{ name: 'TeamDetail', params: { abbr: awayAbbr } }"
-            class="flex min-w-0 items-center justify-center gap-2 rounded-lg transition hover:bg-gray-50 dark:hover:bg-slate-800 md:justify-start"
+            class="flex min-w-0 items-center justify-center gap-2 rounded-lg transition hover:bg-gray-50 md:justify-start"
         >
           <img :src="getTeamLogo(awayAbbr)" class="h-10 w-10" alt="" />
           <div class="min-w-0">
             <span class="block text-xs font-black" :style="{ color: awayColor }">{{ awayAbbr }}</span>
-            <strong class="block truncate text-base font-black text-gray-950 dark:text-slate-100">{{ awayName }}</strong>
+            <strong class="block truncate text-base font-black text-gray-950">{{ awayName }}</strong>
           </div>
         </router-link>
 
-        <div class="flex items-center justify-center gap-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-3 py-2">
+        <div class="flex items-center justify-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
           <strong class="text-2xl font-black leading-none sm:text-3xl" :style="{ color: awayColor }">
             {{ teamStats.away.points }}
           </strong>
-          <span class="text-xs font-black uppercase text-gray-500 dark:text-slate-400">vs</span>
+          <span class="text-xs font-black uppercase text-gray-500">vs</span>
           <strong class="text-2xl font-black leading-none sm:text-3xl" :style="{ color: homeColor }">
             {{ teamStats.home.points }}
           </strong>
@@ -107,11 +107,11 @@
 
         <router-link
             :to="{ name: 'TeamDetail', params: { abbr: homeAbbr } }"
-            class="flex min-w-0 items-center justify-center gap-2 rounded-lg text-center transition hover:bg-gray-50 dark:hover:bg-slate-800 md:justify-end md:text-right"
+            class="flex min-w-0 items-center justify-center gap-2 rounded-lg text-center transition hover:bg-gray-50 md:justify-end md:text-right"
         >
           <div class="min-w-0">
             <span class="block text-xs font-black" :style="{ color: homeColor }">{{ homeAbbr }}</span>
-            <strong class="block truncate text-base font-black text-gray-950 dark:text-slate-100">{{ homeName }}</strong>
+            <strong class="block truncate text-base font-black text-gray-950">{{ homeName }}</strong>
           </div>
           <img :src="getTeamLogo(homeAbbr)" class="h-10 w-10" alt="" />
         </router-link>
@@ -121,19 +121,19 @@
         <div
             v-for="row in comparisonRows"
             :key="row.key"
-            class="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-3 py-2"
+            class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
         >
           <div class="grid grid-cols-[52px_minmax(0,1fr)_52px] items-center gap-2 sm:grid-cols-[64px_minmax(0,1fr)_64px] sm:gap-3">
             <strong class="text-lg font-black leading-none sm:text-xl" :style="{ color: awayColor }">
               {{ formatNumber(row.away) }}
             </strong>
-            <span class="text-center text-xs font-black text-gray-600 dark:text-slate-300 sm:text-sm">{{ row.label }}</span>
+            <span class="text-center text-xs font-black text-gray-600 sm:text-sm">{{ row.label }}</span>
             <strong class="text-right text-lg font-black leading-none sm:text-xl" :style="{ color: homeColor }">
               {{ formatNumber(row.home) }}
             </strong>
           </div>
 
-          <div class="mt-2 flex h-2.5 overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
+          <div class="mt-2 flex h-2.5 overflow-hidden rounded-full bg-gray-200">
             <span :style="{ width: `${row.awayShare}%`, backgroundColor: awayColor }"></span>
             <span :style="{ width: `${row.homeShare}%`, backgroundColor: homeColor }"></span>
           </div>
@@ -144,9 +144,9 @@
         <article
             v-for="row in specialRows"
             :key="row.key"
-            class="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 p-3 shadow-sm"
+            class="rounded-lg border border-gray-200 bg-gray-50 p-3 shadow-sm"
         >
-          <div class="text-sm font-black uppercase text-gray-950 dark:text-slate-100">{{ row.label }}</div>
+          <div class="text-sm font-black uppercase text-gray-950">{{ row.label }}</div>
 
           <div class="mt-3 grid grid-cols-2 gap-3">
             <div>
@@ -157,7 +157,7 @@
               >
                 {{ awayAbbr }}
               </router-link>
-              <strong class="block text-2xl font-black leading-none text-gray-950 dark:text-slate-100 sm:text-3xl">{{ formatNumber(row.away) }}</strong>
+              <strong class="block text-2xl font-black leading-none text-gray-950 sm:text-3xl">{{ formatNumber(row.away) }}</strong>
             </div>
             <div class="text-right">
               <router-link
@@ -167,25 +167,25 @@
               >
                 {{ homeAbbr }}
               </router-link>
-              <strong class="block text-2xl font-black leading-none text-gray-950 dark:text-slate-100 sm:text-3xl">{{ formatNumber(row.home) }}</strong>
+              <strong class="block text-2xl font-black leading-none text-gray-950 sm:text-3xl">{{ formatNumber(row.home) }}</strong>
             </div>
           </div>
 
-          <div class="mt-3 flex h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
+          <div class="mt-3 flex h-2 overflow-hidden rounded-full bg-gray-200">
             <span :style="{ width: `${row.awayShare}%`, backgroundColor: awayColor }"></span>
             <span :style="{ width: `${row.homeShare}%`, backgroundColor: homeColor }"></span>
           </div>
         </article>
       </div>
 
-      <div class="mt-4 border-t border-gray-200 dark:border-slate-700 pt-4">
+      <div class="mt-4 border-t border-gray-200 pt-4">
         <button
             type="button"
             data-collapse-toggle="team-detailed-stats"
             :aria-expanded="isDetailedStatsOpen"
             aria-controls="team-detailed-stats"
             @click="isDetailedStatsOpen = !isDetailedStatsOpen"
-            class="inline-flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-left text-sm font-black uppercase text-gray-900 dark:text-slate-100 shadow-sm transition hover:bg-gray-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-gray-100 sm:w-auto"
+            class="inline-flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-left text-sm font-black uppercase text-gray-900 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-100 sm:w-auto"
         >
           <span>Детальная статистика</span>
           <svg
@@ -208,19 +208,19 @@
           <div
               v-for="row in detailStatRows"
               :key="row.key"
-              class="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-3 py-2"
+              class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
           >
             <div class="grid grid-cols-[52px_minmax(0,1fr)_52px] items-center gap-2 sm:grid-cols-[64px_minmax(0,1fr)_64px] sm:gap-3">
               <strong class="text-lg font-black leading-none sm:text-xl" :style="{ color: awayColor }">
                 {{ formatNumber(row.away) }}
               </strong>
-              <span class="text-center text-xs font-black text-gray-600 dark:text-slate-300 sm:text-sm">{{ row.label }}</span>
+              <span class="text-center text-xs font-black text-gray-600 sm:text-sm">{{ row.label }}</span>
               <strong class="text-right text-lg font-black leading-none sm:text-xl" :style="{ color: homeColor }">
                 {{ formatNumber(row.home) }}
               </strong>
             </div>
 
-            <div class="mt-2 flex h-2.5 overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
+            <div class="mt-2 flex h-2.5 overflow-hidden rounded-full bg-gray-200">
               <span :style="{ width: `${row.awayShare}%`, backgroundColor: awayColor }"></span>
               <span :style="{ width: `${row.homeShare}%`, backgroundColor: homeColor }"></span>
             </div>
@@ -229,9 +229,9 @@
       </div>
     </section>
 
-    <section class="overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-sm sm:p-4">
-      <div class="mb-4 border-b border-gray-200 dark:border-slate-700 pb-3">
-        <h2 class="text-xl font-black uppercase leading-none tracking-normal text-gray-950 dark:text-slate-100 sm:text-3xl">
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
+      <div class="mb-4 border-b border-gray-200 pb-3">
+        <h2 class="text-xl font-black uppercase leading-none tracking-normal text-gray-950 sm:text-3xl">
           Динамика игры
         </h2>
       </div>
@@ -240,36 +240,36 @@
         <LeadChart :final="recap?.meta?.status === 'Final'" :points="leadPoints" :away-abbr="awayAbbr" :home-abbr="homeAbbr" :away-color="awayColor" :home-color="homeColor" />
 
         <div class="mx-auto mt-4 max-w-md">
-          <div class="grid grid-cols-[22px_42px_minmax(0,1fr)_42px_22px] items-center justify-items-center gap-2 border-b border-gray-200 dark:border-slate-700 pb-2 sm:grid-cols-[24px_48px_minmax(0,1fr)_48px_24px] sm:gap-3">
+          <div class="grid grid-cols-[22px_42px_minmax(0,1fr)_42px_22px] items-center justify-items-center gap-2 border-b border-gray-200 pb-2 sm:grid-cols-[24px_48px_minmax(0,1fr)_48px_24px] sm:gap-3">
             <router-link :to="{ name: 'TeamDetail', params: { abbr: awayAbbr } }" class="transition hover:scale-110">
               <img :src="getTeamLogo(awayAbbr)" class="h-6 w-6" alt="" />
             </router-link>
-            <strong class="text-3xl font-black leading-none text-gray-950 dark:text-slate-100 sm:text-4xl">{{ leadSummary.awayLead }}</strong>
-            <span class="text-center text-base font-black leading-none text-gray-950 dark:text-slate-100 sm:text-2xl">Максимальный отрыв</span>
-            <strong class="text-3xl font-black leading-none text-gray-950 dark:text-slate-100 sm:text-4xl">{{ leadSummary.homeLead }}</strong>
+            <strong class="text-3xl font-black leading-none text-gray-950 sm:text-4xl">{{ leadSummary.awayLead }}</strong>
+            <span class="text-center text-base font-black leading-none text-gray-950 sm:text-2xl">Максимальный отрыв</span>
+            <strong class="text-3xl font-black leading-none text-gray-950 sm:text-4xl">{{ leadSummary.homeLead }}</strong>
             <router-link :to="{ name: 'TeamDetail', params: { abbr: homeAbbr } }" class="transition hover:scale-110">
               <img :src="getTeamLogo(homeAbbr)" class="h-6 w-6" alt="" />
             </router-link>
           </div>
 
           <div class="grid gap-2 pt-3 text-center sm:grid-cols-3 sm:gap-3">
-            <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 dark:bg-slate-900 px-3 py-2 sm:justify-center sm:bg-transparent sm:px-0 sm:py-0">
-              <span class="text-xs font-extrabold uppercase leading-tight text-gray-950 dark:text-slate-100">Равный счёт</span>
-              <strong class="text-2xl font-black leading-none text-gray-950 dark:text-slate-100 sm:text-3xl">{{ leadSummary.timesTied }}</strong>
+            <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 sm:justify-center sm:bg-transparent sm:px-0 sm:py-0">
+              <span class="text-xs font-extrabold uppercase leading-tight text-gray-950">Равный счёт</span>
+              <strong class="text-2xl font-black leading-none text-gray-950 sm:text-3xl">{{ leadSummary.timesTied }}</strong>
             </div>
-            <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 dark:bg-slate-900 px-3 py-2 sm:justify-center sm:bg-transparent sm:px-0 sm:py-0">
-              <span class="text-xs font-extrabold uppercase leading-tight text-gray-950 dark:text-slate-100">Рывок</span>
-              <strong class="text-2xl font-black leading-none text-gray-950 dark:text-slate-100 sm:text-3xl">{{ leadSummary.longestRun }}</strong>
+            <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 sm:justify-center sm:bg-transparent sm:px-0 sm:py-0">
+              <span class="text-xs font-extrabold uppercase leading-tight text-gray-950">Рывок</span>
+              <strong class="text-2xl font-black leading-none text-gray-950 sm:text-3xl">{{ leadSummary.longestRun }}</strong>
             </div>
-            <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 dark:bg-slate-900 px-3 py-2 sm:justify-center sm:bg-transparent sm:px-0 sm:py-0">
-              <span class="text-xs font-extrabold uppercase leading-tight text-gray-950 dark:text-slate-100">Смена лидера</span>
-              <strong class="text-2xl font-black leading-none text-gray-950 dark:text-slate-100 sm:text-3xl">{{ leadSummary.leadChanges }}</strong>
+            <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 sm:justify-center sm:bg-transparent sm:px-0 sm:py-0">
+              <span class="text-xs font-extrabold uppercase leading-tight text-gray-950">Смена лидера</span>
+              <strong class="text-2xl font-black leading-none text-gray-950 sm:text-3xl">{{ leadSummary.leadChanges }}</strong>
             </div>
           </div>
         </div>
       </div>
 
-      <div v-else class="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-center text-sm text-gray-500 dark:text-slate-400">
+      <div v-else class="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-center text-sm text-gray-500">
         Play-by-play для графика преимущества пока недоступен.
       </div>
     </section>

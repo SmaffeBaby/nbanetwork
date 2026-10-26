@@ -4,7 +4,7 @@
         type="button"
         :disabled="!game || pendingWatched"
         class="inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 sm:px-3 sm:text-xs"
-        :class="isWatched ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'"
+        :class="isWatched ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'"
         @click.stop="toggleWatched"
     >
       <CheckCircleSolidIcon v-if="isWatched" class="h-4 w-4" />
@@ -16,7 +16,7 @@
         type="button"
         :disabled="!game || pendingFavorite"
         class="inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 sm:px-3 sm:text-xs"
-        :class="isFavorite ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'"
+        :class="isFavorite ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'"
         @click.stop="toggleFavorite"
     >
       <StarSolidIcon v-if="isFavorite" class="h-4 w-4" />

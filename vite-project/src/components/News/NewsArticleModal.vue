@@ -1,14 +1,14 @@
 <template>
   <div class="fixed inset-0 z-[100] overflow-y-auto bg-black/55 px-4 py-6 backdrop-blur-sm sm:px-6">
-    <div class="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-2xl">
-      <div class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 px-4 py-3 backdrop-blur sm:px-6">
+    <div class="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
         <div class="min-w-0">
           <div class="truncate text-xs font-bold uppercase text-red-600">NBA Dashboard News</div>
-          <div class="truncate text-sm font-semibold text-gray-500 dark:text-slate-400">{{ formatNewsDate(article.created_at) }}</div>
+          <div class="truncate text-sm font-semibold text-gray-500">{{ formatNewsDate(article.created_at) }}</div>
         </div>
         <button
           type="button"
-          class="grid h-10 w-10 place-items-center rounded-full border border-gray-200 dark:border-slate-700 text-xl leading-none text-gray-600 dark:text-slate-300 transition hover:border-gray-900 hover:text-gray-950"
+          class="grid h-10 w-10 place-items-center rounded-full border border-gray-200 text-xl leading-none text-gray-600 transition hover:border-gray-900 hover:text-gray-950"
           @click="$emit('close')"
         >
           ×
@@ -23,7 +23,7 @@
       />
 
       <article class="space-y-6 px-5 py-6 sm:px-8">
-        <h1 class="m-0 text-3xl font-black leading-tight text-gray-950 dark:text-slate-100 sm:text-4xl">
+        <h1 class="m-0 text-3xl font-black leading-tight text-gray-950 sm:text-4xl">
           {{ article.title }}
         </h1>
 
@@ -32,7 +32,7 @@
             v-for="gameId in article.game_ids"
             :key="gameId"
             :to="`/game/${gameId}`"
-            class="rounded-full bg-blue-50 dark:bg-blue-950 px-3 py-1.5 text-xs font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-100 hover:no-underline"
+            class="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:no-underline"
           >
             Game {{ gameId }}
           </RouterLink>
@@ -48,7 +48,7 @@
             v-for="tag in article.hashtags"
             :key="tag"
             type="button"
-            class="rounded-full bg-gray-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-gray-700 dark:text-slate-200 transition hover:bg-gray-900 hover:text-white"
+            class="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 transition hover:bg-gray-900 hover:text-white"
             @click="$emit('tag', tag)"
           >
             #{{ tag }}
@@ -58,20 +58,20 @@
         <button
           type="button"
           class="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-black transition"
-          :class="liked ? 'border-red-100 bg-red-50 text-red-700' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 hover:border-red-200 hover:text-red-700'"
+          :class="liked ? 'border-red-100 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-700 hover:border-red-200 hover:text-red-700'"
           @click="toggleLike"
         >
           ♥ {{ likesCount }}
         </button>
         <RouterLink
           :to="{ name: 'NewsArticle', params: { slug: article.slug || article.id } }"
-          class="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 px-4 py-2 text-sm font-black text-gray-700 dark:text-slate-200 transition hover:border-gray-900 hover:no-underline"
+          class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-black text-gray-700 transition hover:border-gray-900 hover:no-underline"
         >
           Открыть ссылку
         </RouterLink>
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 px-4 py-2 text-sm font-black text-gray-700 dark:text-slate-200 transition hover:border-gray-900"
+          class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-black text-gray-700 transition hover:border-gray-900"
           @click="copyLink"
         >
           {{ copied ? 'Ссылка скопирована' : 'Скопировать ссылку' }}

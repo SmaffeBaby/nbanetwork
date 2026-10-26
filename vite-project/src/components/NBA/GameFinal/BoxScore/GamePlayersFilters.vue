@@ -17,7 +17,7 @@
       <option :value="3">Q3</option>
       <option :value="4">Q4</option>
     </select>
-    <p v-if="periodStatsAvailable === false" class="text-xs text-gray-500 dark:text-slate-400">Поквартальная статистика игроков для этого матча недоступна.</p>
+    <p v-if="periodStatsAvailable === false" class="text-xs text-gray-500">Поквартальная статистика игроков для этого матча недоступна.</p>
 
   </div>
 </template>

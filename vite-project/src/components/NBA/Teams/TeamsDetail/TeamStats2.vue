@@ -1,5 +1,5 @@
 <template>
-  <div v-if="loading" class="text-gray-500 dark:text-slate-400">
+  <div v-if="loading" class="text-gray-500">
     Загрузка...
   </div>
 
@@ -24,7 +24,7 @@
       <StatCard title="Последние 10" :value="stats.L10" />
     </div>
 
-    <div class="bg-white dark:bg-slate-900 p-3 rounded-xl shadow sm:p-4">
+    <div class="bg-white p-3 rounded-xl shadow sm:p-4">
       <div class="h-56 sm:h-64">
         <canvas ref="chartRef"></canvas>
       </div>

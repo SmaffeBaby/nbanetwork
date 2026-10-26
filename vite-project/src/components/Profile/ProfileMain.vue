@@ -7,7 +7,7 @@
         <RouterLink
             v-if="user"
             :to="{ name: 'PublicProfile', params: { id: user.id } }"
-            class="rounded-xl bg-gradient-to-r from-teal-200 to-lime-200 px-4 py-2.5 text-center text-sm font-medium leading-5 text-heading hover:bg-gradient-to-l hover:from-teal-200 hover:to-lime-200 focus:outline-none focus:ring-4 focus:ring-lime-200 dark:focus:ring-teal-700"
+            class="rounded-xl bg-gradient-to-r from-teal-200 to-lime-200 px-4 py-2.5 text-center text-sm font-medium leading-5 text-heading hover:bg-gradient-to-l hover:from-teal-200 hover:to-lime-200 focus:outline-none focus:ring-4 focus:ring-lime-200"
         >
           Посмотреть профиль
         </RouterLink>
