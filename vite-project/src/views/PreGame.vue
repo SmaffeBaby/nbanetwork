@@ -2,7 +2,7 @@
  <div class="min-h-screen bg-gray-50 px-3 pb-14 pt-24 sm:px-6 lg:px-8 lg:pt-28">
   <Header />
   <main class="mx-auto max-w-7xl pt-6 sm:pt-10">
-   <div class="mb-6 flex items-center justify-between gap-3"><button class="rounded-xl bg-white px-4 py-2 text-sm font-bold shadow-sm" @click="router.back()">← Назад</button></div>
+   <div class="mb-6 flex items-center justify-between gap-3"><button class="rounded-xl bg-white px-4 py-2 text-sm font-bold shadow-sm" type="button" @click="goBack">← Назад</button></div>
    <div v-if="loading" class="rounded-3xl bg-white p-12 text-center text-gray-500">Загружаем предматчевые данные…</div>
    <div v-if="error" role="alert" class="mb-5 rounded-2xl bg-red-50 p-4 text-red-600">{{ error.message }} <button class="ml-2 underline" @click="retry()">Повторить</button></div>
    <p v-if="preview && preview.state!=='pre'" class="py-12 text-center text-gray-500">Матч уже начался. Открываем игру…</p>
@@ -58,15 +58,19 @@
  </div>
 </template>
 <script setup lang="ts">
+import { useBackNavigation } from '../composables/useBackNavigation'
+
 import {computed} from 'vue'
 import {usePageTitle} from '../composables/usePageTitle'
-import {useRoute,useRouter} from 'vue-router'
+import {useRoute} from 'vue-router'
 import Header from '../components/Headers/Header.vue'
 import PreGameLineup from '../components/NBA/GameFinal/PreGameLineup.vue'
 import GamePrediction from '../components/NBA/GameFinal/GamePrediction.vue'
 import {useGamePreview} from '../composables/NBA/GameFinal/useGamePreview'
 import {statLabels,statValue,statusLabel} from '../composables/NBA/GameFinal/previewLabels'
-const route=useRoute(),router=useRouter()
+
+const { goBack } = useBackNavigation('/games')
+const route=useRoute()
 const {preview,loading,error,countdown,remaining,retry}=useGamePreview(computed(()=>String(route.params.gameId)))
 const bySide=computed(()=>Object.fromEntries((preview.value?.teams || []).map((team:any)=>[team.side,team])))
 usePageTitle(()=>bySide.value.away && bySide.value.home ? `${bySide.value.away.name} — ${bySide.value.home.name} — Перед матчем` : null)

@@ -27,9 +27,8 @@ const PREFERRED_ROUND_ORDER = [
     'Series'
 ]
 
-export function usePlayoffBracket(series: Ref<BracketSeries[]>) {
+export function usePlayoffBracket(series: Ref<BracketSeries[]>, selectedConference: Ref<ConferenceFilter> = ref('All')) {
     const conferences: ConferenceFilter[] = ['All', 'West', 'East']
-    const selectedConference = ref<ConferenceFilter>('All')
 
     const filteredSeries = computed(() => {
         if (selectedConference.value === 'All') return series.value

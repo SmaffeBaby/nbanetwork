@@ -3,9 +3,9 @@
     <Header />
 
     <main class="mx-auto max-w-4xl pb-16">
-      <RouterLink to="/news" class="mb-4 inline-flex rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 transition hover:border-gray-900">
-        Назад к новостям
-      </RouterLink>
+      <button type="button" @click="goBack" class="mb-4 inline-flex rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 transition hover:border-gray-900">
+        Назад
+      </button>
 
       <div v-if="loading" class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm font-bold text-gray-500">
         Загружаем статью...
@@ -55,12 +55,16 @@
 </template>
 
 <script setup lang="ts">
+import { useBackNavigation } from '../composables/useBackNavigation'
+
 import { usePageTitle } from '../composables/usePageTitle'
 import { RouterLink } from 'vue-router'
 import Header from '../components/Headers/Header.vue'
 import ArticleComments from '../components/News/ArticleComments.vue'
 import { useNewsArticle } from '../composables/News/useNewsArticle'
 import { formatNewsDate } from '../utils/news'
+
+const { goBack } = useBackNavigation('/news')
 
 const {
   article,

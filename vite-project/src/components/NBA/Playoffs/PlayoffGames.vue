@@ -79,6 +79,7 @@
     </section>
 
     <PlayoffBracket
+        v-model:conference="selectedConference"
         :series="bracketSeries"
         :hide-spoilers="hideSpoilers"
         @open-series-modal="openSeriesModal"
@@ -127,7 +128,7 @@
           </button>
         </div>
 
-        <div class="max-h-[66vh] space-y-3 overflow-y-auto p-5">
+        <div ref="modalScroll" class="max-h-[66vh] space-y-3 overflow-y-auto p-5">
           <div class="grid gap-3 sm:grid-cols-2">
             <div
                 v-for="team in [modalSeries.series.teamA, modalSeries.series.teamB]"
@@ -213,7 +214,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import type { ConferenceFilter } from '../../../composables/NBA/Playoffs/usePlayoffBracket'
 import { EyeIcon, EyeSlashIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import PlayoffBracket from './PlayoffBracket.vue'
 import { usePlayoffGames } from '../../../composables/NBA/Playoffs/usePlayoffGames'
@@ -244,6 +247,7 @@ const {
   toggleSpoilers
 } = usePlayoffSpoilers()
 const {
+  selectedModalSeriesKey,
   selectedRound,
   selectedTeam,
   selectedStatus,
@@ -265,6 +269,43 @@ const {
   getTeamConference
 })
 
+// Store view state on this history entry, so each visit restores its own series.
+const history = useRouter().options.history
+const savedView = history.state.playoffView as {
+  season?: string; round?: string; team?: string; status?: string;
+  seriesKey?: string | null; conference?: ConferenceFilter; modalScroll?: number
+} | undefined
+const selectedConference = ref<ConferenceFilter>(savedView?.conference ?? 'All')
+const modalScroll = ref<HTMLElement | null>(null)
+if (savedView) {
+  if (savedView.season && seasons.value.includes(savedView.season)) selectedSeason.value = savedView.season
+  selectedRound.value = savedView.round ?? 'All'
+  selectedTeam.value = savedView.team ?? 'All'
+  selectedStatus.value = savedView.status ?? 'All'
+  selectedModalSeriesKey.value = savedView.seriesKey ?? null
+}
+let restoreModalScroll = savedView?.modalScroll ?? 0
+watch(modalSeries, async value => {
+  if (!value) return
+  await nextTick()
+  if (modalScroll.value) modalScroll.value.scrollTop = restoreModalScroll
+  restoreModalScroll = 0
+})
+onBeforeRouteLeave(() => {
+  history.replace(history.location, {
+    ...history.state,
+    playoffView: {
+      season: selectedSeason.value,
+      round: selectedRound.value,
+      team: selectedTeam.value,
+      status: selectedStatus.value,
+      seriesKey: selectedModalSeriesKey.value,
+      conference: selectedConference.value,
+      modalScroll: modalScroll.value?.scrollTop ?? 0
+    }
+  })
+})
+
 onMounted(async () => {
   await loadSeasons()
   seasonsReady.value = true
@@ -276,6 +317,7 @@ onMounted(async () => {
 
 watch(selectedSeason, (season) => {
   if (season && seasonsReady.value) {
+    closeSeriesModal()
     loadAll(season)
   }
 })

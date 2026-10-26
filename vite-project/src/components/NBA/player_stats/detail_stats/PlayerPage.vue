@@ -49,7 +49,8 @@
       <div class="flex flex-wrap items-center gap-3 p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-sm">
 
         <button
-            @click="$router.back()"
+            type="button"
+          @click="goBack"
             class="group inline-flex items-center gap-2 px-4 py-2 rounded-xl
            bg-white/10 text-black text-sm font-medium
            border border-white/20 shadow-sm
@@ -66,7 +67,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
 
-          Back
+          Назад
         </button>
 
         <div class="w-px h-6 bg-white/20"></div>
@@ -216,6 +217,8 @@
 </template>
 
 <script setup lang="ts">
+import { useBackNavigation } from '../../../../composables/useBackNavigation'
+
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
@@ -234,6 +237,8 @@ import FavoritePlayerButton from '../../Favorites/FavoritePlayerButton.vue'
 
 import { getPlayerImage, handleImageError } from '../../../../utils/playerImage'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
+
+const { goBack } = useBackNavigation('/player-stats')
 
 const route = useRoute()
 const router = useRouter()

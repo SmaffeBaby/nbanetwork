@@ -36,7 +36,7 @@ export function usePlayoffSeriesView({
     const selectedRound = ref('All')
     const selectedTeam = ref('All')
     const selectedStatus = ref('All')
-    const selectedModalSeriesIndex = ref<number | null>(null)
+    const selectedModalSeriesKey = ref<string | null>(null)
 
     const decoratedSeries = computed(() => {
         const items = series.value.map((s, index) => ({
@@ -118,19 +118,19 @@ export function usePlayoffSeriesView({
     })
 
     const modalSeries = computed(() => {
-        if (selectedModalSeriesIndex.value === null) return null
+        if (selectedModalSeriesKey.value === null) return null
 
         return decoratedSeries.value.find(item =>
-            item.index === selectedModalSeriesIndex.value
+            item.series.key === selectedModalSeriesKey.value
         ) || null
     })
 
     function openSeriesModal(index: number) {
-        selectedModalSeriesIndex.value = index
+        selectedModalSeriesKey.value = series.value[index]?.key ?? null
     }
 
     function closeSeriesModal() {
-        selectedModalSeriesIndex.value = null
+        selectedModalSeriesKey.value = null
     }
 
     function resetFilters() {
@@ -140,6 +140,7 @@ export function usePlayoffSeriesView({
     }
 
     return {
+        selectedModalSeriesKey,
         selectedRound,
         selectedTeam,
         selectedStatus,

@@ -15,7 +15,8 @@
     <div class="rounded-2xl bg-white p-3 shadow-sm sm:p-4">
       <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-start">
       <button
-          @click="$router.back()"
+          type="button"
+          @click="goBack"
           class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl
                bg-white/10 backdrop-blur-md text-black text-sm font-medium
                border border-white/20 shadow-sm
@@ -25,7 +26,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
-        Back
+        Назад
       </button>
 
       <Categories
@@ -115,6 +116,8 @@
 </template>
 
 <script setup lang="ts">
+import { useBackNavigation } from '../../../../composables/useBackNavigation'
+
 import { ref, computed, defineAsyncComponent, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -132,6 +135,8 @@ import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import { useCurrentSeason } from '../../../../composables/NBA/useCurrentSeason'
 import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
 import type { CategoryOption } from '../../../../types/categories'
+
+const { goBack } = useBackNavigation('/teams')
 
 const TeamAbout = defineAsyncComponent(() => import('./TeamAbout.vue'))
 

@@ -107,6 +107,7 @@
 import { toRef } from 'vue'
 import {
   type BracketSeries,
+  type ConferenceFilter,
   usePlayoffBracket
 } from '../../../composables/NBA/Playoffs/usePlayoffBracket'
 
@@ -120,11 +121,12 @@ defineEmits<{
   (event: 'go-team', abbr: string): void
 }>()
 
+const selectedConference = defineModel<ConferenceFilter>('conference', { default: 'All' })
+
 const {
   conferences,
-  selectedConference,
   filteredSeries,
   rounds,
   groupedSeries
-} = usePlayoffBracket(toRef(props, 'series'))
+} = usePlayoffBracket(toRef(props, 'series'), selectedConference)
 </script>

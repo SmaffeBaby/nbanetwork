@@ -12,7 +12,8 @@
     <TabsContent :comments-unread-count="commentsUnreadCount">
       <template #controls>
         <button
-            @click="$router.back()"
+            type="button"
+          @click="goBack"
             class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 py-2 sm:w-auto
                    bg-white/10 backdrop-blur-md text-black text-sm font-medium
                    border border-white/20 shadow-sm
@@ -22,7 +23,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
-          Back
+          Назад
         </button>
       </template>
 
@@ -75,6 +76,8 @@
 </template>
 
 <script setup lang="ts">
+import { useBackNavigation } from '../../../composables/useBackNavigation'
+
 import { ref } from 'vue'
 import GamePrediction from './GamePrediction.vue'
 import { useGameFinal } from '../../../composables/NBA/GameFinal/useGameFinal'
@@ -88,6 +91,8 @@ import GameBroadcastCard from './GameBroadcastCard.vue'
 import GameComments from './GameComments.vue'
 import GameNewsArticles from './GameNewsArticles.vue'
 import { useGameCommentsUnread } from '../../../composables/NBA/GameFinal/useGameComments'
+
+const { goBack } = useBackNavigation('/games')
 
 const filters = ref({
   search: '',

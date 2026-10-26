@@ -1,3 +1,5 @@
+import { createGameNavigationGuard } from './gameNavigationGuard'
+import { installBackNavigation } from './backNavigation'
 import { routeTitle } from '../utils/pageTitles'
 import { resolveGameNavigation } from '../api/gameNavigation'
 import { createRouter, createWebHistory } from 'vue-router'
@@ -42,16 +44,9 @@ export const router = createRouter({
     }
 })
 
+installBackNavigation(router)
+
 // All game entry points, including old bookmarks and news links, resolve to ESPN.
-router.beforeEach(async to => {
-    if (to.name !== 'GameDetail' && to.name !== 'PreGame') return
-    const original = String(to.params.gameId)
-    try {
-        const gameId = await resolveGameNavigation(original, to.query)
-        if (original !== gameId) return { name: to.name, params: { gameId }, hash: to.hash, replace: true }
-    } catch {
-        // Keep a failed legacy link visible; the detail API shows an error and never substitutes NBA data.
-    }
-})
+router.beforeEach(createGameNavigationGuard(resolveGameNavigation))
 
 router.afterEach(to => { document.title = routeTitle(to) })
