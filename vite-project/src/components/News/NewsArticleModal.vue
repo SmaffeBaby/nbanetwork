@@ -3,7 +3,7 @@
     <div class="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
       <div class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
         <div class="min-w-0">
-          <div class="truncate text-xs font-bold uppercase text-red-600">NBA Dashboard News</div>
+          <div class="truncate text-xs font-bold uppercase text-red-600">Basketsfera News</div>
           <div class="truncate text-sm font-semibold text-gray-500">{{ formatNewsDate(article.created_at) }}</div>
         </div>
         <button

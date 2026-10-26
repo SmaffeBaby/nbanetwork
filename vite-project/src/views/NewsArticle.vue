@@ -19,7 +19,7 @@
 
         <div class="space-y-6 px-5 py-6 sm:px-8">
           <div class="space-y-3">
-            <p class="text-xs font-black uppercase text-red-600">NBA Dashboard News</p>
+            <p class="text-xs font-black uppercase text-red-600">Basketsfera News</p>
             <h1 class="m-0 text-3xl font-black leading-tight text-gray-950 sm:text-5xl">{{ article.title }}</h1>
             <p class="text-sm font-semibold text-gray-500">{{ formatNewsDate(article.created_at) }}</p>
           </div>

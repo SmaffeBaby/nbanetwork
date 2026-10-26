@@ -2,7 +2,7 @@
   <section v-if="articles.length" class="space-y-3">
     <div class="flex items-center justify-between gap-3">
       <div>
-        <div class="text-xs font-black uppercase text-red-600">NBA Dashboard News</div>
+        <div class="text-xs font-black uppercase text-red-600">Basketsfera News</div>
         <h2 class="text-xl font-black text-gray-950">Материалы к игре</h2>
       </div>
       <RouterLink to="/news" class="text-sm font-bold text-blue-700 hover:text-blue-900">

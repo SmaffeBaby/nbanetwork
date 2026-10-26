@@ -8,7 +8,7 @@
           <div>
             <h1 class="m-0 text-3xl font-black text-gray-950 sm:text-5xl">Новости</h1>
             <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-gray-500">
-              Статьи NBA Dashboard, привязанные к матчам, темам и хештегам.
+              Статьи Basketsfera, привязанные к матчам, темам и хештегам.
             </p>
           </div>
 

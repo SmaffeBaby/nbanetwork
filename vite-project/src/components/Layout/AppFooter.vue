@@ -4,7 +4,7 @@
       <div class="gap-10 md:flex md:justify-between">
         <div class="mb-8 max-w-sm md:mb-0">
           <RouterLink to="/" class="inline-flex items-center">
-            <NbaMomLogo class="me-3 h-10 w-[73px]" alt="NBA MOM Logo" />
+            <NbaMomLogo class="me-3 h-10 w-[73px]" alt="Basketsfera Logo" />
           </RouterLink>
         </div>
 
@@ -70,7 +70,7 @@
       <div class="gap-5 sm:flex sm:items-center sm:justify-between">
         <span class="text-sm text-gray-600 sm:text-center">
           © {{ currentYear }}
-          <RouterLink to="/" class="font-semibold hover:text-gray-950 hover:underline">MOM Crew</RouterLink>.
+          <RouterLink to="/" class="font-semibold hover:text-gray-950 hover:underline">Basketsfera</RouterLink>.
           All Rights Reserved.
         </span>
 

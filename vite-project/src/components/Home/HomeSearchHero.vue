@@ -5,7 +5,7 @@
     <div class="relative z-10 mx-auto flex max-w-6xl flex-col items-center px-4 py-12 text-center sm:px-8 lg:px-12 lg:py-16">
       <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/45 px-3 py-1.5 text-sm font-semibold text-blue-800 shadow-lg shadow-blue-950/10 backdrop-blur-xl">
         <SparklesIcon class="h-4 w-4 text-red-500" aria-hidden="true" />
-        NBA Dashboard
+        Basketsfera
         <ChevronRightIcon class="h-4 w-4 text-blue-400" aria-hidden="true" />
       </div>
 

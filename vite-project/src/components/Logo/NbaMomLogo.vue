@@ -29,7 +29,7 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 const props = defineProps({
   alt: {
     type: String,
-    default: 'NBA MOM Logo'
+    default: 'Basketsfera Logo'
   },
   src: {
     type: String,

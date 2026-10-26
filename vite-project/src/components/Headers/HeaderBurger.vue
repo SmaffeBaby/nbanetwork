@@ -34,7 +34,7 @@
       <RouterLink to="/" class="flex min-w-0 items-center" @click="closeDrawer">
         <NbaMomLogo
             id="drawer-navigation-label"
-            alt="NBA MOM Logo"
+            alt="Basketsfera Logo"
             class="h-auto w-[220px] max-w-[calc(100%-4.25rem)]"
         />
       </RouterLink>
@@ -311,7 +311,7 @@
         <div class="mt-5 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <p class="text-sm font-black text-slate-950">Перед регистрацией подтвердите согласие</p>
           <p class="text-xs leading-5 text-slate-600">
-            NBA MOM держится на уважении к людям и баскетболу: без политической агитации, пропаганды,
+            Basketsfera держится на уважении к людям и баскетболу: без политической агитации, пропаганды,
             оскорблений, травли, дискриминации и провокационных материалов.
           </p>
 

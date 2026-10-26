@@ -30,7 +30,7 @@ export const registrationConsentItems: Array<{
   },
   {
     model: 'trademark',
-    text: 'Я ознакомлен с тем, что NBA MOM не является официальным продуктом NBA: ',
+    text: 'Я ознакомлен с тем, что Basketsfera не является официальным продуктом NBA: ',
     linkText: 'Trademark Disclaimer',
     to: '/legal/trademark-disclaimer'
   },

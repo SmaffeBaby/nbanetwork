@@ -369,7 +369,7 @@ export function useHomeSearch() {
                     return {
                         id: `profile-${profile.id}`,
                         type: 'profile' as const,
-                        title: fullName || 'Пользователь NBA Dashboard',
+                        title: fullName || 'Пользователь Basketsfera',
                         subtitle: 'публичный профиль',
                         to: `/profile/${profile.id}`,
                         image: profile.avatar_img ?? undefined,
@@ -414,7 +414,7 @@ export function useHomeSearch() {
                     id: `news-${item.id}`,
                     type: 'news' as const,
                     title: item.title,
-                    subtitle: item.excerpt || 'новость NBA Dashboard',
+                    subtitle: item.excerpt || 'новость Basketsfera',
                     to: query.startsWith('#')
                         ? `/news?tag=${encodeURIComponent(normalizedTag)}`
                         : `/news?q=${encodeURIComponent(item.title)}`,

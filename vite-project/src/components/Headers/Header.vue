@@ -2,7 +2,7 @@
   <header ref="headerRef" :class="{ 'desktop-header-hidden': headerHidden }" @focusin="showHeader" class="desktop-header fixed left-0 top-0 z-50 hidden w-full border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-xl min-[1180px]:block">
     <div class="mx-auto flex h-[88px] w-full max-w-[1840px] items-center px-[20px] lg:px-[28px] 2xl:px-[48px]">
       <RouterLink to="/" class="flex shrink-0 items-center">
-        <NbaMomLogo alt="NBA MOM Logo" class="h-[48px] w-[178px] 2xl:w-[210px]" />
+        <NbaMomLogo alt="Basketsfera Logo" class="h-[48px] w-[178px] 2xl:w-[210px]" />
       </RouterLink>
 
       <nav class="mx-auto flex h-full items-center gap-[28px] text-[16px] font-bold text-slate-700 2xl:gap-[44px] 2xl:text-[18px]">
@@ -139,7 +139,7 @@
                 </div>
 
                 <div class="bg-slate-50 px-5 py-5">
-                  <p class="text-[15px] font-extrabold text-slate-950">Разделы NBA MOM</p>
+                  <p class="text-[15px] font-extrabold text-slate-950">Разделы Basketsfera</p>
                   <div class="mt-4 space-y-4">
                     <RouterLink
                         v-for="item in categoryLinks"
