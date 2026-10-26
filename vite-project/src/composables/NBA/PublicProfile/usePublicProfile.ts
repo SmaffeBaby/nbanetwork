@@ -17,6 +17,8 @@ export type PublicProfile = {
     favorites_players: FavoritePlayer[] | null
     favorites_games: FavoriteGame[] | null
     watched_games: FavoriteGame[] | null
+    telegram_url: string | null
+    instagram_url: string | null
     created_at: string
 }
 
@@ -35,7 +37,7 @@ export const usePublicProfile = () => {
         queryFn: async ({ queryKey: [, id], signal }): Promise<PublicProfile> => {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, first_name, last_name, avatar_img, favorites_teams, favorites_players, favorites_games, watched_games, created_at')
+                .select('id, first_name, last_name, avatar_img, telegram_url, instagram_url, favorites_teams, favorites_players, favorites_games, watched_games, created_at')
                 .eq('id', id)
                 .abortSignal(AbortSignal.any([signal, AbortSignal.timeout(10000)]))
                 .maybeSingle()

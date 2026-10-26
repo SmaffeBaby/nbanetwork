@@ -20,9 +20,9 @@
           <div class="min-w-0 break-words text-sm font-black text-gray-900 sm:text-base">
             {{ rule?.title || 'Прогресс не настроен' }}
           </div>
-          <span class="rounded-full bg-white px-2 py-1 text-xs font-black text-gray-700 shadow-sm">
-            Уровень {{ level }}
-          </span>
+          <button type="button" :aria-label="`${title}: уровень ${level}. Открыть достижения`" aria-haspopup="dialog" class="rounded-full bg-white px-2 py-1 text-xs font-black text-gray-700 shadow-sm ring-blue-200 transition hover:text-blue-700 hover:ring-2 focus-visible:outline-none focus-visible:ring-2" @click="$emit('open-achievements')">
+            Уровень {{ level }} <span aria-hidden="true">↗</span>
+          </button>
         </div>
         <p class="mt-1 text-sm font-medium text-gray-500">
           {{ description }}
@@ -50,6 +50,8 @@
 import { computed } from 'vue'
 import type { ProfileProgressRule } from '../../../composables/NBA/PublicProfile/useProfileProgressRules'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
+
+defineEmits<{ 'open-achievements': [] }>()
 
 const props = defineProps<{
   title: string

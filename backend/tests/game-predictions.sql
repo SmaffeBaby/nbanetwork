@@ -15,7 +15,7 @@ BEGIN
  PERFORM public.set_game_prediction('espn:499999991',owner,NULL,now()+interval '1 day','pre');
  IF (public.read_game_predictions('espn:499999991',owner)->>'total')::int<>0 THEN RAISE EXCEPTION 'Cancel failed'; END IF;
  PERFORM public.set_game_prediction('espn:499999991',owner,'home',now()+interval '1 day','pre');
- UPDATE public.game_prediction_polls SET completed_at=now()-interval '25 hours',state='post' WHERE game_id='espn:499999991';
+ UPDATE public.game_prediction_polls SET completed_at=now()-interval '25 hours',result_settled_at=now(),state='post' WHERE game_id='espn:499999991';
  INSERT INTO public.game_prediction_polls(game_id,starts_at,completed_at,state) VALUES('espn:499999992',now()-interval '2 hours',now()-interval '1 hour','post');
  PERFORM public.cleanup_game_predictions();
  IF EXISTS(SELECT FROM public.game_predictions WHERE game_id='espn:499999991') OR EXISTS(SELECT FROM public.game_prediction_polls WHERE game_id='espn:499999991') THEN RAISE EXCEPTION 'Expired results not removed'; END IF;

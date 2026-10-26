@@ -1,3 +1,4 @@
+import { useAuthStore } from '../../stores/auth'
 import { reactive, ref, watch, onMounted } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useRouter } from 'vue-router'
@@ -7,6 +8,7 @@ import { useAuthPanel } from '../Auth/useAuthPanel'
 
 export function useProfile() {
     const toast = useToast()
+    const auth = useAuthStore()
     const router = useRouter()
     const queryClient = useQueryClient()
     const { user, loadingUser, handleLogout } = useAuthPanel()
@@ -18,13 +20,17 @@ export function useProfile() {
 
     const form = reactive({
         firstName: '',
-        lastName: ''
+        lastName: '',
+        telegramUrl: '',
+        instagramUrl: ''
     })
 
     watch(user, (val) => {
         if (val) {
             form.firstName = val.firstName
             form.lastName = val.lastName
+            form.telegramUrl = val.telegramUrl ?? ''
+            form.instagramUrl = val.instagramUrl ?? ''
         }
     }, { immediate: true })
 
@@ -32,27 +38,13 @@ export function useProfile() {
         if (!user.value) return
         loadingSave.value = true
 
-        const { error } = await supabase
-            .from('profiles')
-            .update({
-                first_name: form.firstName,
-                last_name: form.lastName
-            })
-            .eq('id', user.value.id)
-
-        loadingSave.value = false
-
-        if (error) {
-            toast.error('Ошибка сохранения')
-            return
-        }
-
-        user.value.firstName = form.firstName
-        user.value.lastName = form.lastName
-
-        void queryClient.invalidateQueries({ queryKey: ['public-profile', user.value.id] })
-        toast.success('Профиль обновлён')
-        isEditing.value = false
+        try {
+            await auth.updateProfileDetails(form)
+            void queryClient.invalidateQueries({ queryKey: ['public-profile', user.value.id] })
+            toast.success('Профиль обновлён')
+            isEditing.value = false
+        } catch (error: any) { toast.error(error.message || 'Не удалось сохранить профиль') }
+        finally { loadingSave.value = false }
     }
 
     const fileToDataUrl = (file: File) => {

@@ -239,3 +239,40 @@ node --test backend/tests/auth-mail.test.js
 docker exec -i nba-dashboard-db-1 psql -U postgres -d postgres -v ON_ERROR_STOP=1 < backend/tests/auth-registration.sql
 npm run build --prefix vite-project
 ```
+
+## Profile XP and social links
+
+Apply the additive, repeatable migration locally before rebuilding backend/frontend:
+
+```sh
+docker exec -i nba-dashboard-db-1 psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < supabase/migrations/20261027001000_profile_experience.sql
+docker compose up -d --build --no-deps backend frontend
+```
+
+`profiles` may be owned by `supabase_admin`, so this migration uses that role.
+The new append-only XP ledger is writable only by trusted server operations.
+A watched mark grants 30 XP once per canonical ESPN game; removing/re-adding it
+never farms XP or revokes earned experience. Future, postponed and cancelled games
+cannot be newly marked watched. Correct pregame predictions grant 100 XP once after
+ESPN confirms the final winner; cancelled or unreliable results grant nothing.
+Votes are cleaned only after settlement, while XP history survives poll deletion.
+Previously deleted predictions cannot be reconstructed. Existing watched games are
+credited once at migration time; captured legacy NBA IDs are resolved in small
+background batches without modifying the user's saved marks.
+
+Level N starts at `150 * N * (N - 1)` XP. Each level requires `300 * N` XP to reach
+the next. Overall levels have no rank titles. Achievement tables also show the
+existing configurable watched/team milestones and correct-prediction milestones;
+these milestones do not introduce extra XP rewards.
+
+Telegram/Instagram links are normalized in the client and constrained in PostgreSQL
+to HTTPS public profile URLs on the expected hosts. Empty inputs remove the link.
+Links appear in public profiles and open with `noopener noreferrer`.
+
+Validation:
+
+```sh
+node --test vite-project/tests/profile-experience.test.mjs
+node --test backend/tests/experience.test.js
+docker exec -i nba-dashboard-db-1 psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < backend/tests/profile-experience.sql
+```

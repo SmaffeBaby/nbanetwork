@@ -13,8 +13,10 @@ router.put('/profile-games/:kind', requireUser, async(req,res) => {
         const saved = [...(profile.favorites_games || []), ...(profile.watched_games || [])]
         // Removing a saved mark must not depend on the publisher being available.
         const previous = saved.find(item => sameGame(item, { ...input, id }))
+        const recap = req.body.active ? await getEspnGame(id) : null
+        if (req.body.active && req.params.kind === 'watched' && (['Scheduled','Postponed','Cancelled'].includes(recap.meta?.status) || !Number.isFinite(Date.parse(recap.dateUTC)) || Date.parse(recap.dateUTC) > Date.now())) return res.status(409).json({error:'Просмотр можно отметить после начала матча.'})
         const game = req.body.active
-            ? snapshotFromRecap(await getEspnGame(id))
+            ? snapshotFromRecap(recap)
             : { ...(previous || { date:null,homeName:'',awayName:'',homeAbbr:'',awayAbbr:'',homeScore:null,awayScore:null }), id,source:'espn' }
         const aliases = [...new Set([input.id, id, id.slice(5), ...saved.filter(item=>sameGame(item,game)).map(item=>String(item.id))])]
         const {data,error} = await getAdmin().rpc('set_profile_game', { p_user_id:req.user.id, p_kind:req.params.kind, p_game:game, p_active:req.body.active, p_aliases:aliases }).abortSignal(AbortSignal.timeout(5000))

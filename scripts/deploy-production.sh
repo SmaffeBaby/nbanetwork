@@ -40,5 +40,7 @@ docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
   < supabase/migrations/20261025180000_game_predictions.sql
 docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
   < supabase/migrations/20261026230000_confirmed_registration_mail.sql
+docker exec -i "$DB_CONTAINER" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 \
+  < supabase/migrations/20261027001000_profile_experience.sql
 docker compose up -d --build --no-deps contracts-importer
 docker compose ps frontend backend python-backend contracts-importer

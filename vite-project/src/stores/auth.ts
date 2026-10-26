@@ -1,4 +1,5 @@
 import { normalizeFavoriteGame, normalizeFavoriteGames, sameGame } from '../api/gameIdentity'
+import { normalizeSocialLink } from '../utils/socialLinks'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../lib/supabase'
@@ -12,6 +13,8 @@ export type AppUser = {
     firstName: string
     lastName: string
     avatarImg: string | null
+    telegramUrl: string | null
+    instagramUrl: string | null
     hideScores: boolean
     favoriteTeams: string[]
     favoritePlayers: FavoritePlayer[]
@@ -107,6 +110,8 @@ export const useAuthStore = defineStore('auth', () => {
                 firstName: cached.firstName,
                 lastName: cached.lastName,
                 avatarImg: cached.avatarImg ?? null,
+                telegramUrl: cached.telegramUrl ?? null,
+                instagramUrl: cached.instagramUrl ?? null,
                 hideScores: cached.hideScores ?? true,
                 favoriteTeams: cached.favoriteTeams ?? [],
                 favoritePlayers: cached.favoritePlayers ?? [],
@@ -133,7 +138,7 @@ export const useAuthStore = defineStore('auth', () => {
         const [{ data, error }, followingProfiles] = await Promise.all([
             supabase
             .from('profiles')
-            .select('first_name, last_name, avatar_img, hide_scores, favorites_teams, favorites_players, favorites_games, watched_games, notify_followed_comments, notifications, admin, created_at')
+            .select('first_name, last_name, avatar_img, telegram_url, instagram_url, hide_scores, favorites_teams, favorites_players, favorites_games, watched_games, notify_followed_comments, notifications, admin, created_at')
             .eq('id', userId)
             .abortSignal(AbortSignal.timeout(10000))
             .single(),
@@ -148,6 +153,8 @@ export const useAuthStore = defineStore('auth', () => {
             firstName: data.first_name,
             lastName: data.last_name,
             avatarImg: data.avatar_img ?? null,
+            telegramUrl: data.telegram_url ?? null,
+            instagramUrl: data.instagram_url ?? null,
             hideScores: data.hide_scores ?? true,
             favoriteTeams: Array.isArray(data.favorites_teams) ? data.favorites_teams : [],
             favoritePlayers: normalizeFavoritePlayers(data.favorites_players),
@@ -188,6 +195,8 @@ export const useAuthStore = defineStore('auth', () => {
                     const updated = payload.new as {
                         first_name?: string
                         last_name?: string
+                        telegram_url?: string | null
+                        instagram_url?: string | null
                         avatar_img?: string | null
                         hide_scores?: boolean
                         favorites_teams?: string[]
@@ -207,6 +216,8 @@ export const useAuthStore = defineStore('auth', () => {
                         firstName: updated.first_name ?? user.value.firstName,
                         lastName: updated.last_name ?? user.value.lastName,
                         avatarImg: updated.avatar_img ?? user.value.avatarImg,
+                        telegramUrl: updated.telegram_url !== undefined ? updated.telegram_url : user.value.telegramUrl,
+                        instagramUrl: updated.instagram_url !== undefined ? updated.instagram_url : user.value.instagramUrl,
                         hideScores: updated.hide_scores ?? user.value.hideScores,
                         favoriteTeams: updated.favorites_teams ?? user.value.favoriteTeams,
                         favoritePlayers: updated.favorites_players
@@ -595,6 +606,20 @@ export const useAuthStore = defineStore('auth', () => {
         if (error) throw error
     }
 
+    const updateProfileDetails = async (details: { firstName: string; lastName: string; telegramUrl: string; instagramUrl: string }) => {
+        const owner = user.value?.id
+        if (!owner) throw new Error('Войдите в аккаунт')
+        const firstName = details.firstName.trim(), lastName = details.lastName.trim()
+        if (!firstName || !lastName || firstName.length > 100 || lastName.length > 100) throw new Error('Укажите имя и фамилию длиной до 100 символов.')
+        const telegramUrl = normalizeSocialLink(details.telegramUrl, 'telegram')
+        const instagramUrl = normalizeSocialLink(details.instagramUrl, 'instagram')
+        const { data, error } = await supabase.from('profiles').update({ first_name: firstName, last_name: lastName, telegram_url: telegramUrl, instagram_url: instagramUrl }).eq('id', owner).select('id').single()
+        if (error || !data) throw new Error('Не удалось сохранить профиль. Попробуйте ещё раз.')
+        if (user.value?.id !== owner) return
+        user.value = { ...user.value, firstName, lastName, telegramUrl, instagramUrl }
+        saveToCache(user.value)
+    }
+
     const logout = async () => {
         authGeneration++
         try {
@@ -667,6 +692,7 @@ export const useAuthStore = defineStore('auth', () => {
         resendRegistrationCode,
         logout,
         subscribeAuthState,
+        updateProfileDetails,
         updateHideScores,
         updateFavoriteTeams,
         toggleFavoriteTeam,

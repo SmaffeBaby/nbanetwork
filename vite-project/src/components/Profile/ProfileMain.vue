@@ -81,6 +81,17 @@
         />
       </div>
 
+      <fieldset class="space-y-3 rounded-xl border border-slate-200 p-4">
+        <legend class="px-1 text-sm font-semibold">Социальные сети</legend>
+        <p class="text-xs text-slate-500">Ссылки видны другим пользователям в вашем публичном профиле. Чтобы убрать ссылку, очистите поле.</p>
+        <label class="block text-sm text-slate-600">Telegram
+          <input v-model="form.telegramUrl" :disabled="!isEditing" placeholder="https://t.me/username или @username" autocomplete="off" class="mt-1 w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+        </label>
+        <label class="block text-sm text-slate-600">Instagram
+          <input v-model="form.instagramUrl" :disabled="!isEditing" placeholder="https://www.instagram.com/username/" autocomplete="off" class="mt-1 w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+        </label>
+      </fieldset>
+
       <ProfileFavoriteTeams />
 
       <ProfileSubscriptions />

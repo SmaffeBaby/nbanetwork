@@ -16,7 +16,7 @@
               v-if="profile.avatar_img"
               :src="profile.avatar_img"
               alt="User avatar"
-              class="h-24 w-24 rounded-full object-cover ring-4 ring-gray-100 sm:h-28 sm:w-28"
+              class="h-24 w-24 shrink-0 rounded-full object-cover ring-4 ring-gray-100 sm:h-28 sm:w-28"
           >
 
           <div
@@ -26,11 +26,15 @@
             <span class="text-2xl font-bold text-gray-600 sm:text-3xl">{{ initials }}</span>
           </div>
 
-          <div class="min-w-0">
-            <h1 class="m-0 break-words text-2xl font-black leading-tight text-gray-900 sm:text-3xl">
+          <div class="min-w-0 w-full">
+            <h1 style="margin: 0" class="m-0 break-words text-2xl font-black leading-tight text-gray-900 sm:text-3xl">
               {{ fullName }}
             </h1>
-            <p class="mt-1 text-sm font-medium text-gray-500">
+            <PublicProfileExperience ref="experiencePanel" :profile-id="profile.id" :watched-count="watchedGames.length" :top-team-count="topWatchedTeam?.count ?? 0" :rules="progressRules" />
+            <div v-if="socialLinks.length" class="mt-3 flex flex-wrap justify-center gap-2 md:justify-start">
+              <a v-for="link in socialLinks" :key="link.label" :href="link.url" target="_blank" rel="noopener noreferrer nofollow ugc" class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:border-blue-200 hover:text-blue-700">{{ link.label }} <span aria-hidden="true">↗</span></a>
+            </div>
+            <p class="mt-2 text-sm font-medium text-gray-500">
               {{ registeredSince }}
             </p>
           </div>
@@ -55,6 +59,7 @@
       <ProfileSubscriptions v-if="isOwnProfile" />
 
       <PublicProfileProgressSummary
+          @open-achievements="category => experiencePanel?.openCategory(category)"
           :watched-count="watchedGames.length"
           :top-team-count="topWatchedTeam?.count ?? 0"
           :top-team-abbr="topWatchedTeam?.abbr"
@@ -91,12 +96,14 @@ import ProfileSubscriptions from '../../Profile/ProfileSubscriptions.vue'
 import FavoriteTeam from './FavoriteTeam.vue'
 import FavoritePlayers from './FavoritePlayers.vue'
 import PublicProfileGameList from './PublicProfileGameList.vue'
+import PublicProfileExperience from './PublicProfileExperience.vue'
+import { normalizeSocialLink } from '../../../utils/socialLinks'
 import PublicProfileProgressSummary from './PublicProfileProgressSummary.vue'
 import PublicProfileWatchedStats from './PublicProfileWatchedStats.vue'
 import ProfileLikedArticles from '../../Profile/ProfileLikedArticles.vue'
 import { usePublicProfile } from '../../../composables/NBA/PublicProfile/usePublicProfile'
 import { useProfileProgressRules } from '../../../composables/NBA/PublicProfile/useProfileProgressRules'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const {
   profile,
@@ -126,8 +133,20 @@ const {
   deleteRule: deleteProgressRule
 } = useProfileProgressRules()
 
+const experiencePanel = ref<InstanceType<typeof PublicProfileExperience> | null>(null)
 const auth = useAuthStore()
 const isOwnProfile = computed(() => Boolean(profile.value && auth.user?.id === profile.value.id))
+
+const socialLinks = computed(() => {
+  const links: { label: string; url: string }[] = []
+  for (const [network, value] of [['telegram', profile.value?.telegram_url], ['instagram', profile.value?.instagram_url]] as const) {
+    try {
+      const url = normalizeSocialLink(value, network)
+      if (url) links.push({ label: network === 'telegram' ? 'Telegram' : 'Instagram', url })
+    } catch { /* Do not render invalid legacy links. */ }
+  }
+  return links
+})
 
 const topWatchedTeam = computed(() => {
   const teams = new Map<string, { abbr: string, count: number }>()

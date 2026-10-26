@@ -2,6 +2,7 @@
   <section class="grid gap-4 md:grid-cols-2">
     <PublicProfileProgressCard
         title="Прогресс просмотров"
+        @open-achievements="$emit('open-achievements', 'watched_games')"
         :count="watchedCount"
         :rule="watchedRule"
         :level="watchedLevel"
@@ -10,6 +11,7 @@
 
     <PublicProfileProgressCard
         title="Прогресс команды"
+        @open-achievements="$emit('open-achievements', 'top_team')"
         :count="topTeamCount"
         :rule="teamRule"
         :level="teamLevel"
@@ -28,6 +30,8 @@ import type {
 } from '../../../composables/NBA/PublicProfile/useProfileProgressRules'
 import PublicProfileProgressCard from './PublicProfileProgressCard.vue'
 
+defineEmits<{ 'open-achievements': [category: ProfileProgressCategory] }>()
+
 const props = defineProps<{
   watchedCount: number
   topTeamCount: number
@@ -40,7 +44,7 @@ const findProgressRule = (category: ProfileProgressCategory, count: number) => {
       .filter(rule => rule.category === category)
       .sort((a, b) => a.max_games - b.max_games)
 
-  return categoryRules.find(rule => count <= rule.max_games) ?? categoryRules.at(-1) ?? null
+  return categoryRules.find(rule => count < rule.max_games) ?? categoryRules.at(-1) ?? null
 }
 
 const getLevel = (category: ProfileProgressCategory, count: number) => {
