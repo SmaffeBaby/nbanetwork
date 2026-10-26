@@ -563,62 +563,36 @@ export const useAuthStore = defineStore('auth', () => {
             community: boolean
         }
     }) => {
-        const { data: authData, error } = await supabase.auth.signUp({
-            email: data.email,
-            password: data.password
+        const { error } = await supabase.auth.signUp({
+            email: data.email.trim(),
+            password: data.password,
+            options: { data: {
+                registration_version: 1,
+                first_name: data.firstName.trim(),
+                last_name: data.lastName.trim(),
+                consents: data.consents
+            } }
         })
         if (error) throw error
-        if (!authData.user) throw new Error('No user')
-        setAccessToken(authData.session?.access_token)
+        // No profile/session until the email code is verified. The database creates
+        // the profile and queues both success messages in the confirmation transaction.
+    }
 
-        const { error: profileError } = await supabase.from('profiles').insert({
-            id: authData.user.id,
-            email: data.email,
-            first_name: data.firstName,
-            last_name: data.lastName,
-            avatar_img: null,
-            hide_scores: true,
-            favorites_teams: [],
-            favorites_players: [],
-            favorites_games: [],
-            watched_games: [],
-            following_profiles: [],
-            notify_followed_comments: false,
-            notifications: [],
-            admin: false,
-            accepted_terms: data.consents.terms,
-            accepted_privacy: data.consents.privacy,
-            accepted_cookies: data.consents.cookies,
-            accepted_trademark: data.consents.trademark,
-            accepted_copyright: data.consents.copyright,
-            accepted_community_policy: data.consents.community,
-            policy_acceptance_version: 1,
-            policy_accepted_at: new Date().toISOString()
-        })
+    const verifyRegistration = async (email: string, token: string) => {
+        const { data, error } = await supabase.auth.verifyOtp({ email: email.trim(), token, type: 'signup' })
+        if (error) throw error
+        if (!data.user || !data.session) throw new Error('Не удалось подтвердить регистрацию')
+        setAccessToken(data.session.access_token)
+        const fresh = await fetchProfile(data.user.id, data.user.email ?? email)
+        user.value = fresh
+        initialized = true
+        saveToCache(fresh)
+        await subscribeToProfile(data.user.id)
+    }
 
-        if (profileError) throw profileError
-
-        const newUser: AppUser = {
-            id: authData.user.id,
-            email: data.email,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            avatarImg: null,
-            hideScores: true,
-            favoriteTeams: [],
-            favoritePlayers: [],
-            favoriteGames: [],
-            watchedGames: [],
-            followingProfiles: [],
-            notifyFollowedComments: false,
-            notifications: [],
-            isAdmin: false,
-            createdAt: new Date().toISOString()
-        }
-
-        user.value = newUser
-        saveToCache(newUser)
-        await subscribeToProfile(authData.user.id)
+    const resendRegistrationCode = async (email: string) => {
+        const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() })
+        if (error) throw error
     }
 
     const logout = async () => {
@@ -689,6 +663,8 @@ export const useAuthStore = defineStore('auth', () => {
         init,
         signIn,
         signUp,
+        verifyRegistration,
+        resendRegistrationCode,
         logout,
         subscribeAuthState,
         updateHideScores,

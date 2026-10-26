@@ -194,3 +194,48 @@ merge, and append only missing game IDs/matches. Preserve existing production en
 unrelated fields (especially favorites); never replace the production profile/database with
 a local dump. `set_profile_game` also preserves unrelated legacy entries with absent IDs or
 null comparisons. Regression check: `backend/tests/preserve-legacy-game-marks.sql` (rollback).
+
+
+## Registration email and password recovery
+
+Mail is sent from `basketsfera@inbox.ru` through `smtp.mail.ru:465` with TLS.
+Set `SMTP_USER`, `SMTP_PASS` (Mail.ru application password), `SMTP_ADMIN_EMAIL`,
+`SMTP_HOST`, `SMTP_PORT`, and `SMTP_SENDER_NAME` in the ignored `supabase/.env`.
+Never put SMTP credentials in Vite variables, tracked files or browser code.
+`ENABLE_EMAIL_AUTOCONFIRM=false` is required. Auth sends a six-digit code valid for
+10 minutes, with a 60-second resend interval. Auth fetches the confirmation and
+recovery templates from the backend's internal HTTP endpoint.
+
+Apply `supabase/migrations/20261026230000_confirmed_registration_mail.sql` before
+running the updated app. It creates profiles only after email confirmation and queues
+separate welcome/admin notifications. The backend retries failed notifications;
+SMTP delivery is at least once (a crash immediately after sending may cause a duplicate).
+Existing accounts remain unchanged. Recovery uses a one-time token, a new password
+and matching confirmation; it ends the recovery session after saving.
+
+Rebuild `backend` and `frontend`, then recreate `auth` with the updated server env:
+
+```sh
+docker exec -i nba-dashboard-db-1 psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/migrations/20261026230000_confirmed_registration_mail.sql
+docker compose up -d --build --no-deps backend frontend
+docker compose --env-file supabase/.env -f supabase/docker-compose.yml -p nba-dashboard up -d --no-deps auth
+```
+
+For production, set `SITE_URL` to the public HTTPS origin and add its exact
+`/reset-password` URL to `ADDITIONAL_REDIRECT_URLS`. Also use the public Supabase URL
+in `API_EXTERNAL_URL` and `VITE_SUPABASE_URL`; localhost URLs work only on this computer.
+Serve the website over HTTPS in production.
+
+Only outgoing TCP 465 to Mail.ru is needed for SMTP. Do not publish a local SMTP,
+IMAP or POP port. Browser traffic uses the site's HTTP/HTTPS and configured Supabase
+API endpoint. The local stack publishes HTTP on 80 and the Supabase gateway on 8010;
+backend 3000 and Python 8000 are bound to loopback. A production reverse proxy may
+serve both website and Supabase over 443, with 8010 kept private.
+
+Validation:
+
+```sh
+node --test backend/tests/auth-mail.test.js
+docker exec -i nba-dashboard-db-1 psql -U postgres -d postgres -v ON_ERROR_STOP=1 < backend/tests/auth-registration.sql
+npm run build --prefix vite-project
+```

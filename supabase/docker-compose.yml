@@ -164,6 +164,15 @@ services:
       GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP}
       GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: ${ENABLE_ANONYMOUS_USERS}
       GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM}
+      GOTRUE_PASSWORD_MIN_LENGTH: 8
+      GOTRUE_MAILER_OTP_LENGTH: 6
+      GOTRUE_MAILER_OTP_EXP: 600
+      GOTRUE_SMTP_MAX_FREQUENCY: 60s
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: 30
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: http://backend:3000/internal/auth-email/confirmation.html
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: http://backend:3000/internal/auth-email/recovery.html
+      GOTRUE_MAILER_SUBJECTS_CONFIRMATION: Basketsfera — код подтверждения регистрации
+      GOTRUE_MAILER_SUBJECTS_RECOVERY: Basketsfera — сброс пароля
 
       # Uncomment to bypass nonce check in ID Token flow. Commonly set to true when using Google Sign In on mobile.
       # GOTRUE_EXTERNAL_SKIP_NONCE_CHECK: "true"

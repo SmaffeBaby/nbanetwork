@@ -106,6 +106,7 @@
     </div>
   </template>
 
+  <ProfileSecurity v-else-if="activeTab === 'security'" />
   <ProfileLikedArticles v-else-if="activeTab === 'likedArticles'" />
 </template>
 
@@ -115,6 +116,7 @@ import { RouterLink } from 'vue-router'
 import { useProfile } from '../../composables/Profile/useProfile'
 import ProfileFavoriteTeams from './ProfileFavoriteTeams.vue'
 import ProfileSubscriptions from './ProfileSubscriptions.vue'
+import ProfileSecurity from './ProfileSecurity.vue'
 import ProfileLikedArticles from './ProfileLikedArticles.vue'
 
 const props = defineProps({

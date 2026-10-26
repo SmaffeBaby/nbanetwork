@@ -13,6 +13,7 @@ import { getTodayDateKey } from '../composables/NBA/games/useGamesByDate'
 const routes = [
     { path: '/', component: Home },
     { path: '/profile', component: Profile },
+    { path: '/reset-password', name: 'ResetPassword', component: () => import('../views/ResetPassword.vue') },
     { path: '/profile/:id', name: 'PublicProfile', component: () => import('../views/PublicProfile.vue') },
     { path: '/standings', component: Standings },
     { path: '/playoffs', name: 'Playoffs', component: () => import('../views/Playoffs.vue')},

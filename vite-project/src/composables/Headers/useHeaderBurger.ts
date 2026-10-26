@@ -40,6 +40,11 @@ export function useHeaderBurger() {
   } = useHeader()
 
   const {
+    verificationCode,
+    busy,
+    resendCooldown,
+    handleVerify,
+    handleResend,
     email,
     password,
     firstName,
@@ -162,6 +167,11 @@ export function useHeaderBurger() {
     consentModels,
     conferenceTeams,
     DashboardIcon,
+    verificationCode,
+    busy,
+    resendCooldown,
+    handleVerify,
+    handleResend,
     email,
     featuredLinks,
     firstName,

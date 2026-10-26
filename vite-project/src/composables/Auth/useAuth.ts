@@ -13,6 +13,8 @@ export function useAuth() {
         init: () => store.init(),
         signIn: store.signIn,
         signUp: store.signUp,
+        verifyRegistration: store.verifyRegistration,
+        resendRegistrationCode: store.resendRegistrationCode,
         logout: store.logout,
         subscribeAuthState: store.subscribeAuthState,
         updateHideScores: store.updateHideScores,

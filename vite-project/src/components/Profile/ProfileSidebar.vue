@@ -12,7 +12,7 @@
       </button>
 
       <button
-          class="min-w-fit whitespace-nowrap rounded-lg px-4 py-2 text-sm opacity-50 transition cursor-not-allowed md:text-base"
+          class="min-w-fit whitespace-nowrap rounded-lg px-4 py-2 text-sm transition md:text-base"
           :class="activeTab === 'security' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'"
           @click="setTab('security')"
       >

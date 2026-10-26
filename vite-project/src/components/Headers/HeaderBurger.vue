@@ -275,12 +275,12 @@
 
         <div class="mt-5 space-y-3">
           <input v-model="email" type="email" placeholder="Email" class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-500" />
-          <input v-model="password" type="password" placeholder="Пароль" class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+          <PasswordInput v-model="password" />
         </div>
 
         <div class="mt-4 flex gap-2">
-          <button class="flex-1 rounded-lg bg-blue-600 py-2 text-white transition hover:bg-blue-700" @click="loginFromDrawer">Войти</button>
-          <button class="flex-1 rounded-lg bg-slate-200 py-2 text-slate-800 transition hover:bg-slate-300" @click="sendPasswordReset">Сброс</button>
+          <button class="flex-1 rounded-lg bg-blue-600 py-2 text-white transition hover:bg-blue-700" :disabled="busy" @click="loginFromDrawer">Войти</button>
+          <button class="flex-1 rounded-lg bg-slate-200 py-2 text-slate-800 transition hover:bg-slate-300" @click="sendPasswordReset">Сбросить пароль</button>
         </div>
 
         <button class="mt-3 w-full rounded-lg border py-2 text-slate-700 transition hover:bg-green-600 hover:text-white" @click="showForm = 'register'">
@@ -305,7 +305,7 @@
           <input v-model="firstName" type="text" placeholder="Имя" class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-green-500" />
           <input v-model="lastName" type="text" placeholder="Фамилия" class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-green-500" />
           <input v-model="email" type="email" placeholder="Email" class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-green-500" />
-          <input v-model="password" type="password" placeholder="Пароль" class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-green-500" />
+          <PasswordInput v-model="password" autocomplete="new-password" />
         </div>
 
         <div class="mt-5 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -331,21 +331,30 @@
         </div>
 
         <div class="mt-5 flex gap-2">
-          <button class="flex-1 rounded-lg bg-green-600 py-2 text-white transition hover:bg-green-700" @click="registerFromDrawer">Зарегистрироваться</button>
+          <button class="flex-1 rounded-lg bg-green-600 py-2 text-white transition hover:bg-green-700" :disabled="busy" @click="registerFromDrawer">Зарегистрироваться</button>
           <button class="flex-1 rounded-lg bg-slate-200 py-2 text-slate-800 transition hover:bg-slate-300" @click="showForm = 'login'">Назад</button>
         </div>
       </div>
     </div>
   </Teleport>
+  <VerifyRegistrationDialog :open="showForm === 'verify'" :email="email" v-model:code="verificationCode" :busy="busy" :cooldown="resendCooldown" @verify="handleVerify" @resend="handleResend" @close="showForm = ''" />
+
 </template>
 
 <script setup lang="ts">
+import PasswordInput from '../Auth/PasswordInput.vue'
+import VerifyRegistrationDialog from '../Auth/VerifyRegistrationDialog.vue'
 import { RouterLink } from 'vue-router'
 import NotificationsBell from './NotificationsBell.vue'
 import NbaMomLogo from '../Logo/NbaMomLogo.vue'
 import { useHeaderBurger } from '../../composables/Headers/useHeaderBurger'
 
 const {
+  verificationCode,
+  busy,
+  resendCooldown,
+  handleVerify,
+  handleResend,
   BagIcon,
   CalendarIcon,
   categoryLinks,

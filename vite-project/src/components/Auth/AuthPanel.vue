@@ -73,16 +73,11 @@
               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
           />
 
-          <input
-              v-model="password"
-              type="password"
-              placeholder="Пароль"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
+          <PasswordInput v-model="password" />
 
           <div class="flex gap-2">
             <button
-                @click="handleLogin"
+                :disabled="busy" @click="handleLogin"
                 class="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition"
             >
               Войти
@@ -92,7 +87,7 @@
                 @click="sendPasswordReset"
                 class="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 active:scale-95 transition"
             >
-              Сброс
+              Сбросить пароль
             </button>
           </div>
 
@@ -128,7 +123,7 @@
             <input v-model="firstName" type="text" placeholder="Имя" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
             <input v-model="lastName" type="text" placeholder="Фамилия" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
             <input v-model="email" type="email" placeholder="Email" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
-            <input v-model="password" type="password" placeholder="Пароль" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"/>
+            <PasswordInput v-model="password" autocomplete="new-password" />
           </div>
 
           <div class="mt-5 space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-left">
@@ -156,7 +151,7 @@
 
           <div class="mt-5 flex gap-2">
             <button
-                @click="handleRegister"
+                :disabled="busy" @click="handleRegister"
                 class="flex-1 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 active:scale-95 transition"
             >
               Зарегистрироваться
@@ -177,13 +172,22 @@
     </template>
 
   </div>
+  <VerifyRegistrationDialog :open="showForm === 'verify'" :email="email" v-model:code="verificationCode" :busy="busy" :cooldown="resendCooldown" @verify="handleVerify" @resend="handleResend" @close="showForm = ''" />
+
 </template>
 
 <script setup lang="ts">
+import PasswordInput from './PasswordInput.vue'
+import VerifyRegistrationDialog from './VerifyRegistrationDialog.vue'
 import { RouterLink } from 'vue-router'
 import { useAuthPanel } from '../../composables/Auth/useAuthPanel.ts'
 
 const {
+  verificationCode,
+  busy,
+  resendCooldown,
+  handleVerify,
+  handleResend,
   email,
   password,
   firstName,

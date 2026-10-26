@@ -26,6 +26,7 @@ const teamAboutRoutes = require('./routes/teamAbout')
 const app = express()
 const PORT = process.env.PORT || 3000
 
+app.use('/internal/auth-email', express.static(require('path').join(__dirname, 'templates/auth'), { index: false }))
 app.use(cors())
 app.use(express.json({ limit: '40mb' }))
 
@@ -74,3 +75,5 @@ app.listen(PORT, () => {
 require('./services/contracts/importQueue').startImportQueue()
 
 require('./services/gamePredictions').startPredictionMaintenance()
+
+require('./services/authMail').startAuthMail()
