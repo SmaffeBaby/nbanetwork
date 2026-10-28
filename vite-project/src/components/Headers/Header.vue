@@ -5,7 +5,7 @@
         <NbaMomLogo alt="Basketsfera Logo" class="h-[48px] w-[178px] 2xl:w-[210px]" />
       </RouterLink>
 
-      <nav class="mx-auto flex h-full items-center gap-[28px] text-[16px] font-bold text-slate-700 2xl:gap-[44px] 2xl:text-[18px]">
+      <nav class="mx-auto flex h-full items-center gap-[18px] text-[16px] font-bold text-slate-700 2xl:gap-[30px] 2xl:text-[18px]">
         <RouterLink
             :to="newsLink.to"
             class="flex h-full items-center border-b-2 border-transparent px-1 transition hover:text-blue-700"
@@ -99,6 +99,8 @@
             </div>
           </div>
         </div>
+
+        <RouterLink to="/fantasy" class="flex h-full items-center border-b-2 border-transparent px-1 transition hover:text-blue-700" :class="$route.path === '/fantasy' ? 'border-blue-600 text-blue-700' : ''">Фентези</RouterLink>
 
         <RouterLink
             :to="playersLink.to"

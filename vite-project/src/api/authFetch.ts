@@ -54,7 +54,7 @@ async function refreshAccessToken() {
 
 async function requestJson(path: string, options: RequestInit, token: string | null) {
     const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), (path.startsWith('/api/profile-games/') || path.startsWith('/api/game-predictions/')) ? 30000 : REQUEST_TIMEOUT_MS)
+    const timeoutId = window.setTimeout(() => controller.abort(), (path.startsWith('/api/profile-games/') || path.startsWith('/api/game-predictions/') || path.startsWith('/api/fantasy')) ? 30000 : REQUEST_TIMEOUT_MS)
 
     const headers = new Headers(options.headers)
     headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json')

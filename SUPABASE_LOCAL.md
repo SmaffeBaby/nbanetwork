@@ -276,3 +276,26 @@ node --test vite-project/tests/profile-experience.test.mjs
 node --test backend/tests/experience.test.js
 docker exec -i nba-dashboard-db-1 psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < backend/tests/profile-experience.sql
 ```
+
+## Fantasy league
+
+Apply `supabase/migrations/20261028001000_fantasy.sql` to an existing database, then rebuild backend and frontend. New installations include this schema in `100-nba-dashboard.sql`; production deployment applies the migration automatically.
+
+Fantasy lives at `/fantasy`. Each authenticated profile may confirm one immutable PG/SG/SF/PF/C lineup per Moscow calendar week. ESPN roster injuries are rechecked on confirmation. Generic G and F positions permit PG/SG and SF/PF respectively. Only teams with scheduled games in the week appear; a selected player must have a future game before Sunday 20:00 Moscow time.
+
+Scoring v1 per completed game: PTS + 1.2 REB + 1.5 AST + 3 STL + 3 BLK − TO − 0.5 missed FG − missed FT + 3 for a win, plus 3 for a double-double or 6 for a triple-double (not both). DNP players earn no win bonus. The total sums player appearances in games starting after confirmation. Fantasy points also award profile XP: after each completed game, the positive sum earned by a profile’s five players becomes XP at 1:1. Negative sums only affect the fantasy ranking. The unique (user_id, kind, game_id) award prevents duplicates; fractional XP is preserved. Apply `20261028002000_fantasy_experience.sql` after the original migration. Existing game snapshots are reconciled automatically.
+
+The backend worker checks every minute and stores each final player box score once, using `(week, game_id, player_id)` to prevent duplicates. The database rejects score writes at or after Sunday 20:00 Moscow time. Results freeze from the snapshots received by that deadline; unfinished/unreceived games and later provider corrections are excluded. This means an upstream outage near the deadline can omit a match. The backend must stay running during the week. No scores are backfilled into closed weeks. Confirmed weeks, including zero-score weeks, remain in the profile. Tied scores share rank.
+
+Checks:
+
+```sh
+node --test backend/tests/fantasy.test.js
+docker exec -i nba-dashboard-db-1 psql -U postgres -d postgres -v ON_ERROR_STOP=1 < backend/tests/fantasy.sql
+```
+
+The SQL checks roll back all test records.
+
+The Fantasy catalog reuses `PublicProfileTeamFilter` and only offers teams in that week’s schedule. Player cards open a dialog with current regular-season statistics, games played, a TanStack Charts radar (each axis has an explicit normalization ceiling), links to player profiles, and linked weekly match cards. Fantasy season 1 starts the week of 26 October 2026; the following season starts on the Monday containing 26 October of the following year.
+
+Fantasy season detail ranks are computed across the full ESPN regular-season population with games played, in descending order (also turnovers); equal raw values share competition rank. Shooting percentage ranks require at least one corresponding attempt, without official NBA qualification thresholds. Two-point totals are FG minus 3P, and their accuracy uses those totals. Offensive/defensive rebounds use current-season full athlete totals divided by games played. Since ESPN omits these fields from its compact leaderboard, complete league tables sorted by each rebound metric supply the order. A binary search of full athlete totals finds the first tied position, including large zero-value ties. Incomplete tables or missing comparison values never produce a guessed rank. Season sources are cached for 15 minutes.

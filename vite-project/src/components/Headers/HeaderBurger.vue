@@ -90,6 +90,7 @@
 
     <nav class="py-5">
       <ul class="space-y-2 font-medium">
+        <li><RouterLink to="/fantasy" class="flex items-center rounded-lg p-3 font-bold text-slate-700 hover:bg-white/70" :class="{ 'bg-white/70 text-blue-700': $route.path === '/fantasy' }" @click="closeDrawer">🏀 <span class="ms-3">Фентези</span></RouterLink></li>
         <li>
           <RouterLink
               :to="newsLink.to"

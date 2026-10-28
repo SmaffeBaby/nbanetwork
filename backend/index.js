@@ -38,6 +38,7 @@ app.get('/', (req, res) => {
 app.use('/api', require('./routes/gameIdentity'))
 app.use('/api', require('./routes/profileGames'))
 app.use('/api', require('./routes/profileExperience'))
+app.use('/api', require('./routes/fantasy'))
 app.use('/api', require('./routes/gamePreview'))
 app.use('/api', require('./routes/patchNotes'))
 app.use('/api', gamesRoutes)
@@ -80,3 +81,5 @@ require('./services/gamePredictions').startPredictionMaintenance()
 require('./services/authMail').startAuthMail()
 
 require('./services/experienceBackfill').startExperienceBackfill()
+
+require('./services/fantasy/maintenance').startFantasyMaintenance()

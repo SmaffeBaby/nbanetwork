@@ -1125,3 +1125,243 @@ SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname='cleanup-game-predicti
 SELECT cron.schedule('cleanup-game-predictions','*/15 * * * *',$$SELECT public.cleanup_game_predictions();$$);
 NOTIFY pgrst,'reload schema';
 COMMIT;
+
+-- Fantasy league
+BEGIN;
+-- Fantasy v1: server-owned lineups and immutable, idempotent game snapshots.
+create table if not exists public.fantasy_entries (
+ user_id uuid not null references public.profiles(id) on delete cascade,
+ week date not null,
+ ends_at timestamptz not null,
+ confirmed_at timestamptz not null default clock_timestamp(),
+ lineup jsonb not null check (jsonb_typeof(lineup) = 'array' and jsonb_array_length(lineup) = 5),
+ primary key (user_id, week)
+);
+create table if not exists public.fantasy_scores (
+ week date not null,
+ game_id text not null,
+ player_id text not null,
+ starts_at timestamptz not null,
+ observed_at timestamptz not null,
+ points numeric not null,
+ stats jsonb not null,
+ primary key (week, game_id, player_id)
+);
+create index if not exists fantasy_entries_ends on public.fantasy_entries(ends_at);
+alter table public.fantasy_entries enable row level security;
+alter table public.fantasy_scores enable row level security;
+revoke all on public.fantasy_entries, public.fantasy_scores from public, anon, authenticated;
+grant all on public.fantasy_entries, public.fantasy_scores to service_role;
+
+-- The DB clock enforces the deadline even if an upstream request runs late.
+create or replace function public.guard_fantasy_write() returns trigger language plpgsql set search_path = public as $$
+begin
+ if TG_TABLE_NAME = 'fantasy_entries' then
+  if TG_OP <> 'INSERT' or new.ends_at <= clock_timestamp() then raise exception 'Fantasy lineup locked'; end if;
+  new.confirmed_at := clock_timestamp();
+ else
+  if clock_timestamp() >= (new.week::timestamp at time zone 'Europe/Moscow') + interval '6 days 20 hours' then raise exception 'Fantasy week closed'; end if;
+  new.observed_at := clock_timestamp();
+ end if;
+ return new;
+end $$;
+drop trigger if exists fantasy_entry_guard on public.fantasy_entries;
+create trigger fantasy_entry_guard before insert or update on public.fantasy_entries for each row execute function public.guard_fantasy_write();
+drop trigger if exists fantasy_score_guard on public.fantasy_scores;
+create trigger fantasy_score_guard before insert or update on public.fantasy_scores for each row execute function public.guard_fantasy_write();
+
+create or replace view public.fantasy_results with (security_invoker=true) as
+ select e.user_id,e.week,e.ends_at,e.confirmed_at,e.lineup,
+ coalesce(sum(s.points),0) as points, count(s.game_id) as player_games, max(s.observed_at) as updated_at
+ from public.fantasy_entries e
+ left join public.fantasy_scores s on s.week=e.week and s.starts_at>=e.confirmed_at and s.starts_at<e.ends_at
+ and exists(select 1 from jsonb_array_elements(e.lineup) p where p->>'id'=s.player_id)
+ group by e.user_id,e.week;
+revoke all on public.fantasy_results from public, anon, authenticated;
+grant select on public.fantasy_results to service_role;
+
+create or replace function public.read_fantasy(p_week date, p_user uuid default null) returns jsonb
+language sql stable security definer set search_path=public as $$
+ with ranked as (
+  select r.*, rank() over (partition by week order by points desc) as rank from fantasy_results r
+ ), leaders as (
+  select r.user_id,r.points,r.rank,r.player_games,p.first_name,p.last_name from ranked r join profiles p on p.id=r.user_id
+  where r.week=p_week order by r.points desc,r.confirmed_at,r.user_id limit 100
+ ), history as (
+  select r.*, (select jsonb_object_agg(p->>'id',coalesce((select sum(s.points) from fantasy_scores s where s.week=r.week and s.player_id=p->>'id' and s.starts_at>=r.confirmed_at and s.starts_at<r.ends_at),0)) from jsonb_array_elements(r.lineup) p) as player_points
+  from ranked r where user_id=p_user order by week desc
+ ), overall as (
+  select r.user_id,sum(r.points) as points,count(*) as weeks from fantasy_results r group by r.user_id
+ ), overall_top as (
+  select o.*,rank() over(order by o.points desc) as rank,p.first_name,p.last_name from overall o join profiles p on p.id=o.user_id
+  order by o.points desc,o.user_id limit 100
+ )
+ select jsonb_build_object(
+  'leaderboard',coalesce((select jsonb_agg(l) from leaders l),'[]'::jsonb),
+  'overall',coalesce((select jsonb_agg(o) from overall_top o),'[]'::jsonb),
+  'history',coalesce((select jsonb_agg(h) from history h),'[]'::jsonb),
+  'participants',(select count(*) from ranked where week=p_week)
+ );
+$$;
+revoke all on function public.read_fantasy(date,uuid) from public,anon,authenticated;
+grant execute on function public.read_fantasy(date,uuid) to service_role;
+
+NOTIFY pgrst, 'reload schema';
+COMMIT;
+
+-- Profile experience foundation
+BEGIN;
+SELECT set_config('basketsfera.experience_initial', (to_regclass('public.profile_experience_events') IS NULL)::text, true);
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS telegram_url text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS instagram_url text;
+DO $$ BEGIN ALTER TABLE public.profiles ADD CONSTRAINT profiles_telegram_url_check CHECK (telegram_url IS NULL OR telegram_url ~ '^https://t[.]me/[A-Za-z0-9_]{1,64}$'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE public.profiles ADD CONSTRAINT profiles_instagram_url_check CHECK (instagram_url IS NULL OR instagram_url ~ '^https://www[.]instagram[.]com/[A-Za-z0-9_.]{1,30}/$'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE TABLE IF NOT EXISTS public.profile_experience_events (
+ id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+ kind text NOT NULL CHECK (kind IN ('watched','prediction')),
+ game_id text NOT NULL CHECK (game_id ~ '^espn:[0-9]{9}$'),
+ points integer NOT NULL CHECK ((kind='watched' AND points=30) OR (kind='prediction' AND points=100)),
+ details jsonb NOT NULL DEFAULT '{}',
+ created_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE(user_id,kind,game_id)
+);
+CREATE INDEX IF NOT EXISTS profile_experience_history_idx ON public.profile_experience_events(user_id,created_at DESC,id DESC);
+ALTER TABLE public.profile_experience_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.profile_experience_events FROM PUBLIC,anon,authenticated;
+GRANT ALL ON public.profile_experience_events TO service_role;
+GRANT USAGE,SELECT ON SEQUENCE public.profile_experience_events_id_seq TO service_role;
+
+-- Capture only the watched list that existed at migration time. Legacy IDs are resolved by the worker.
+CREATE TABLE IF NOT EXISTS public.profile_experience_backfill (
+ user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+ original_id text NOT NULL,
+ snapshot jsonb NOT NULL,
+ next_attempt_at timestamptz NOT NULL DEFAULT now(),
+ PRIMARY KEY(user_id,original_id)
+);
+ALTER TABLE public.profile_experience_backfill ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.profile_experience_backfill FROM PUBLIC,anon,authenticated;
+GRANT ALL ON public.profile_experience_backfill TO service_role;
+DO $$ BEGIN IF current_setting('basketsfera.experience_initial')='true' THEN
+INSERT INTO public.profile_experience_events(user_id,kind,game_id,points,details)
+ SELECT p.id,'watched','espn:'||regexp_replace(g->>'id','^espn:',''),30,g||'{"backfilled":true}'::jsonb
+ FROM public.profiles p CROSS JOIN LATERAL jsonb_array_elements(p.watched_games) g
+ WHERE g->>'id' ~ '^(espn:)?[0-9]{9}$'
+ ON CONFLICT(user_id,kind,game_id) DO NOTHING;
+INSERT INTO public.profile_experience_backfill(user_id,original_id,snapshot)
+ SELECT p.id,g->>'id',g FROM public.profiles p CROSS JOIN LATERAL jsonb_array_elements(p.watched_games) g
+ WHERE g->>'id' ~ '^(nba:)?[0-9]{8,10}$' AND g->>'id' !~ '^[0-9]{9}$'
+ ON CONFLICT DO NOTHING;
+END IF; END $$;
+
+CREATE OR REPLACE FUNCTION public.set_profile_game(p_user_id uuid,p_kind text,p_game jsonb,p_active boolean,p_aliases text[])
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE p public.profiles%ROWTYPE; fav jsonb; watched jsonb; was_fav boolean; was_watched boolean;
+BEGIN
+ IF p_kind NOT IN ('favorite','watched') OR coalesce(p_game->>'id','') !~ '^espn:[0-9]{9}$' THEN RAISE EXCEPTION 'Invalid game mark'; END IF;
+ SELECT * INTO STRICT p FROM public.profiles WHERE id=p_user_id FOR UPDATE;
+ SELECT EXISTS(SELECT 1 FROM jsonb_array_elements(p.favorites_games) x WHERE x->>'id'=ANY(p_aliases)) INTO was_fav;
+ SELECT EXISTS(SELECT 1 FROM jsonb_array_elements(p.watched_games) x WHERE x->>'id'=ANY(p_aliases)) INTO was_watched;
+ SELECT coalesce(jsonb_agg(x),'[]'::jsonb) INTO fav FROM jsonb_array_elements(p.favorites_games) x WHERE NOT coalesce(x->>'id'=ANY(p_aliases),false);
+ SELECT coalesce(jsonb_agg(x),'[]'::jsonb) INTO watched FROM jsonb_array_elements(p.watched_games) x WHERE NOT coalesce(x->>'id'=ANY(p_aliases),false);
+ IF (p_kind='favorite' AND p_active) OR (p_kind<>'favorite' AND was_fav) THEN fav:=fav||jsonb_build_array(p_game); END IF;
+ IF (p_kind='watched' AND p_active) OR (p_kind<>'watched' AND was_watched) THEN watched:=watched||jsonb_build_array(p_game); END IF;
+ UPDATE public.profiles SET favorites_games=fav,watched_games=watched WHERE id=p_user_id;
+ IF p_kind='watched' AND p_active THEN
+  INSERT INTO public.profile_experience_events(user_id,kind,game_id,points,details) VALUES(p_user_id,'watched',p_game->>'id',30,p_game) ON CONFLICT(user_id,kind,game_id) DO NOTHING;
+ END IF;
+ RETURN jsonb_build_object('favoriteGames',fav,'watchedGames',watched);
+END $$;
+
+ALTER FUNCTION public.set_profile_game(uuid,text,jsonb,boolean,text[]) OWNER TO supabase_admin;
+
+CREATE OR REPLACE FUNCTION public.complete_experience_backfill(p_user_id uuid,p_original_id text,p_game_id text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+BEGIN
+ INSERT INTO public.profile_experience_events(user_id,kind,game_id,points,details)
+ SELECT user_id,'watched',p_game_id,30,snapshot||'{"backfilled":true}'::jsonb FROM public.profile_experience_backfill
+ WHERE user_id=p_user_id AND original_id=p_original_id
+ ON CONFLICT(user_id,kind,game_id) DO NOTHING;
+ DELETE FROM public.profile_experience_backfill WHERE user_id=p_user_id AND original_id=p_original_id;
+END $$;
+
+ALTER TABLE public.game_prediction_polls ADD COLUMN IF NOT EXISTS result_settled_at timestamptz;
+ALTER TABLE public.game_prediction_polls ADD COLUMN IF NOT EXISTS winner_side text CHECK (winner_side IN ('home','away'));
+CREATE OR REPLACE FUNCTION public.settle_game_prediction(p_game_id text,p_starts_at timestamptz,p_winner_side text,p_details jsonb)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE poll public.game_prediction_polls%ROWTYPE;
+BEGIN
+ IF p_winner_side IS NOT NULL AND p_winner_side NOT IN ('home','away') THEN RAISE EXCEPTION 'Invalid winner'; END IF;
+ SELECT * INTO poll FROM public.game_prediction_polls WHERE game_id=p_game_id FOR UPDATE;
+ IF NOT FOUND OR poll.result_settled_at IS NOT NULL THEN RETURN; END IF;
+ UPDATE public.game_prediction_polls SET starts_at=p_starts_at,state='post',completed_at=coalesce(completed_at,now()),checked_at=now(),winner_side=p_winner_side,result_settled_at=now() WHERE game_id=p_game_id;
+ IF p_winner_side IS NOT NULL THEN
+  INSERT INTO public.profile_experience_events(user_id,kind,game_id,points,details)
+  SELECT user_id,'prediction',p_game_id,100,p_details FROM public.game_predictions WHERE game_id=p_game_id AND side=p_winner_side AND updated_at<p_starts_at
+  ON CONFLICT(user_id,kind,game_id) DO NOTHING;
+ END IF;
+END $$;
+CREATE OR REPLACE FUNCTION public.cleanup_game_predictions() RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public AS $$
+ DELETE FROM public.game_prediction_polls WHERE completed_at<now()-interval '1 day' AND result_settled_at IS NOT NULL;
+$$;
+
+CREATE OR REPLACE FUNCTION public.read_profile_experience(p_user_id uuid,p_kind text DEFAULT NULL,p_offset integer DEFAULT 0)
+RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
+ SELECT jsonb_build_object('totalXp',coalesce(sum(points),0),'watchedCount',count(*) FILTER(WHERE kind='watched'),'correctPredictions',count(*) FILTER(WHERE kind='prediction'),
+ 'historyTotal',count(*) FILTER(WHERE p_kind IS NULL OR kind=p_kind),
+ 'history',coalesce((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.created_at DESC,e.id DESC) FROM
+  (SELECT id,kind,game_id,points,details,created_at FROM public.profile_experience_events WHERE user_id=p_user_id AND (p_kind IS NULL OR kind=p_kind) ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET greatest(p_offset,0)) e),'[]'::jsonb))
+ FROM public.profile_experience_events WHERE user_id=p_user_id;
+$$;
+REVOKE ALL ON FUNCTION public.complete_experience_backfill(uuid,text,text),public.settle_game_prediction(text,timestamptz,text,jsonb),public.read_profile_experience(uuid,text,integer) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.complete_experience_backfill(uuid,text,text),public.settle_game_prediction(text,timestamptz,text,jsonb),public.read_profile_experience(uuid,text,integer) TO service_role;
+NOTIFY pgrst,'reload schema';
+COMMIT;
+
+-- Fantasy profile experience
+BEGIN;
+ALTER TABLE public.profile_experience_events DROP CONSTRAINT IF EXISTS profile_experience_events_check;
+ALTER TABLE public.profile_experience_events DROP CONSTRAINT IF EXISTS profile_experience_events_kind_check;
+ALTER TABLE public.profile_experience_events DROP CONSTRAINT IF EXISTS profile_experience_events_points_check;
+ALTER TABLE public.profile_experience_events ALTER COLUMN points TYPE numeric USING points::numeric;
+ALTER TABLE public.profile_experience_events ADD CONSTRAINT profile_experience_events_kind_check CHECK(kind IN ('watched','prediction','fantasy'));
+ALTER TABLE public.profile_experience_events ADD CONSTRAINT profile_experience_events_points_check CHECK((kind='watched' AND points=30) OR (kind='prediction' AND points=100) OR (kind='fantasy' AND points>=0));
+
+-- One award per user and real game; all five players contribute to this award.
+CREATE OR REPLACE FUNCTION public.sync_fantasy_experience() RETURNS void
+LANGUAGE sql SECURITY DEFINER SET search_path=public AS $$
+ WITH awards AS (
+  SELECT e.user_id,s.game_id,greatest(0,sum(s.points)) AS points,
+   jsonb_build_object('week',e.week,'fantasyPoints',sum(s.points),'homeAbbr',max(s.stats->>'homeAbbr'),'awayAbbr',max(s.stats->>'awayAbbr'),
+   'players',jsonb_agg(jsonb_build_object('id',s.player_id,'points',s.points) ORDER BY s.player_id)) AS details
+  FROM public.fantasy_entries e JOIN public.fantasy_scores s ON s.week=e.week AND s.starts_at>=e.confirmed_at AND s.starts_at<e.ends_at
+  AND EXISTS(SELECT 1 FROM jsonb_array_elements(e.lineup) p WHERE p->>'id'=s.player_id)
+  GROUP BY e.user_id,e.week,s.game_id
+ )
+ INSERT INTO public.profile_experience_events(user_id,kind,game_id,points,details)
+ SELECT user_id,'fantasy',game_id,points,details FROM awards a WHERE points>0 OR EXISTS(SELECT 1 FROM public.profile_experience_events x WHERE x.user_id=a.user_id AND x.kind='fantasy' AND x.game_id=a.game_id)
+ ON CONFLICT(user_id,kind,game_id) DO UPDATE SET points=excluded.points,details=excluded.details
+ WHERE profile_experience_events.points IS DISTINCT FROM excluded.points OR profile_experience_events.details IS DISTINCT FROM excluded.details;
+$$;
+CREATE OR REPLACE FUNCTION public.on_fantasy_experience() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+BEGIN PERFORM public.sync_fantasy_experience(); RETURN NULL; END $$;
+DROP TRIGGER IF EXISTS fantasy_experience_award ON public.fantasy_scores;
+CREATE TRIGGER fantasy_experience_award AFTER INSERT OR UPDATE ON public.fantasy_scores FOR EACH STATEMENT EXECUTE FUNCTION public.on_fantasy_experience();
+
+CREATE OR REPLACE FUNCTION public.read_profile_experience(p_user_id uuid,p_kind text DEFAULT NULL,p_offset integer DEFAULT 0)
+RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
+ SELECT jsonb_build_object('totalXp',coalesce(sum(points),0),'watchedCount',count(*) FILTER(WHERE kind='watched'),'correctPredictions',count(*) FILTER(WHERE kind='prediction'),
+ 'fantasyXp',coalesce(sum(points) FILTER(WHERE kind='fantasy'),0),'fantasyGames',count(*) FILTER(WHERE kind='fantasy'),
+ 'historyTotal',count(*) FILTER(WHERE p_kind IS NULL OR kind=p_kind),
+ 'history',coalesce((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.created_at DESC,e.id DESC) FROM
+  (SELECT id,kind,game_id,points,details,created_at FROM public.profile_experience_events WHERE user_id=p_user_id AND (p_kind IS NULL OR kind=p_kind) ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET greatest(p_offset,0)) e),'[]'::jsonb))
+ FROM public.profile_experience_events WHERE user_id=p_user_id;
+$$;
+REVOKE ALL ON FUNCTION public.sync_fantasy_experience(),public.on_fantasy_experience(),public.read_profile_experience(uuid,text,integer) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.read_profile_experience(uuid,text,integer) TO service_role;
+SELECT public.sync_fantasy_experience();
+NOTIFY pgrst,'reload schema';
+COMMIT;

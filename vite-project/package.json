@@ -12,10 +12,12 @@
   "dependencies": {
     "@heroicons/vue": "^2.2.0",
     "@supabase/supabase-js": "^2.101.1",
+    "@tanstack/charts": "^1.1.0",
     "@tanstack/vue-query": "^5.100.9",
     "@vuepic/vue-datepicker": "^12.1.0",
     "axios": "^1.14.0",
     "chart.js": "^4.5.1",
+    "d3-shape": "^3.2.0",
     "dayjs": "^1.11.20",
     "flowbite": "^4.0.1",
     "pinia": "^3.0.4",

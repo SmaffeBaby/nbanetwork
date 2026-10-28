@@ -3,6 +3,8 @@
     <div class="flex gap-2 overflow-x-auto md:flex-col md:overflow-visible">
       <h2 class="hidden md:block text-lg font-semibold mb-2">Настройки</h2>
 
+      <button class="min-w-fit whitespace-nowrap rounded-lg px-4 py-2 text-sm transition md:text-base" :class="activeTab === 'fantasy' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'" @click="setTab('fantasy')">Фентези</button>
+
       <button
           class="min-w-fit whitespace-nowrap rounded-lg px-4 py-2 text-sm transition md:text-base"
           :class="activeTab === 'main' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'"
@@ -32,14 +34,14 @@
 
 <script setup lang="ts">
 const props = defineProps<{
-  activeTab: 'main' | 'likedArticles' | 'security'
+  activeTab: 'main' | 'likedArticles' | 'security' | 'fantasy'
 }>()
 
 const emit = defineEmits<{
-  (e: 'changeTab', tab: 'main' | 'likedArticles' | 'security'): void
+  (e: 'changeTab', tab: 'main' | 'likedArticles' | 'security' | 'fantasy'): void
 }>()
 
-const setTab = (tab: 'main' | 'likedArticles' | 'security') => {
+const setTab = (tab: 'main' | 'likedArticles' | 'security' | 'fantasy') => {
   emit('changeTab', tab)
 }
 </script>

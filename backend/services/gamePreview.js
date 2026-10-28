@@ -87,4 +87,4 @@ async function getGamePreview(id) {
         status:recap.meta.status,votingOpen:state.state==='pre'&&!/CANCEL|POSTPON/i.test(state.name || '')&&Date.now()<Date.parse(recap.dateUTC),
         teams,updatedAt:new Date().toISOString()}
 }
-module.exports={getGamePreview,injuryReports,lineup,teamStats,teamLeaders}
+module.exports={seasonAthletes,getGamePreview,injuryReports,lineup,teamStats,teamLeaders}

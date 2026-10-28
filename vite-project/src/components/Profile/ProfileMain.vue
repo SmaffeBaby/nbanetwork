@@ -117,11 +117,13 @@
     </div>
   </template>
 
+  <ProfileFantasy v-else-if="activeTab === 'fantasy' && user" :profile-id="user.id" />
   <ProfileSecurity v-else-if="activeTab === 'security'" />
   <ProfileLikedArticles v-else-if="activeTab === 'likedArticles'" />
 </template>
 
 <script setup lang="ts">
+import ProfileFantasy from '../Fantasy/ProfileFantasy.vue'
 import { computed, toRef } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useProfile } from '../../composables/Profile/useProfile'

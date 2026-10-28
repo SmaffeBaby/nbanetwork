@@ -18,6 +18,7 @@ const routes = [
     { path: '/standings', component: Standings },
     { path: '/playoffs', name: 'Playoffs', component: () => import('../views/Playoffs.vue')},
     { path: '/teams', component: Teams },
+    { path: '/fantasy', name: 'Fantasy', component: () => import('../views/Fantasy.vue') },
     { path: '/games', redirect: () => `/games/${getTodayDateKey()}` },
     { path: '/games/:date', name: 'GamesByDate', component: () => import('../views/GamesByDate.vue') },
     { path: '/news', name: 'News', component: () => import('../views/News.vue') },

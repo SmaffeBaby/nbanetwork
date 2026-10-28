@@ -5,7 +5,7 @@ router.get('/profiles/:id/experience', requireUser, async (req, res) => {
     if (!/^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i.test(req.params.id)) return res.status(400).json({ error: 'Некорректный профиль' })
     const kind = req.query.kind || null
     const offset = Number(req.query.offset || 0)
-    if ((kind !== null && !['watched', 'prediction'].includes(kind)) || !Number.isSafeInteger(offset) || offset < 0 || offset > 1000000) return res.status(400).json({ error: 'Некорректный фильтр истории' })
+    if ((kind !== null && !['watched', 'prediction', 'fantasy'].includes(kind)) || !Number.isSafeInteger(offset) || offset < 0 || offset > 1000000) return res.status(400).json({ error: 'Некорректный фильтр истории' })
     try {
         const db = getAdmin()
         const { data: profile, error: profileError } = await db.from('profiles').select('id').eq('id', req.params.id).maybeSingle().abortSignal(AbortSignal.timeout(5000))

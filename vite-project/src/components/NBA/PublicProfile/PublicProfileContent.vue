@@ -58,6 +58,8 @@
       </div>
       <ProfileSubscriptions v-if="isOwnProfile" />
 
+      <ProfileFantasy :profile-id="profile.id" />
+
       <PublicProfileProgressSummary
           @open-achievements="category => experiencePanel?.openCategory(category)"
           :watched-count="watchedGames.length"
@@ -90,6 +92,7 @@
 </template>
 
 <script setup lang="ts">
+import ProfileFantasy from '../../Fantasy/ProfileFantasy.vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '../../../stores/auth'
 import ProfileSubscriptions from '../../Profile/ProfileSubscriptions.vue'
