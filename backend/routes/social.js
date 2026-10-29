@@ -312,6 +312,48 @@ router.delete('/profile-notifications', requireUser, async (req, res) => {
     }
 })
 
+// Public social graph for signed-in visitors; return display fields only.
+router.get('/profiles/:profileId/connections', requireUser, async (req, res) => {
+    const { profileId } = req.params
+    const { kind, offset = '0' } = req.query
+    if (!/^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i.test(profileId) ||
+        (kind !== undefined && !['following', 'followers'].includes(kind)) ||
+        typeof offset !== 'string' || !/^\d{1,7}$/.test(offset) || Number(offset) > 1000000) {
+        return res.status(400).json({ error: 'Некорректный профиль или параметры списка' })
+    }
+    try {
+        const db = getAdmin()
+        const { data: profile, error: profileError } = await db.from('profiles').select('id').eq('id', profileId).maybeSingle().abortSignal(AbortSignal.timeout(8000))
+        if (profileError) throw profileError
+        if (!profile) return res.status(404).json({ error: 'Профиль не найден' })
+        if (!kind) {
+            const results = await Promise.all([
+                db.from('profile_follows').select('*', { count: 'exact', head: true }).eq('follower_id', profileId).abortSignal(AbortSignal.timeout(8000)),
+                db.from('profile_follows').select('*', { count: 'exact', head: true }).eq('following_id', profileId).abortSignal(AbortSignal.timeout(8000))
+            ])
+            for (const result of results) if (result.error) throw result.error
+            return res.set('Cache-Control', 'no-store').json({ following: results[0].count || 0, followers: results[1].count || 0 })
+        }
+        const ownerColumn = kind === 'following' ? 'follower_id' : 'following_id'
+        const targetColumn = kind === 'following' ? 'following_id' : 'follower_id'
+        const { data, count, error } = await db.from('profile_follows')
+            .select(`profile:${targetColumn}(id,first_name,last_name,avatar_img)`, { count: 'exact' })
+            .eq(ownerColumn, profileId).order('created_at', { ascending: false }).order(targetColumn)
+            .range(Number(offset), Number(offset) + 19).abortSignal(AbortSignal.timeout(8000))
+        // PostgREST returns 416 when a page moves past the end after unfollowing.
+        if (error?.code === 'PGRST103') {
+            const total = await db.from('profile_follows').select('*', { count: 'exact', head: true }).eq(ownerColumn, profileId).abortSignal(AbortSignal.timeout(8000))
+            if (total.error) throw total.error
+            return res.set('Cache-Control', 'no-store').json({ profiles: [], total: total.count || 0 })
+        }
+        if (error) throw error
+        res.set('Cache-Control', 'no-store').json({ profiles: data.map(row => Array.isArray(row.profile) ? row.profile[0] : row.profile).filter(Boolean), total: count || 0 })
+    } catch (error) {
+        console.warn('Profile connections:', error.message)
+        res.status(503).json({ error: 'Не удалось загрузить подписки. Попробуйте ещё раз.' })
+    }
+})
+
 router.get('/profile-follows', requireUser, async (req, res) => {
     try {
         const admin = getAdmin()

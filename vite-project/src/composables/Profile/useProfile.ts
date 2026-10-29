@@ -13,7 +13,7 @@ export function useProfile() {
     const queryClient = useQueryClient()
     const { user, loadingUser, handleLogout } = useAuthPanel()
 
-    const activeTab = ref<'main' | 'likedArticles' | 'security' | 'fantasy'>('main')
+    const activeTab = ref<'main' | 'likedArticles' | 'security' | 'fantasy' | 'subscriptions'>('main')
     const isEditing = ref(false)
     const loadingSave = ref(false)
     const loadingAvatar = ref(false)

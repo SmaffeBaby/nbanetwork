@@ -5,6 +5,8 @@
 
       <button class="min-w-fit whitespace-nowrap rounded-lg px-4 py-2 text-sm transition md:text-base" :class="activeTab === 'fantasy' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'" @click="setTab('fantasy')">Фентези</button>
 
+      <button class="min-w-fit whitespace-nowrap rounded-lg px-4 py-2 text-sm transition md:text-base" :class="activeTab === 'subscriptions' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'" @click="setTab('subscriptions')">Подписки</button>
+
       <button
           class="min-w-fit whitespace-nowrap rounded-lg px-4 py-2 text-sm transition md:text-base"
           :class="activeTab === 'main' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'"
@@ -34,14 +36,14 @@
 
 <script setup lang="ts">
 const props = defineProps<{
-  activeTab: 'main' | 'likedArticles' | 'security' | 'fantasy'
+  activeTab: 'main' | 'likedArticles' | 'security' | 'fantasy' | 'subscriptions'
 }>()
 
 const emit = defineEmits<{
-  (e: 'changeTab', tab: 'main' | 'likedArticles' | 'security' | 'fantasy'): void
+  (e: 'changeTab', tab: 'main' | 'likedArticles' | 'security' | 'fantasy' | 'subscriptions'): void
 }>()
 
-const setTab = (tab: 'main' | 'likedArticles' | 'security' | 'fantasy') => {
+const setTab = (tab: 'main' | 'likedArticles' | 'security' | 'fantasy' | 'subscriptions') => {
   emit('changeTab', tab)
 }
 </script>

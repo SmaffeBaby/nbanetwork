@@ -308,3 +308,11 @@ Apply `supabase/migrations/20261029193000_fantasy_player_bonuses.sql` after the 
 Player XP sums positive weekly base results in that profile across positions. Level N begins at `150 * N * (N - 1)` XP. On lineup confirmation the database snapshots each player's level and bonus rate from prior weeks: level 3 = 0.5%, 5 = 1%, 8 = 1.5%, 10+ = 2%. The weekly bonus is `round(min(3, max(0, basePoints) * rate), 1)`, added once to the player's weekly result and both profile leaderboards. Bonuses do not generate player or profile XP. Existing lineups keep zero bonus; past results are unchanged. Game-level breakdowns stay base-only; the player dialog shows the weekly bonus separately. The two information buttons expand scoring and level explanations.
 
 Verify with `node --test backend/tests/fantasy-scoring.test.js vite-project/tests/fantasy-progress.cjs` and the rollback-only `backend/tests/fantasy-bonuses.sql` through psql.
+
+## Profile tabs and social lists
+
+Public profiles group content into overview, fantasy, viewing statistics, games, favorites and saved articles. The selected tab is preserved in the `tab` URL query. Profile settings retain editing/security controls and a separate subscriptions tab.
+
+Signed-in visitors can inspect another profile's subscription and follower counts at `GET /api/profiles/:id/connections`. Add `kind=following` or `kind=followers` and a nonnegative `offset` for a stable 20-person page. Responses contain only profile ID, display name and avatar; account email and notification preferences stay private. The profile header opens an accessible modal with both lists, profile links, pagination, and existing follow/unfollow actions. Counts and lists refresh when a follow action settles.
+
+The local API integration check `node tests/profile-connections.integration.js` runs inside the backend container and creates/removes only its own temporary accounts. No schema migration is needed.

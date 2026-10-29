@@ -92,11 +92,8 @@
         </label>
       </fieldset>
 
-      <ProfileFantasy v-if="user" :profile-id="user.id" />
-
       <ProfileFavoriteTeams />
 
-      <ProfileSubscriptions />
 
     </div>
 
@@ -120,6 +117,7 @@
   </template>
 
   <ProfileFantasy v-else-if="activeTab === 'fantasy' && user" :profile-id="user.id" />
+  <ProfileSubscriptions v-else-if="activeTab === 'subscriptions'" />
   <ProfileSecurity v-else-if="activeTab === 'security'" />
   <ProfileLikedArticles v-else-if="activeTab === 'likedArticles'" />
 </template>
