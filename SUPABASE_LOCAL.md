@@ -299,3 +299,12 @@ The SQL checks roll back all test records.
 The Fantasy catalog reuses `PublicProfileTeamFilter` and only offers teams in that week’s schedule. Player cards open a dialog with current regular-season statistics, games played, a TanStack Charts radar (each axis has an explicit normalization ceiling), links to player profiles, and linked weekly match cards. Fantasy season 1 starts the week of 26 October 2026; the following season starts on the Monday containing 26 October of the following year.
 
 Fantasy season detail ranks are computed across the full ESPN regular-season population with games played, in descending order (also turnovers); equal raw values share competition rank. Shooting percentage ranks require at least one corresponding attempt, without official NBA qualification thresholds. Two-point totals are FG minus 3P, and their accuracy uses those totals. Offensive/defensive rebounds use current-season full athlete totals divided by games played. Since ESPN omits these fields from its compact leaderboard, complete league tables sorted by each rebound metric supply the order. A binary search of full athlete totals finds the first tied position, including large zero-value ties. Incomplete tables or missing comparison values never produce a guessed rank. Season sources are cached for 15 minutes.
+
+
+## Personal fantasy player levels and bonuses
+
+Apply `supabase/migrations/20261029193000_fantasy_player_bonuses.sql` after the fantasy migrations and rebuild backend/frontend. Fresh database initialization and production deployment include this migration.
+
+Player XP sums positive weekly base results in that profile across positions. Level N begins at `150 * N * (N - 1)` XP. On lineup confirmation the database snapshots each player's level and bonus rate from prior weeks: level 3 = 0.5%, 5 = 1%, 8 = 1.5%, 10+ = 2%. The weekly bonus is `round(min(3, max(0, basePoints) * rate), 1)`, added once to the player's weekly result and both profile leaderboards. Bonuses do not generate player or profile XP. Existing lineups keep zero bonus; past results are unchanged. Game-level breakdowns stay base-only; the player dialog shows the weekly bonus separately. The two information buttons expand scoring and level explanations.
+
+Verify with `node --test backend/tests/fantasy-scoring.test.js vite-project/tests/fantasy-progress.cjs` and the rollback-only `backend/tests/fantasy-bonuses.sql` through psql.

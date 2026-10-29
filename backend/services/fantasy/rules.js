@@ -8,10 +8,24 @@ function weekAt(now = new Date()) {
 function positions(value) {
     return ({ G: ['PG', 'SG'], F: ['SF', 'PF'], 'G-F': ['SG', 'SF'], 'F-C': ['PF', 'C'] })[value] || (POSITIONS.includes(value) ? [value] : [])
 }
-function score(s, won = false) {
+function scoreBreakdown(s, won = false) {
     const n = key => Number.isFinite(Number(s[key])) ? Number(s[key]) : 0
     const doubles = ['points', 'reboundsTotal', 'assists', 'steals', 'blocks'].filter(k => n(k) >= 10).length
-    return Math.round((n('points') + 1.2 * n('reboundsTotal') + 1.5 * n('assists') + 3 * (n('steals') + n('blocks')) - n('turnovers') - .5 * Math.max(0, n('fieldGoalsAttempted') - n('fieldGoalsMade')) - Math.max(0, n('freeThrowsAttempted') - n('freeThrowsMade')) + (won ? 3 : 0) + (doubles >= 3 ? 6 : doubles >= 2 ? 3 : 0)) * 10) / 10
+    return [
+        ['points', 'Очки', n('points'), 1],
+        ['rebounds', 'Подборы', n('reboundsTotal'), 1.2],
+        ['assists', 'Передачи', n('assists'), 1.5],
+        ['steals', 'Перехваты', n('steals'), 3],
+        ['blocks', 'Блоки', n('blocks'), 3],
+        ['turnovers', 'Потери', n('turnovers'), -1],
+        ['missedShots', 'Промахи с игры', Math.max(0, n('fieldGoalsAttempted') - n('fieldGoalsMade')), -0.5],
+        ['missedFreeThrows', 'Промахи штрафных', Math.max(0, n('freeThrowsAttempted') - n('freeThrowsMade')), -1],
+        ['win', 'Победа команды', won ? 1 : 0, 3],
+        ['double', doubles >= 3 ? 'Трипл-дабл' : 'Дабл-дабл', doubles >= 2 ? 1 : 0, doubles >= 3 ? 6 : 3]
+    ].map(([key, label, count, weight]) => ({ key, label, count, weight, points: Math.round(count * weight * 10) / 10 }))
+}
+function score(s, won = false) {
+    return Math.round(scoreBreakdown(s, won).reduce((sum, item) => sum + item.points, 0) * 10) / 10
 }
 function validateLineup(lineup, catalog) {
     if (!Array.isArray(lineup) || lineup.length !== 5 || new Set(lineup.map(p => p?.id)).size !== 5 || new Set(lineup.map(p => p?.slot)).size !== 5) throw new Error('Выберите пять разных игроков: PG, SG, SF, PF и C')
@@ -22,4 +36,4 @@ function validateLineup(lineup, catalog) {
         return { id: player.id, name: player.name, team: player.team, slot }
     })
 }
-module.exports = { POSITIONS, DAY, weekAt, positions, score, validateLineup }
+module.exports = { POSITIONS, DAY, weekAt, positions, score, scoreBreakdown, validateLineup }

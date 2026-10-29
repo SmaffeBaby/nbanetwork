@@ -14,7 +14,32 @@
           <p v-if="'injury' in player && player.injury" class="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">Травма / ограничение · {{ player.injury }}</p>
           <p v-if="loading" role="status" class="py-10 text-center text-slate-500">Загружаем статистику сезона…</p>
           <p v-else-if="error" role="alert" class="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">{{ error }} <button class="font-bold underline" @click="load">Повторить</button></p>
-          <template v-else-if="data?.gamesPlayed">
+          <section v-if="data" class="rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
+            <FantasySectionHeading title="Баллы фентези">
+              <template #value><span class="text-2xl font-black text-blue-700">{{ points(data.fantasy.points) }}</span></template>
+              <p>{{ data.fantasy.profile ? 'Баллы в составе этого профиля за выбранную неделю: учитываются матчи после закрепления состава.' : 'Учтённые матчи выбранной недели. В составе профиля учитываются только игры после его закрепления.' }}</p>
+              <p>Откройте матч ниже, чтобы увидеть начисления за статистику, бонусы и штрафы. Бонусы за дабл-дабл и трипл-дабл не складываются.</p>
+            </FantasySectionHeading>
+
+            <details v-for="game in data.fantasy.games" :key="game.id" class="mt-3 rounded-xl border border-blue-100 bg-white p-3">
+              <summary class="cursor-pointer text-sm font-bold text-slate-800">{{ game.matchup }} · {{ points(game.points) }} баллов <span class="block text-xs font-normal text-slate-500">{{ dateTime(game.start) }} МСК</span></summary>
+              <div class="mt-3 divide-y divide-slate-100"><div v-for="item in game.breakdown" :key="item.key" class="flex items-center justify-between gap-3 py-2 text-xs"><span class="text-slate-600">{{ item.label }} <span class="text-slate-400">{{ item.count }} × {{ points(item.weight) }}</span></span><strong :class="item.points < 0 ? 'text-rose-600' : 'text-blue-700'">{{ item.points > 0 ? '+' : '' }}{{ points(item.points) }}</strong></div></div>
+              <RouterLink :to="`/game/${game.id}`" class="mt-3 inline-block text-xs font-bold text-blue-700" @click="$emit('close')">Открыть матч ↗</RouterLink>
+            </details>
+            <div v-if="data.fantasy.profile" class="mt-3 rounded-xl bg-indigo-50 p-3 text-xs text-indigo-800">
+              <p class="flex justify-between gap-3"><span>Базовые баллы</span><strong>{{ points(data.fantasy.basePoints) }}</strong></p>
+              <p class="mt-2 flex justify-between gap-3"><span>Бонус уровня {{ data.fantasy.bonusLevel }} · +{{ points(data.fantasy.bonusRate * 100) }}%</span><strong>+{{ points(data.fantasy.bonusPoints) }}</strong></p>
+            </div>
+            <p v-if="!data.fantasy.games.length" class="mt-3 text-sm text-slate-500">Начислений за эту неделю пока нет. Баллы появятся после обработки завершённых матчей.</p>
+          </section>
+          <section v-if="data && playerXp !== undefined">
+            <FantasySectionHeading title="Уровень фентези" class="mb-3">
+              <p>1 балл = 1 XP. Опыт — сумма положительных базовых недельных результатов игрока в этом профиле. Он сохраняется между неделями, даже если игрока нет в новом составе. Смена позиции не сбрасывает опыт.</p>
+              <p>Порог уровня N: 150 × N × (N − 1) XP. Уровень 2 — 300 XP, уровень 3 — 900 XP. Бонусы к положительным баллам за неделю: с уровня 3 — +0,5%, с 5 — +1%, с 8 — +1,5%, с 10 — +2%. Максимум +3 балла на игрока за неделю. Уровень и процент фиксируются при закреплении состава, бонус в XP не входит.</p>
+            </FantasySectionHeading>
+            <FantasyPlayerLevel :xp="playerXp" />
+          </section>
+          <template v-if="data?.gamesPlayed">
             <div>
               <h3 class="font-extrabold text-slate-900">В среднем за матч</h3>
               <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -62,8 +87,10 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, useId } from 'vue'
 import { authFetch } from '../../api/authFetch'
 import { dateTime, points, type Match, type Player, type Pick, type PlayerDetails } from './types'
+import FantasySectionHeading from './FantasySectionHeading.vue'
+import FantasyPlayerLevel from './FantasyPlayerLevel.vue'
 import FantasyRadar from './FantasyRadar.vue'
-const props = defineProps<{ player: Player | Pick; position: string; week?: string }>()
+const props = defineProps<{ player: Player | Pick; position: string; week?: string; profileId?: string; playerXp?: number }>()
 defineEmits<{ close: [] }>()
 const titleId = useId(), dialog = ref<HTMLElement | null>(null), data = ref<PlayerDetails | null>(null), loading = ref(true), error = ref(''), photoFailed = ref(false)
 const metrics = [['Очки','avgPoints'],['Подборы всего','avgRebounds'],['Подборы в нападении','avgOffensiveRebounds'],['Подборы в защите','avgDefensiveRebounds'],['Передачи','avgAssists'],['Перехваты','avgSteals'],['Блоки','avgBlocks'],['Потери','avgTurnovers'],['Минуты','avgMinutes']] as const
@@ -93,7 +120,10 @@ async function load() {
   clearTimeout(rankPoll)
   if (!data.value) loading.value = true; error.value = ''
   try {
-    data.value = await authFetch(`/api/fantasy/players/${props.player.id}${props.week ? `?week=${props.week}` : ''}`, { signal:controller.signal })
+    const params = new URLSearchParams()
+    if (props.week) params.set('week', props.week)
+    if (props.profileId) params.set('profile', props.profileId)
+    data.value = await authFetch(`/api/fantasy/players/${props.player.id}?${params}`, { signal:controller.signal })
     if (data.value?.rankingsUpdating && !controller.signal.aborted) rankPoll = setTimeout(() => void load(), 10000)
   }
   catch (e:any) { if (!controller.signal.aborted) error.value = e.message }

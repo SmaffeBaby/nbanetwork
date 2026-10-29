@@ -59,6 +59,8 @@ docker exec -i "$DB_CONTAINER" psql -U supabase_admin -d postgres -v ON_ERROR_ST
   < supabase/migrations/20261028001000_fantasy.sql
 docker exec -i "$DB_CONTAINER" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 \
   < supabase/migrations/20261028002000_fantasy_experience.sql
+docker exec -i "$DB_CONTAINER" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 \
+  < supabase/migrations/20261029193000_fantasy_player_bonuses.sql
 # Start the new app only after its required database objects are available.
 docker compose up -d --no-build frontend backend python-backend
 docker compose up -d --build --no-deps contracts-importer

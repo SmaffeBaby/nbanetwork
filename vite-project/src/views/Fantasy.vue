@@ -22,7 +22,7 @@
         <span v-else class="text-sm font-bold text-slate-500">{{ picks.length }} / 5 игроков</span>
       </div>
       <div v-if="entry" class="mt-5 grid grid-cols-1 gap-3 min-[460px]:grid-cols-2 lg:grid-cols-5">
-        <FantasyPlayerCard v-for="player in currentLineup" :key="player.slot" :player="player" :position="player.slot" :fantasy-points="Number(entry.player_points?.[player.id] || 0)" selected />
+        <FantasyPlayerCard v-for="player in currentLineup" :key="player.slot" :player="player" :position="player.slot" :fantasy-points="Number(entry.player_points?.[player.id] || 0)" :profile-id="auth.user?.id" :player-xp="progress.totals[player.id] ?? 0" selected />
       </div>
       <template v-else>
         <div class="mt-5 grid grid-cols-5 gap-2">
@@ -56,7 +56,7 @@
       <p v-if="playersLoading && !players.length" role="status" class="py-8 text-center text-slate-500">Проверяем расписание и составы команд…</p>
       <div v-else-if="playersError && !players.length" role="alert" class="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">{{ playersError }} <button class="font-bold underline" @click="loadPlayers">Повторить</button></div>
       <div v-else-if="filtered.length" class="grid grid-cols-1 gap-4 min-[460px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        <FantasyPlayerCard v-for="player in visiblePlayers" :key="player.id" :player="player" :position="activeSlot" :selected="pickAt(activeSlot)?.id === player.id" selectable :disabled="!!player.injury || player.remaining < 1 || picks.some(p => p.id === player.id && p.slot !== activeSlot) || saving" @select="selectPlayer(player)" />
+        <FantasyPlayerCard v-for="player in visiblePlayers" :key="player.id" :player="player" :position="activeSlot" :profile-id="auth.user?.id" :player-xp="auth.user ? progress.totals[player.id] ?? 0 : undefined" :selected="pickAt(activeSlot)?.id === player.id" selectable :disabled="!!player.injury || player.remaining < 1 || picks.some(p => p.id === player.id && p.slot !== activeSlot) || saving" @select="selectPlayer(player)" />
       </div>
       <p v-else class="rounded-2xl bg-white p-8 text-center text-slate-500">Игроки не найдены. Измените поиск или фильтр; в межсезонье каталог может быть пустым.</p>
       <button v-if="filtered.length > limit" class="block w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-bold text-slate-700" @click="limit += 30">Показать ещё</button>
@@ -79,6 +79,7 @@ import { teamsFullNames } from '../constants/TeamFullName'
 import Header from '../components/Headers/Header.vue'
 import FantasyPlayerCard from '../components/Fantasy/FantasyPlayerCard.vue'
 import FantasyRules from '../components/Fantasy/FantasyRules.vue'
+import { playerProgress } from '../components/Fantasy/progress'
 import { slots, points, dateTime, weekLabel, type Slot, type Player, type Pick, type Board } from '../components/Fantasy/types'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
@@ -102,6 +103,7 @@ const error = ref(''), playersError = ref(''), now = ref(Date.now())
 const closed = computed(() => !!board.value && now.value >= Date.parse(board.value.week.end))
 const entry = computed(() => board.value?.history.find(e => e.week === board.value?.week.id))
 const currentLineup = computed(() => (entry.value?.lineup || []).map(p => ({ ...p, ...players.value.find(player => player.id === p.id) })))
+const progress = computed(() => playerProgress(board.value?.history || []))
 const leaders = computed(() => (overall.value ? board.value?.overall : board.value?.leaderboard) || [])
 const pickAt = (slot: Slot) => picks.value.find(p => p.slot === slot)
 const filtered = computed(() => players.value.filter(p => p.positions.includes(activeSlot.value) && (team.value === 'all' || p.team === team.value) && (!healthyOnly.value || (!p.injury && p.remaining > 0)) && `${p.name} ${p.team}`.toLowerCase().includes(search.value.trim().toLowerCase())))

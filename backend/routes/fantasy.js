@@ -7,6 +7,7 @@ const uuid = /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i
 const fail = (res, error) => { console.warn('Fantasy API:', error.message); res.status(503).json({ error: 'Фентези временно недоступно. Попробуйте ещё раз.' }) }
 router.get('/fantasy/players/:id', async (req, res) => {
     if (!/^\d{1,12}$/.test(req.params.id)) return res.status(400).json({ error: 'Некорректный игрок' })
+    if (req.query.profile && !uuid.test(req.query.profile)) return res.status(400).json({ error: 'Некорректный профиль' })
     let week = weekAt()
     if (req.query.week) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(req.query.week)) return res.status(400).json({ error: 'Некорректная неделя' })
@@ -14,7 +15,7 @@ router.get('/fantasy/players/:id', async (req, res) => {
         if (!Number.isFinite(+date) || date.toISOString().slice(0,10) !== req.query.week || date.getUTCDay() !== 1) return res.status(400).json({ error: 'Некорректная неделя' })
         week = weekAt(date)
     }
-    try { res.json(await playerDetails(req.params.id, week)) } catch (error) { fail(res, error) }
+    try { res.json(await playerDetails(req.params.id, week, req.query.profile)) } catch (error) { fail(res, error) }
 })
 router.get('/fantasy/players', async (req, res) => {
     try {

@@ -92,6 +92,8 @@
         </label>
       </fieldset>
 
+      <ProfileFantasy v-if="user" :profile-id="user.id" />
+
       <ProfileFavoriteTeams />
 
       <ProfileSubscriptions />

@@ -22,17 +22,19 @@
           <ul class="mt-1 space-y-2"><li v-for="game in player.schedule" :key="game.id"><RouterLink :to="`/game/${game.id}`" class="block rounded-lg p-1 hover:bg-blue-50 hover:text-blue-700"><strong>{{ game.matchup }} ↗</strong><br>{{ dateTime(game.start) }} МСК</RouterLink></li></ul>
         </details>
       </template>
+      <FantasyPlayerLevel v-if="playerXp !== undefined" :xp="playerXp" />
       <p v-if="fantasyPoints !== undefined" class="text-lg font-black text-blue-600">{{ points(fantasyPoints) }} <span class="text-xs font-medium text-slate-400">фентези-очков</span></p>
       <button v-if="selectable" type="button" class="w-full rounded-xl px-3 py-2.5 text-sm font-bold transition disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400" :class="selected ? 'bg-blue-100 text-blue-700' : 'bg-slate-900 text-white hover:bg-blue-700'" :disabled="disabled" @click.stop="$emit('select')">{{ selected ? 'Выбран' : 'Выбрать игрока' }}</button>
     </div>
   </article>
-  <FantasyPlayerDialog v-if="detailsOpen" :player="player" :position="position" :week="week" @close="detailsOpen = false" />
+  <FantasyPlayerDialog v-if="detailsOpen" :player="player" :position="position" :week="week" :profile-id="profileId" :player-xp="playerXp" @close="detailsOpen = false" />
 </template>
 <script setup lang="ts">
+import FantasyPlayerLevel from './FantasyPlayerLevel.vue'
 import { computed, ref, watch, defineAsyncComponent } from 'vue'
 const FantasyPlayerDialog = defineAsyncComponent(() => import('./FantasyPlayerDialog.vue'))
 import { dateTime, points, type Player, type Pick } from './types'
-const props = defineProps<{ player: Player | Pick; position: string; selected?: boolean; selectable?: boolean; disabled?: boolean; fantasyPoints?: number; week?: string }>()
+const props = defineProps<{ player: Player | Pick; position: string; selected?: boolean; selectable?: boolean; disabled?: boolean; fantasyPoints?: number; week?: string; profileId?: string; playerXp?: number }>()
 defineEmits<{ select: [] }>()
 const photoFailed = ref(false), detailsOpen = ref(false)
 const nextMatch = computed(() => 'schedule' in props.player ? props.player.schedule.find(g => Date.parse(g.start) > Date.now()) || props.player.schedule.at(-1) : undefined)
