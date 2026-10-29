@@ -19,12 +19,12 @@ export const useScoreVisibility = defineStore('scoreVisibility', {
     }),
 
     actions: {
-        toggle(gameId: string) {
+        toggle(gameId: string, defaultVisible = false) {
             if (!gameId) return
 
             this.visibleGames = {
                 ...this.visibleGames,
-                [gameId]: !this.visibleGames[gameId]
+                [gameId]: !this.isVisible(gameId, defaultVisible)
             }
 
             localStorage.setItem(
@@ -33,8 +33,13 @@ export const useScoreVisibility = defineStore('scoreVisibility', {
             )
         },
 
-        isVisible(gameId: string) {
-            return !!this.visibleGames[gameId]
+        isVisible(gameId: string, defaultVisible = false): boolean {
+            return this.visibleGames[gameId] ?? defaultVisible
+        },
+
+        reset() {
+            this.visibleGames = {}
+            localStorage.setItem('scoreVisibility', '{}')
         }
     }
 })

@@ -71,7 +71,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useAuthStore } from '../../../stores/auth'
 import { EyeIcon } from '@heroicons/vue/24/outline'
 import Categories from '../../Categories/Categories.vue'
 import type { CategoryOption } from '../../../types/categories'
@@ -82,6 +83,7 @@ const props = defineProps<{
   commentsUnreadCount?: number
 }>()
 
+const auth = useAuthStore()
 const activeTab = ref<Tab>('overview')
 const revealed = ref(false)
 const normalizedCommentsUnreadCount = computed(() => props.commentsUnreadCount ?? 0)
@@ -105,8 +107,9 @@ const reveal = () => {
 }
 
 const isLocked = computed(() =>
-    !revealed.value && activeTab.value !== 'injury'
+    !revealed.value && activeTab.value !== 'injury' && (auth.loading || auth.user?.hideScores !== false)
 )
+watch(() => auth.user?.hideScores, (value, previous) => { if (value === true && previous === false) revealed.value = false })
 </script>
 
 <style scoped>

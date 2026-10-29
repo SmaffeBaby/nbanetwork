@@ -31,15 +31,16 @@
       aria-labelledby="drawer-navigation-label"
   >
     <div class="relative mt-6 flex min-h-20 items-center border-b border-white/45 pb-4">
-      <RouterLink to="/" class="flex min-w-0 items-center" @click="closeDrawer">
+      <RouterLink to="/" class="flex min-w-0 flex-1 items-center" @click="closeDrawer">
         <NbaMomLogo
             id="drawer-navigation-label"
             alt="Basketsfera Logo"
-            class="h-auto w-[220px] max-w-[calc(100%-4.25rem)]"
+            class="h-auto w-full max-w-[180px]"
         />
       </RouterLink>
 
-      <div v-if="user" class="mobile-notifications absolute right-1 top-2">
+      <div v-if="user" class="mobile-notifications ml-2 flex shrink-0 items-center gap-2">
+        <GlobalScoreToggle />
         <NotificationsBell />
       </div>
 
@@ -347,6 +348,7 @@ import PasswordInput from '../Auth/PasswordInput.vue'
 import VerifyRegistrationDialog from '../Auth/VerifyRegistrationDialog.vue'
 import { RouterLink } from 'vue-router'
 import NotificationsBell from './NotificationsBell.vue'
+import GlobalScoreToggle from './GlobalScoreToggle.vue'
 import NbaMomLogo from '../Logo/NbaMomLogo.vue'
 import { useHeaderBurger } from '../../composables/Headers/useHeaderBurger'
 

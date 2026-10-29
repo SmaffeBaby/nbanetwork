@@ -8,12 +8,11 @@ export function usePlayoffSpoilers() {
     const localHideSpoilers = ref(true)
 
     const hideSpoilers = computed(() => {
-        return authStore.user?.hideScores ?? localHideSpoilers.value
+        return authStore.loading || (authStore.user?.hideScores ?? localHideSpoilers.value)
     })
 
     function isGameVisible(gameId: string) {
-        if (!hideSpoilers.value) return true
-        return scoreVisibility.isVisible(gameId)
+        return !authStore.loading && scoreVisibility.isVisible(gameId, !hideSpoilers.value)
     }
 
     function displayScore(gameId: string, score: number) {
@@ -21,7 +20,7 @@ export function usePlayoffSpoilers() {
     }
 
     function toggleGameVisibility(gameId: string) {
-        scoreVisibility.toggle(gameId)
+        scoreVisibility.toggle(gameId, !hideSpoilers.value)
     }
 
     async function toggleSpoilers() {

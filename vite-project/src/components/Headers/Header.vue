@@ -160,6 +160,7 @@
       </nav>
 
       <div class="ml-auto flex shrink-0 items-center gap-3 xl:gap-4">
+        <GlobalScoreToggle />
         <NotificationsBell />
         <AuthPanel />
       </div>
@@ -175,6 +176,7 @@ import { RouterLink } from 'vue-router'
 import AuthPanel from '../Auth/AuthPanel.vue'
 import HeaderBurger from './HeaderBurger.vue'
 import NotificationsBell from './NotificationsBell.vue'
+import GlobalScoreToggle from './GlobalScoreToggle.vue'
 import NbaMomLogo from '../Logo/NbaMomLogo.vue'
 import { useHeader } from '../../composables/Headers/useHeader'
 

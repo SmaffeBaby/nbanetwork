@@ -72,6 +72,8 @@
       </template>
     </TabsContent>
 
+    <GameRelatedMatches :game-id="gameId" />
+
   </div>
 </template>
 
@@ -83,6 +85,7 @@ import GamePrediction from './GamePrediction.vue'
 import { useGameFinal } from '../../../composables/NBA/GameFinal/useGameFinal'
 import GameHeader from './GameHeader.vue'
 import GameRecapCard from './GameRecapCard.vue'
+import GameRelatedMatches from './GameRelatedMatches.vue'
 import GamePlayersStats from './BoxScore/GamePlayersStats.vue'
 import InjuryPlayers from './Injury/InjuryPlayers.vue'
 import TabsContent from './TabsContent.vue'

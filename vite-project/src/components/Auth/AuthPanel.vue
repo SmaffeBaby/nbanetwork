@@ -3,7 +3,7 @@
 
     <div
         v-if="user"
-        class="flex h-[48px] w-[224px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-2.5 py-2 shadow-sm transition hover:border-blue-100 hover:bg-slate-50 hover:shadow-md"
+        class="flex h-[48px] w-[188px] 2xl:w-[224px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-2.5 py-2 shadow-sm transition hover:border-blue-100 hover:bg-slate-50 hover:shadow-md"
         @click="goToProfile"
     >
       <img

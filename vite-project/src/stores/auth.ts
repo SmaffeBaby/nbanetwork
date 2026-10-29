@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { isRealtimeEnabled } from '../lib/realtime'
 import { authFetch } from '../api/authFetch'
 import { clearAccessToken, setAccessToken } from '../api/authToken'
+import { useScoreVisibility } from './useScoreVisibility'
 
 export type AppUser = {
     id: string
@@ -293,27 +294,21 @@ export const useAuthStore = defineStore('auth', () => {
         return initPromise
     }
 
-    const updateHideScores = async (value: boolean) => {
-        if (!user.value) return
-
+    const updateHideScores = async (value: boolean): Promise<boolean> => {
+        if (!user.value) return false
+        const ownerId = user.value.id, generation = authGeneration
         const { data, error } = await supabase
             .from('profiles')
             .update({ hide_scores: value })
-            .eq('id', user.value.id)
-            .select()
-
-        if (error) {
-            console.error('update hide_scores error:', error)
-            return
-        }
-
-        if (!data || data.length === 0) {
-            console.warn('update не применился (возможно RLS)')
-            return
-        }
-
+            .eq('id', ownerId)
+            .select('hide_scores')
+            .abortSignal(AbortSignal.timeout(10000))
+        if (error || !data?.length || data[0].hide_scores !== value) return false
+        if (user.value?.id !== ownerId || generation !== authGeneration) return false
         user.value.hideScores = value
+        useScoreVisibility().reset()
         saveToCache(user.value)
+        return true
     }
 
     const updateFavoriteTeams = async (teams: string[]) => {

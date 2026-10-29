@@ -1,6 +1,7 @@
 <template>
+  <GameMatchOverview v-if="recap?.source === 'espn'" :recap="recap" />
   <div
-      v-if="recap"
+      v-else-if="recap"
       class="rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-md sm:p-6"
   >
     <article v-if="apRecap" class="space-y-5">
@@ -231,6 +232,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import GameMatchOverview from './GameMatchOverview.vue'
 import { getPlayerImage, handleImageError } from '../../../utils/playerImage'
 
 const props = defineProps<{
