@@ -1,13 +1,11 @@
 <template>
-  <div class="pt-28 px-8">
-    <Header />
-    <div class="pt-16 px-6">
-      <Standings />
-    </div>
-  </div>
+  <Header />
+  <main class="mx-auto w-full max-w-7xl px-3 pb-12 pt-24 sm:px-6 sm:pt-28 lg:px-8">
+    <Standings />
+  </main>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Standings from '../components/NBA/Standings/Standings.vue'
-import Header from "../components/Headers/Header.vue";
+import Header from '../components/Headers/Header.vue'
 </script>

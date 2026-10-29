@@ -8,7 +8,7 @@
           </RouterLink>
         </div>
 
-        <div class="grid grid-cols-2 gap-8 sm:gap-10 sm:grid-cols-4">
+        <div class="grid min-w-0 grid-cols-2 gap-8 break-words sm:gap-10 sm:grid-cols-4">
           <div>
             <h2 class="mb-5 text-sm font-bold uppercase text-gray-950">Страницы</h2>
             <ul class="space-y-3 text-sm font-medium text-gray-600">
