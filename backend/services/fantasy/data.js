@@ -8,7 +8,7 @@ async function request(path, params) {
     return data
 }
 async function schedule(week) {
-    return fetchWithCache({ key: `fantasy-schedule:${week.id}:${week.end}`, ttl: 60000, fetcher: async () => {
+    return fetchWithCache({ key: `fantasy-schedule-v2:${week.id}:${week.end}`, ttl: 60000, fetcher: async () => {
         // Include the preceding UTC date because our week starts at 21:00 UTC.
         const dates = Array.from({ length: Math.ceil((Date.parse(week.end)-Date.parse(week.start))/DAY)+1 }, (_, i) => new Date(Date.parse(week.start) + i * DAY).toISOString().slice(0, 10).replaceAll('-', ''))
         const days = await Promise.all(dates.map(dates => request('scoreboard', { dates, limit: 100 })))
@@ -17,7 +17,7 @@ async function schedule(week) {
         for (const day of days) for (const event of day.events) {
             const start = Date.parse(event.date)
             const c = event.competitions?.[0]
-            if (start >= Date.parse(week.start) && start < Date.parse(week.end) && c && !/CANCEL|POSTPON/i.test(c.status?.type?.name || '')) games.set(event.id, { id: event.id, start: event.date, completed: Boolean(c.status?.type?.completed), teams: c.competitors.map(p => ({ id: String(p.team.id), abbr: ALIASES[p.team.abbreviation] || p.team.abbreviation, homeAway:p.homeAway })) })
+            if (start >= Date.parse(week.start) && start < Date.parse(week.end) && c && !/CANCEL|POSTPON/i.test(c.status?.type?.name || '')) games.set(event.id, { id: event.id, start: event.date, completed: Boolean(c.status?.type?.completed), started: c.status?.type?.state==='in' || Boolean(c.status?.type?.completed), teams: c.competitors.map(p => ({ id: String(p.team.id), abbr: ALIASES[p.team.abbreviation] || p.team.abbreviation, homeAway:p.homeAway })) })
         }
         return [...games.values()]
     } })

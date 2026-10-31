@@ -13,11 +13,11 @@ function params(req) {
 }
 async function defaultDay() {
     const today=dayAt()
-    // Prefer the next playable day rather than a slate whose first tip has passed.
+    // Evening fixtures remain playable after earlier games on the same Moscow day.
     for(let i=0;i<4;i++) {
         const day=dayAt(new Date(Date.parse(today.start)+i*DAY))
         const games=await schedule(day)
-        if(games.length && games.every(g=>Date.parse(g.start)>Date.now())) return day.id
+        if(games.length && games.some(g=>!g.started && !g.completed && Date.parse(g.start)>Date.now())) return day.id
     }
     return today.id
 }

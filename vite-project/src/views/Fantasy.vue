@@ -8,7 +8,7 @@
       <p class="mt-4 max-w-xl text-sm leading-6 text-slate-300">Собери команду из звёзд НБА, зарабатывай очки за их реальные матчи и поднимайся в рейтинге.</p>
       <div v-if="board" class="mt-6 flex flex-wrap gap-3 text-xs font-bold">
         <span class="rounded-full bg-white/10 px-3 py-2">{{ weekLabel(board.week.id) }} · МСК</span>
-        <span class="rounded-full bg-blue-500/20 px-3 py-2 text-blue-200">{{ board.day?.hasGames === false ? 'В этот день нет игр' : closed ? 'Приём составов закрыт' : `Старт ${dateTime(board.day?.locksAt || board.week.end)} МСК` }}</span>
+        <span class="rounded-full bg-blue-500/20 px-3 py-2 text-blue-200">{{ board.day?.hasGames === false ? 'В этот день нет игр' : closed ? 'Приём составов закрыт' : `Приём до ${dateTime(board.day?.locksAt || board.week.end)} МСК` }}</span>
         <span class="rounded-full bg-white/10 px-3 py-2">{{ board.participants }} участников · {{ modeLabel }}</span>
       </div>
     </section>
@@ -20,7 +20,7 @@
       </div>
       <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
         <div class="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-700"><span>Игровой день · МСК</span><FantasyCalendar :model-value="selectedWeek || board?.week.id || ''" :entries="board?.history || []" :max-date="maxDate" :disabled="saving" @update:model-value="selectDate" /></div>
-        <p class="max-w-lg text-xs leading-5 text-slate-500">Один состав на день в каждом режиме. Приём закрывается с первым матчем. Опыт игрока сохраняется и не удваивается между режимами.</p>
+        <p class="max-w-lg text-xs leading-5 text-slate-500">Один состав на день в каждом режиме. Выбирать можно игроков, чьи матчи ещё не начались. Опыт игрока сохраняется и не удваивается между режимами.</p>
       </div>
     </section>
     <p v-if="error" role="alert" class="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{{ error }} <button class="ml-2 font-bold underline" @click="refresh">Повторить</button></p>
@@ -53,7 +53,7 @@
         <div v-if="reviewing" class="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
           <h3 class="font-bold text-blue-950">Закрепить эту пятёрку на день?</h3>
           <p class="mt-2 text-sm text-blue-900">{{ picks.map(p => `${p.slot}: ${p.name}`).join(' · ') }}</p>
-          <p class="mt-2 text-sm text-blue-900">После подтверждения замены недоступны. Учитываются матчи выбранного дня по Москве. Состав закрывается с началом первой игры.</p>
+          <p class="mt-2 text-sm text-blue-900">После подтверждения замены недоступны. Учитываются матчи выбранного дня по Москве. В состав можно включить только игроков, чьи матчи ещё не начались.</p>
           <div class="mt-3 flex flex-wrap gap-3"><button :disabled="saving || closed || totalOvr > (mode === 'balanced' ? cap : 495)" class="rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50" @click="confirmLineup">{{ saving ? 'Проверяем травмы и сохраняем…' : 'Подтвердить состав' }}</button><button :disabled="saving" class="px-4 py-3 text-sm font-bold text-blue-800" @click="reviewing = false">Вернуться к выбору</button></div>
         </div>
         <button v-else class="mt-4 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400" :disabled="picks.length !== 5 || !auth.user || closed || loading || (mode === 'balanced' && totalOvr > cap)" @click="reviewing = true">Проверить и закрепить состав</button>

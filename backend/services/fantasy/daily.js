@@ -10,27 +10,50 @@ async function readDay(id) {
     if (error) throw error
     return data
 }
+function entryWindow(games, ratings, now = Date.now()) {
+    const firstByTeam = new Map()
+    for (const game of games) for (const team of game.teams) {
+        const start = Date.parse(game.start)
+        const previous = firstByTeam.get(team.abbr)
+        if (!previous || start < previous.start) firstByTeam.set(team.abbr, {start, started:game.started || game.completed})
+    }
+    const playerLocks = Object.fromEntries(Object.entries(ratings).flatMap(([id,player]) => {
+        const game = firstByTeam.get(player.team)
+        return game && !game.started && game.start > now ? [[id,new Date(game.start).toISOString()]] : []
+    }))
+    return { locksAt: games.length ? new Date(Math.max(...games.map(g=>Date.parse(g.start)))).toISOString() : null, playerLocks }
+}
+async function refreshWindow(saved, games) {
+    const window = entryWindow(games,saved.ratings)
+    if (!window.locksAt) return {...saved,player_locks:{}}
+    const patch = {locks_at:window.locksAt,player_locks:window.playerLocks}
+    const {error} = await getAdmin().from('fantasy_days').update(patch).eq('day',saved.day)
+    if (error) throw error
+    return {...saved,...patch}
+}
 async function slate(id) {
     const existing = await readDay(id)
-    if (existing) return existing
+    if (existing) return refreshWindow(existing,await schedule(dayPeriod(id)))
     if (pending.has(id)) return pending.get(id)
     const task = (async()=>{
         const period = dayPeriod(id), games = await schedule(period)
         if (!games.length) return null
-        const lock = games.reduce((min,g)=>Math.min(min,Date.parse(g.start)),Infinity)
-        // Never create a historical rating from information learned after tip-off.
-        if (Date.now()>=lock) return null
+        // Late entry is allowed only for teams whose first game is still ahead.
+        const eligibleTeams = new Set(games.filter(g=>!g.started && !g.completed && Date.parse(g.start)>Date.now()).flatMap(g=>g.teams.map(t=>t.abbr)))
+        if (!eligibleTeams.size) return null
         const year = seasonYear(id)
         const [players, stats] = await Promise.all([catalog(period),seasonAthletes(year,2)])
         const ratings = rateSeason(stats)
-        const snapshot = Object.fromEntries(players.map(p=>[p.id,{
+        const snapshot = Object.fromEntries(players.filter(p=>eligibleTeams.has(p.team)).map(p=>[p.id,{
             id:p.id,name:p.name,team:p.team,positions:p.positions,scoringPosition:p.positions[0],
             ...(ratings[p.id] || {ovr:80,gamesPlayed:0,confidence:0,components:[]})
         }]))
-        const row = {day:id,starts_at:period.start,ends_at:period.end,locks_at:new Date(lock).toISOString(),season:year,ratings:snapshot}
+        const window = entryWindow(games,snapshot)
+        if (!Object.keys(window.playerLocks).length) return null
+        const row = {day:id,starts_at:period.start,ends_at:period.end,locks_at:window.locksAt,player_locks:window.playerLocks,season:year,ratings:snapshot}
         const { error } = await getAdmin().from('fantasy_days').upsert(row,{onConflict:'day',ignoreDuplicates:true})
         if (error) throw error
-        return readDay(id)
+        return refreshWindow(await readDay(id),games)
     })().finally(()=>pending.delete(id))
     pending.set(id,task)
     return task
@@ -38,9 +61,9 @@ async function slate(id) {
 async function dayInfo(id, fresh = false) {
     const period = dayPeriod(id)
     const [saved, games] = await Promise.all([slate(id),schedule(period)])
-    const lock = Math.min(saved ? Date.parse(saved.locks_at) : Infinity,...games.map(g=>Date.parse(g.start)))
-    const open = !!saved && games.length>0 && Date.now()<lock
-    const players = open ? (await catalog(period,fresh)).filter(p=>saved.ratings[p.id] && saved.ratings[p.id].team===p.team).map(p=>({...p,...saved.ratings[p.id]})) : []
+    const lock = saved ? Date.parse(saved.locks_at) : Math.max(...games.map(g=>Date.parse(g.start)))
+    const open = !!saved && games.length>0 && Date.now()<lock && Object.values(saved.player_locks || {}).some(t=>Date.parse(t)>Date.now())
+    const players = open ? (await catalog(period,fresh)).filter(p=>saved.ratings[p.id] && saved.ratings[p.id].team===p.team && Date.parse(saved.player_locks[p.id])>Date.now()).map(p=>({...p,...saved.ratings[p.id]})) : []
     return {day:{...period,locksAt:Number.isFinite(lock)?new Date(lock).toISOString():period.start,hasGames:games.length>0,open},players,ovrCap:OVR_CAP,ratingAt:saved?.created_at || null,season:saved?.season || seasonYear(id)}
 }
 let syncing = false
@@ -49,7 +72,7 @@ async function syncDaily() {
     syncing=true
     try {
         const db=getAdmin()
-        const {data:days,error}=await db.from('fantasy_days').select('day,ratings,ends_at').is('settled_at',null).lte('locks_at',new Date().toISOString()).order('day')
+        const {data:days,error}=await db.from('fantasy_days').select('day,ratings,ends_at').is('settled_at',null).lte('starts_at',new Date().toISOString()).order('day')
         if(error) throw error
         for(const day of days) {
             const {count,error:entryError}=await db.from('fantasy_daily_entries').select('user_id',{count:'exact',head:true}).eq('day',day.day)
@@ -89,4 +112,4 @@ function buildDailyRows(day,game,result) {
     }
     return rows
 }
-module.exports={slate,dayInfo,syncDaily,buildDailyRows}
+module.exports={slate,dayInfo,syncDaily,buildDailyRows,entryWindow}

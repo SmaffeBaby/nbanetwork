@@ -6,7 +6,7 @@ const {gameCompetition}=require('./gameCompetition')
 const ROOT='https://site.api.espn.com/apis/site/v2/sports/basketball/nba'
 const aliases={NY:'NYK',GS:'GSW',SA:'SAS',NO:'NOP',UTAH:'UTA',WSH:'WAS'}
 const abbr=t=>aliases[t?.abbreviation]||t?.abbreviation
-async function get(path,params,ttl=60000){return cache({key:`cup-source:${path}:${JSON.stringify(params)}`,ttl,fetcher:async()=>{const {data}=await axios.get(`${ROOT}/${path}`,{params,timeout:10000});return data}})}
+async function get(path,params,ttl=60000){return cache({key:`cup-source:${path}:${JSON.stringify(params)}`,ttl,fetcher:async()=>{const {data}=await axios.get(`${ROOT}/${path}`,{params,timeout:10000});if(path.endsWith('/schedule'))return {season:data.season,requestedSeason:data.requestedSeason,events:Array.isArray(data.events)?data.events.filter(e=>gameCompetition(e,2)?.kind==='cup'):undefined};if(path==='summary')return {header:data.header};return data}})}
 function normalizeEvent(event,fallbackType=2){
  const c=event.competitions?.[0],status=c?.status||event.status,competition=gameCompetition(event,fallbackType)
  if(competition?.kind!=='cup'||!c||!/^\d{9}$/.test(String(event.id)))return null
