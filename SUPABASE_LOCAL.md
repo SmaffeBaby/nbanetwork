@@ -380,3 +380,22 @@ docker compose -p nba-dashboard -f supabase/docker-compose.yml exec -T db psql -
 The SQL fixtures roll back. No persistent test account is needed.
 
 Apply `20261031150000_balanced_ovr_410.sql` after the history migration to increase the balanced lineup cap to 410. The Node validator, UI budget/rules/help and DB trigger all use 410. Existing confirmed lineups and frozen player OVR are preserved. Exactly 410 is valid; 411 is rejected in balanced mode. Unlimited mode is unaffected.
+
+## Notification center and preferences
+
+Apply `20261031180000_notification_center.sql`, then rebuild backend/frontend. This supersedes the old separate bell feeds and the best-effort Node social fanout. Existing legacy notifications/read states are imported with stable event keys; a durable import cutoff prevents future deployments from replaying newer legacy-table writes. No historical activity is replayed.
+
+The bell uses authenticated `/api/profile-inbox`, `/read`, `/clear` and `/settings` routes. The gear opens per-account settings for activity (game comments, published articles, article comments; all followed people or a selected list), daily fantasy and match results (favorites, favorite teams, predictions). The existing profile `notify_followed_comments` switch remains the activity master switch, so older profile settings still apply. Fantasy/results default off until opted in; activation timestamps prevent retroactive result spam. Selected actors are intersected with current follows and generation always rechecks the follow relationship. Turning categories off stops new events, preserving old inbox history.
+
+Social notifications are created atomically by database triggers, including writes through direct Supabase APIs. Fantasy triggers cover confirmation, complete-game score batches (transition tables restrict work to changed games), and settled day results. A unique recipient/event key prevents retries from generating duplicates. Favorite/team/prediction match discovery queues durable game watches; a one-minute Node worker retries pending status reads, publishes final non-tied scores, and finishes the watch atomically with delivery. Favorite-team discovery scans up to 14 days back after downtime; previously queued watches have no such cutoff. Modern canonical ESPN favorites and current prediction polls are supported. The worker only queues games from teams actually selected by enabled subscribers. No browser push or email delivery is added.
+
+Inbox reads remove score, winner, fantasy points and rank fields on the server when the profile hides scores. The client also respects the current hide-scores preference, including stale cached payloads. Article titles/excerpts are not included in notification previews. Only display names/avatars are returned for actors/follows. Settings and inbox data have no direct anon/authenticated table access; the trusted API scopes every mutation/read to the validated session. `X-Profile-Id` binds requests to the account that opened the UI, rejecting account-switch races. Read/clear-all operations use the inbox snapshot timestamp so newly arrived events are preserved. Clear sets `dismissed_at`; it does not delete stored notifications. Loading/errors are visible, unlike the old empty-feed fallback.
+
+Checks:
+```
+node --test backend/tests/notification-rules.test.js backend/tests/notification-api.test.js
+node --test vite-project/tests/notifications.cjs
+./vite-project/node_modules/.bin/vue-tsc -p vite-project/tsconfig.app.json --noEmit --incremental false
+docker compose -p nba-dashboard -f supabase/docker-compose.yml exec -T db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < backend/tests/notifications.sql
+```
+SQL tests roll back all fixtures, including generated events. A live request without a session returns 401. Visual verification in the signed-in Chrome account was not performed because computer-use access to Chrome was not approved; no real account preferences were changed during verification.

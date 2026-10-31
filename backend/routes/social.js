@@ -11,46 +11,6 @@ function authorName(profile) {
     return name || 'Пользователь'
 }
 
-async function createCommentNotifications(comment) {
-    try {
-        const admin = getAdmin()
-        const { data: followers, error } = await admin
-            .from('profile_follows')
-            .select(`
-                follower_id,
-                profiles:follower_id (
-                    notify_followed_comments
-                )
-            `)
-            .eq('following_id', comment.user_id)
-
-        if (error) throw error
-
-        const rows = (followers || [])
-            .filter(row => row.follower_id !== comment.user_id)
-            .filter(row => {
-                const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
-                return profile?.notify_followed_comments === true
-            })
-            .map(row => ({
-                recipient_id: row.follower_id,
-                actor_id: comment.user_id,
-                game_id: comment.game_id,
-                comment_id: comment.id
-            }))
-
-        if (rows.length === 0) return
-
-        const { error: insertError } = await admin
-            .from('profile_comment_notifications')
-            .upsert(rows, { onConflict: 'recipient_id,comment_id' })
-
-        if (insertError) throw insertError
-    } catch (error) {
-        console.error('create comment notifications error:', error)
-    }
-}
-
 router.get('/game-comments/:gameId', requireUser, async (req, res) => {
     try {
         const admin = getAdmin()
@@ -169,9 +129,7 @@ router.post('/game-comments', requireUser, async (req, res) => {
 
         res.status(201).json({ comment: data })
 
-        setImmediate(() => {
-            void createCommentNotifications(data)
-        })
+
     } catch (error) {
         res.status(500).json({ error: error.message || 'Social service is unavailable' })
     }

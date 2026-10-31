@@ -319,73 +319,6 @@ async function fetchLikedArticles(userId) {
         .filter(article => article?.published !== false)
 }
 
-async function createArticleNotifications(article) {
-    if (!article?.published) return
-
-    try {
-        const admin = getAdmin()
-        const { data: followers, error } = await admin
-            .from('profile_follows')
-            .select('follower_id')
-            .eq('following_id', article.author_id)
-
-        if (error) throw error
-
-        const rows = (followers || [])
-            .filter(row => row.follower_id !== article.author_id)
-            .map(row => ({
-                recipient_id: row.follower_id,
-                actor_id: article.author_id,
-                article_id: article.id,
-                kind: 'article_published'
-            }))
-
-        if (rows.length === 0) return
-
-        const { error: insertError } = await admin
-            .from('profile_news_notifications')
-            .upsert(rows, { onConflict: 'recipient_id,article_id,kind' })
-
-        if (insertError) throw insertError
-    } catch (error) {
-        console.error('create article notifications error:', error)
-    }
-}
-
-async function createArticleCommentNotifications(comment) {
-    if (!comment?.id || !comment?.user_id || !comment?.article_id) return
-
-    try {
-        const admin = getAdmin()
-        const { data: followers, error } = await admin
-            .from('profile_follows')
-            .select('follower_id')
-            .eq('following_id', comment.user_id)
-
-        if (error) throw error
-
-        const rows = (followers || [])
-            .filter(row => row.follower_id !== comment.user_id)
-            .map(row => ({
-                recipient_id: row.follower_id,
-                actor_id: comment.user_id,
-                article_id: comment.article_id,
-                comment_id: comment.id,
-                kind: 'article_comment'
-            }))
-
-        if (rows.length === 0) return
-
-        const { error: insertError } = await admin
-            .from('profile_news_notifications')
-            .upsert(rows, { onConflict: 'recipient_id,comment_id,kind' })
-
-        if (insertError) throw insertError
-    } catch (error) {
-        console.error('create article comment notifications error:', error)
-    }
-}
-
 router.post('/news-articles', requireUser, async (req, res) => {
     try {
         const admin = await requireAdmin(req, res)
@@ -407,10 +340,6 @@ router.post('/news-articles', requireUser, async (req, res) => {
         }
 
         res.status(201).json({ article: data })
-
-        setImmediate(() => {
-            void createArticleNotifications(data)
-        })
     } catch (error) {
         res.status(500).json({ error: error.message || 'News service is unavailable' })
     }
@@ -700,10 +629,6 @@ router.patch('/news-articles/:id', requireUser, async (req, res) => {
         }
 
         res.json({ article: data })
-
-        setImmediate(() => {
-            void createArticleNotifications(data)
-        })
     } catch (error) {
         res.status(500).json({ error: error.message || 'News service is unavailable' })
     }
@@ -824,10 +749,6 @@ router.post('/news-articles/:id/comments', requireUser, async (req, res) => {
         }
 
         res.status(201).json({ comment: normalizeComment(data) })
-
-        setImmediate(() => {
-            void createArticleCommentNotifications(data)
-        })
     } catch (error) {
         res.status(500).json({ error: error.message || 'News comments service is unavailable' })
     }

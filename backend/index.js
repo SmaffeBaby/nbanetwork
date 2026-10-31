@@ -58,6 +58,7 @@ app.use('/api', playerCareerRoutes)
 app.use('/api', playerSearchRoutes)
 app.use('/api', translateRoutes)
 app.use('/api', gameBroadcastRoutes)
+app.use('/api', require('./routes/notifications'))
 app.use('/api', socialRoutes)
 app.use('/api', newsRoutes)
 app.use('/api', teamContractsRoutes)
@@ -84,3 +85,5 @@ require('./services/authMail').startAuthMail()
 require('./services/experienceBackfill').startExperienceBackfill()
 
 require('./services/fantasy/maintenance').startFantasyMaintenance()
+
+require('./services/notifications').startNotificationMaintenance()
