@@ -8,14 +8,20 @@
             <div class="flex h-28 w-28 shrink-0 items-end overflow-hidden rounded-2xl bg-white/10 sm:h-36 sm:w-36"><img v-if="!photoFailed" :src="`https://a.espncdn.com/i/headshots/nba/players/full/${player.id}.png`" :alt="player.name" class="h-full w-full object-contain object-bottom" @error="photoFailed = true" /><span v-else class="m-auto text-3xl font-black">{{ player.name.split(' ').map(p=>p[0]).slice(0,2).join('') }}</span></div>
             <div class="min-w-0"><p class="flex items-center gap-2 text-xs font-bold text-blue-200"><img :src="`/logos/${player.team}.svg`" :alt="player.team" class="h-7 w-7 object-contain" />{{ player.team }} · {{ position }}</p><h2 :id="titleId" class="mt-2 break-words text-2xl font-black sm:text-3xl">{{ player.name }}</h2><p class="mt-2 text-sm text-blue-200">Сезон {{ data?.season || 'НБА' }} · {{ data ? `Матчей сыграно: ${data.gamesPlayed}` : 'Загружаем статистику' }}<span v-if="data?.ranks.gamesPlayed" class="ml-2 text-xs">{{ rankText('gamesPlayed') }}</span></p></div>
           </div>
-          <FantasyOvrBadge v-if="data?.rating || player.ovr" :rating="data?.rating || player" :name="player.name" class="mt-3" />
-          <RouterLink :to="`/player/${encodeURIComponent(player.name)}`" class="mt-4 inline-flex rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-900" @click="$emit('close')">Страница игрока ↗</RouterLink>
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+          <FantasyOvrBadge v-if="data?.rating || player.ovr" :rating="data?.rating || player" :name="player.name" />
+          <RouterLink :to="`/player/${encodeURIComponent(player.name)}`" class="inline-flex rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-900" @click="$emit('close')">Страница игрока ↗</RouterLink>
+          </div>
         </header>
+        <div class="sticky top-0 z-20 border-b border-slate-100 bg-white p-3 sm:px-7">
+          <FantasyPlayerTabs v-model="activeTab" :tabs="tabs" :id="titleId" label="Разделы карточки игрока" />
+        </div>
         <div class="space-y-5 p-5 sm:p-7">
           <p v-if="'injury' in player && player.injury" class="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">Травма / ограничение · {{ player.injury }}</p>
           <p v-if="loading" role="status" class="py-10 text-center text-slate-500">Загружаем статистику сезона…</p>
           <p v-else-if="error" role="alert" class="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">{{ error }} <button class="font-bold underline" @click="load">Повторить</button></p>
 
+          <div v-show="activeTab==='fantasy'" :id="`${titleId}-panel-fantasy`" role="tabpanel" :aria-labelledby="`${titleId}-tab-fantasy`" class="space-y-5">
           <section v-if="data" class="rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
             <FantasySectionHeading title="Баллы фентези">
               <template #value><span class="text-2xl font-black text-blue-700">{{ points(data.fantasy.points) }}</span></template>
@@ -41,6 +47,8 @@
             </FantasySectionHeading>
             <FantasyPlayerLevel :xp="playerXp" />
           </section>
+          </div>
+          <div v-show="activeTab==='stats'" :id="`${titleId}-panel-stats`" role="tabpanel" :aria-labelledby="`${titleId}-tab-stats`" class="space-y-5">
           <template v-if="data?.gamesPlayed">
             <div>
               <h3 class="font-extrabold text-slate-900">В среднем за матч</h3>
@@ -69,7 +77,11 @@
             <FantasyRadar :stats="data.stats" />
           </template>
           <p v-else-if="data" class="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">В текущем регулярном сезоне ещё нет сыгранных матчей или опубликованной статистики. График появится после первой игры.</p>
-          <div>
+          </div>
+          <div v-show="activeTab==='rating'" :id="`${titleId}-panel-rating`" role="tabpanel" :aria-labelledby="`${titleId}-tab-rating`">
+            <FantasyRatingHistory v-if="activeTab==='rating'" :player-id="player.id" :season="seasonYear" :slate-ovr="data?.rating?.ovr || player.ovr" />
+          </div>
+          <div v-show="activeTab==='games'" :id="`${titleId}-panel-games`" role="tabpanel" :aria-labelledby="`${titleId}-tab-games`">
             <h3 class="font-extrabold text-slate-900">Матчи игрового дня</h3>
             <div v-if="games.length" class="mt-3 grid gap-3 sm:grid-cols-2">
               <RouterLink v-for="game in games" :key="game.id" :to="`/game/${game.id}`" class="group rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-blue-300 hover:bg-blue-50/40" @click="$emit('close')">
@@ -93,9 +105,14 @@ import FantasySectionHeading from './FantasySectionHeading.vue'
 import FantasyPlayerLevel from './FantasyPlayerLevel.vue'
 import FantasyRadar from './FantasyRadar.vue'
 import FantasyOvrBadge from './FantasyOvrBadge.vue'
+import FantasyPlayerTabs from './FantasyPlayerTabs.vue'
+import FantasyRatingHistory from './FantasyRatingHistory.vue'
 const props = defineProps<{ player: Player | Pick; position: string; week?: string; mode?: 'unlimited' | 'balanced' | 'legacy'; profileId?: string; playerXp?: number }>()
 defineEmits<{ close: [] }>()
 const titleId = useId(), dialog = ref<HTMLElement | null>(null), data = ref<PlayerDetails | null>(null), loading = ref(true), error = ref(''), photoFailed = ref(false)
+const activeTab=ref('fantasy')
+const tabs=[{id:'fantasy',label:'Фентези'},{id:'stats',label:'Статистика'},{id:'rating',label:'Рейтинг OVR'},{id:'games',label:'Матчи'}]
+const seasonYear=computed(()=>{const date=new Date(`${props.week || new Date(Date.now()+3*3600000).toISOString().slice(0,10)}T12:00:00Z`);return date.getUTCFullYear()+(date.getUTCMonth()>=6?1:0)})
 const metrics = [['Очки','avgPoints'],['Подборы всего','avgRebounds'],['Подборы в нападении','avgOffensiveRebounds'],['Подборы в защите','avgDefensiveRebounds'],['Передачи','avgAssists'],['Перехваты','avgSteals'],['Блоки','avgBlocks'],['Потери','avgTurnovers'],['Минуты','avgMinutes']] as const
 const shooting = [
   { label:'Двухочковые', pct:'twoPointPct', made:'avgTwoPointFieldGoalsMade', attempts:'avgTwoPointFieldGoalsAttempted' },
@@ -136,7 +153,7 @@ async function load() {
 let previousFocus: HTMLElement | null = null, previousOverflow = ''
 function trap(event: KeyboardEvent) {
   if(event.key !== 'Tab' || !dialog.value || !(event.target instanceof Node) || !dialog.value.contains(event.target)) return
-  const items = [...dialog.value.querySelectorAll<HTMLElement>('button:not(:disabled),a[href]')], first=items[0], last=items.at(-1)
+  const items = [...dialog.value.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],summary')].filter(e=>e.getClientRects().length>0), first=items[0], last=items.at(-1)
   if(event.shiftKey && (document.activeElement === first || document.activeElement === dialog.value)) { event.preventDefault(); last?.focus() }
   else if(!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
 }

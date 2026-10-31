@@ -6,6 +6,20 @@ const { playerDetails } = require('../services/fantasy/data')
 const uuid = /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i
 const fail = (res, error) => { console.warn('Fantasy API:', error.message); res.status(503).json({ error: 'Фентези временно недоступно. Попробуйте ещё раз.' }) }
 const daily = require('./fantasyDaily')
+router.get('/fantasy/profiles/:id',async(req,res)=>{
+    if(!uuid.test(req.params.id))return res.status(400).json({error:'Некорректный профиль'})
+    try {
+        const {data,error}=await getAdmin().rpc('read_fantasy_profile',{p_user:req.params.id}).abortSignal(AbortSignal.timeout(10000))
+        if(error)throw error
+        res.set('Cache-Control','no-store').json({...data,history:[...data.history,...data.legacy.map(e=>({...e,mode:'legacy'}))].sort((a,b)=>b.week.localeCompare(a.week))})
+    }catch(error){fail(res,error)}
+})
+router.get('/fantasy/players/:id/rating-history', (req,res)=>{
+    const year=Number(req.query.season)
+    if(!/^\d{1,12}$/.test(req.params.id)||!Number.isInteger(year)||year<2026||year>new Date().getUTCFullYear()+1)return res.status(400).json({error:'Некорректный игрок или сезон'})
+    const result=require('../services/fantasy/ratingHistory').history(year,req.params.id)
+    res.set('Cache-Control','no-store').status(result.status==='loading'?202:result.status==='error'?503:200).json(result)
+})
 router.get('/fantasy/players/:id', async (req, res) => {
     if (!req.query.week) return daily.details(req,res)
     if (!/^\d{1,12}$/.test(req.params.id)) return res.status(400).json({ error: 'Некорректный игрок' })

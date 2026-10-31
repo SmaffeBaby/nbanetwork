@@ -7,6 +7,9 @@ function seasonYear(date) {
 }
 function rateSeason(data) {
     const rows = data.athletes.map(row => ({ ...normalizeRow(row, data.categories), position: row.athlete.position?.abbreviation || row.athlete.position || '' }))
+    return rateRows(rows)
+}
+function rateRows(rows, onlyId = null) {
     const eligible = rows.filter(p => p.stats.gamesPlayed > 0 && p.stats.avgMinutes > 0)
     const role = position => /^(PG|SG|G)$/.test(position) ? 'guard' : /^(PF|C|F-C)$/.test(position) ? 'big' : 'wing'
     const n = (s, key) => Number.isFinite(s[key]) ? s[key] : 0
@@ -21,7 +24,7 @@ function rateSeason(data) {
     const all = eligible.map(p => ({ ...p, role: role(p.position), values: metrics(p.stats) }))
     const percentile = (v, values) => values.length < 2 ? .5 : (values.filter(x=>x<v).length + .5*(values.filter(x=>x===v).length-1))/(values.length-1)
     const weights = [.25,.10,.20,.20,.15,.10]
-    return Object.fromEntries(all.map(p => {
+    return Object.fromEntries(all.filter(p=>onlyId===null || p.id===onlyId).map(p => {
         const peers = all.filter(x=>x.role===p.role)
         const group = peers.length >= 10 ? peers : all
         const parts = p.values.map((v,i)=>percentile(v,group.map(x=>x.values[i])))
@@ -32,4 +35,4 @@ function rateSeason(data) {
         return [p.id,{ovr,gamesPlayed:p.stats.gamesPlayed,confidence:Math.round(confidence*100),components:parts.map(v=>Math.round(v*100))}]
     }))
 }
-module.exports = { rateSeason, seasonYear }
+module.exports = { rateSeason, rateRows, seasonYear }

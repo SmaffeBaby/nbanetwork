@@ -19,7 +19,7 @@
         <button v-for="item in modes" :key="item.id" :aria-pressed="mode === item.id" :disabled="saving" class="rounded-2xl border p-5 text-left transition" :class="mode === item.id ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white'" @click="switchMode(item.id)"><span class="block text-lg font-black text-slate-900">{{ item.name }}</span><span class="mt-1 block text-sm text-slate-500">{{ item.description }}</span></button>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-        <label class="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-700">Игровой день · МСК <input type="date" :value="selectedWeek || board?.week.id" :max="maxDate" :disabled="saving" class="rounded-xl border border-slate-200 p-2" @change="selectDate(($event.target as HTMLInputElement).value)" /></label>
+        <div class="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-700"><span>Игровой день · МСК</span><FantasyCalendar :model-value="selectedWeek || board?.week.id || ''" :entries="board?.history || []" :max-date="maxDate" :disabled="saving" @update:model-value="selectDate" /></div>
         <p class="max-w-lg text-xs leading-5 text-slate-500">Один состав на день в каждом режиме. Приём закрывается с первым матчем. Опыт игрока сохраняется и не удваивается между режимами.</p>
       </div>
     </section>
@@ -94,6 +94,7 @@ import { teamsFullNames } from '../constants/TeamFullName'
 import Header from '../components/Headers/Header.vue'
 import FantasyPlayerCard from '../components/Fantasy/FantasyPlayerCard.vue'
 import FantasyRules from '../components/Fantasy/FantasyRules.vue'
+import FantasyCalendar from '../components/Fantasy/FantasyCalendar.vue'
 import { playerProgress } from '../components/Fantasy/progress'
 import { slots, points, dateTime, weekLabel, type Slot, type Player, type Pick, type Board, type Mode } from '../components/Fantasy/types'
 import { useRoute } from 'vue-router'
@@ -106,12 +107,12 @@ const team = ref('all')
 const eligibleTeams = computed(() => [...new Set(players.value.map(p => p.team))].sort().map(abbr => ({ abbr, name: teamsFullNames[abbr] || abbr })))
 const modes: { id: Mode; name: string; description: string }[] = [
   {id:'unlimited',name:'Без ограничений',description:'Пятёрка мечты без лимита OVR'},
-  {id:'balanced',name:'Баланс-фентези',description:'До 400 OVR: звёзды, роли и продуманная пятёрка'}
+  {id:'balanced',name:'Баланс-фентези',description:'До 410 OVR: звёзды, роли и продуманная пятёрка'}
 ]
 const archive = ref(typeof route.query.week === 'string')
 const mode = ref<Mode>(route.query.mode === 'balanced' ? 'balanced' : 'unlimited')
 const modeLabel = computed(() => modes.find(m => m.id === mode.value)!.name)
-const cap = computed(() => board.value?.ovrCap || 400)
+const cap = computed(() => board.value?.ovrCap || 410)
 const totalOvr = computed(() => picks.value.reduce((sum,p) => sum + (p.ovr || 0), 0))
 const maxDate = new Date(Date.now() + 7*86400000 + 3*3600000).toISOString().slice(0,10)
 const sort = ref('ovr')

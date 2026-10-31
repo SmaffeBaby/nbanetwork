@@ -1613,3 +1613,60 @@ GRANT EXECUTE ON FUNCTION public.read_daily_fantasy(date,text,uuid) TO service_r
 SELECT public.sync_fantasy_experience();
 NOTIFY pgrst,'reload schema';
 COMMIT;
+
+BEGIN;
+CREATE TABLE IF NOT EXISTS public.fantasy_rating_games (
+ game_id text PRIMARY KEY CHECK(game_id ~ '^espn:[0-9]{9}$'),
+ season integer NOT NULL CHECK(season BETWEEN 2000 AND 2200), starts_at timestamptz NOT NULL,
+ players jsonb NOT NULL CHECK(jsonb_typeof(players)='array'),
+ matchup text NOT NULL, version integer NOT NULL DEFAULT 1,
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX IF NOT EXISTS fantasy_rating_games_season ON public.fantasy_rating_games(season,starts_at);
+ALTER TABLE public.fantasy_rating_games ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.fantasy_rating_games FROM PUBLIC,anon,authenticated,service_role;
+GRANT SELECT,INSERT ON public.fantasy_rating_games TO service_role;
+CREATE OR REPLACE FUNCTION public.read_fantasy_profile(p_user uuid) RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
+ WITH daily AS (SELECT read_daily_fantasy((clock_timestamp() AT TIME ZONE 'Europe/Moscow')::date,'unlimited',p_user) data),
+ legacy AS (SELECT read_fantasy(date_trunc('week',clock_timestamp() AT TIME ZONE 'Europe/Moscow')::date,p_user) data),
+ totals AS (SELECT user_id,mode,sum(points) points FROM fantasy_daily_results GROUP BY user_id,mode),
+ ranked AS (SELECT *,rank() OVER(PARTITION BY mode ORDER BY points DESC) rank,count(*) OVER(PARTITION BY mode) participants FROM totals)
+ SELECT jsonb_build_object('history',(SELECT data->'history' FROM daily),
+ 'legacy',(SELECT data->'history' FROM legacy),'playerXp',(SELECT data->'playerXp' FROM daily),
+ 'ranks',coalesce((SELECT jsonb_object_agg(mode,jsonb_build_object('rank',rank,'participants',participants)) FROM ranked WHERE user_id=p_user),'{}'::jsonb));
+$$;
+REVOKE ALL ON FUNCTION public.read_fantasy_profile(uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.read_fantasy_profile(uuid) TO service_role;
+NOTIFY pgrst,'reload schema';
+COMMIT;
+
+BEGIN;
+CREATE OR REPLACE FUNCTION public.fantasy_ovr_cap() RETURNS integer
+LANGUAGE sql IMMUTABLE SET search_path=public AS $$ SELECT 410; $$;
+REVOKE ALL ON FUNCTION public.fantasy_ovr_cap() FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.fantasy_ovr_cap() TO service_role;
+CREATE OR REPLACE FUNCTION public.guard_daily_fantasy() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE d fantasy_days; p jsonb; r jsonb; total integer:=0; xp numeric; lvl integer; bonuses jsonb:='{}'; canonical jsonb:='[]';
+BEGIN
+ IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'Fantasy lineup immutable'; END IF;
+ SELECT * INTO STRICT d FROM fantasy_days WHERE day=NEW.day;
+ IF clock_timestamp()>=d.locks_at OR clock_timestamp()<d.starts_at-interval '7 days' THEN RAISE EXCEPTION 'Fantasy day locked'; END IF;
+ IF (SELECT count(DISTINCT x->>'id') FROM jsonb_array_elements(NEW.lineup) x)<>5
+ OR (SELECT count(DISTINCT x->>'slot') FROM jsonb_array_elements(NEW.lineup) x WHERE x->>'slot' IN ('PG','SG','SF','PF','C'))<>5 THEN RAISE EXCEPTION 'Invalid lineup'; END IF;
+ FOR p IN SELECT * FROM jsonb_array_elements(NEW.lineup) LOOP
+  r:=d.ratings->(p->>'id');
+  IF r IS NULL OR NOT (r->'positions' ? (p->>'slot')) THEN RAISE EXCEPTION 'Invalid player'; END IF;
+  total:=total+(r->>'ovr')::integer;
+  canonical:=canonical||jsonb_build_array(jsonb_build_object('id',p->>'id','slot',p->>'slot','name',r->>'name','team',r->>'team','ovr',(r->>'ovr')::integer,'scoringPosition',r->>'scoringPosition'));
+  SELECT coalesce(sum(a.xp),0) INTO xp FROM fantasy_player_xp_awards a WHERE a.user_id=NEW.user_id AND a.player_id=p->>'id' AND a.period<NEW.day;
+  lvl:=floor((1+sqrt(1+xp/37.5))/2)::integer;
+  bonuses:=bonuses||jsonb_build_object(p->>'id',jsonb_build_object('level',lvl,'rate',fantasy_bonus_rate(lvl)));
+ END LOOP;
+ IF NEW.mode='balanced' AND total>public.fantasy_ovr_cap() THEN RAISE EXCEPTION 'OVR cap exceeded'; END IF;
+ NEW.lineup:=canonical; NEW.player_bonuses:=bonuses; NEW.confirmed_at:=clock_timestamp();
+ RETURN NEW;
+END $$;
+NOTIFY pgrst,'reload schema';
+COMMIT;

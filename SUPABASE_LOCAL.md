@@ -335,7 +335,7 @@ Additional checks: `node --test vite-project/tests/score-visibility.cjs`. `node 
 
 Apply `20261031120000_daily_fantasy.sql` after earlier migrations, then rebuild backend/frontend. Fresh initialization and production deployment include it. Existing weekly tables, points and lineups remain archived and use scoring v1. Legacy maintenance continues for existing current-week entries; new weekly enrollment is disabled.
 
-Daily tournaments use Moscow calendar dates, including games that finish after midnight. `unlimited` and `balanced` each allow one immutable lineup/user/day with separate daily and cumulative standings. Balanced cap is 400 OVR, enforced in Node and a database trigger that overwrites client ratings/bonuses from the stored slate. All entries lock at the first scheduled tip-off. Days without games cannot be entered; up to 7 days may be selected ahead. Postponed games moved beyond the selected day are excluded. A daily worker retries unfinished slates and waits for complete final player totals; it does not cut off overnight games at midnight. Final snapshots are scored once; later source corrections do not automatically rewrite settled results.
+Daily tournaments use Moscow calendar dates, including games that finish after midnight. `unlimited` and `balanced` each allow one immutable lineup/user/day with separate daily and cumulative standings. Balanced cap is 410 OVR, enforced in Node and a database trigger that overwrites client ratings/bonuses from the stored slate. All entries lock at the first scheduled tip-off. Days without games cannot be entered; up to 7 days may be selected ahead. Postponed games moved beyond the selected day are excluded. A daily worker retries unfinished slates and waits for complete final player totals; it does not cut off overnight games at midnight. Final snapshots are scored once; later source corrections do not automatically rewrite settled results.
 
 Scoring v2 retains PTS=1 and existing penalties/STL/BLK/DD/TD. PG/SG assists=2 and rebounds=1.2; SF/PF/C assists=1.5 and rebounds=1.5; win=6 for players who actually played. The roster's primary eligible position is frozen per slate, so moving a G-F between lineup slots cannot change coefficients. Generic G => PG/SG, F => SF/PF. Injuries are freshly checked at confirmation.
 
@@ -357,3 +357,26 @@ Live enrollment integration (creates and deletes its own disposable profile):
 ```
 docker compose exec -T -w /app/tests backend node - < backend/tests/fantasy-daily.integration.js
 ```
+
+## Fantasy player tabs, OVR history and profile stats
+
+Apply `20261031140000_fantasy_rating_history.sql`, then rebuild backend/frontend. The player dialog separates Fantasy points/level, season Statistics, OVR history and selected-day Matches. Tabs support arrow/Home/End keys. The OVR help button remains in the header.
+
+`GET /api/fantasy/players/:id/rating-history?season=2027` starts a shared per-season job and returns 202 with progress until the history is ready. The job reads ESPN's season calendar, filters completed regular-season events and saves complete, reconciled boxscores in `fantasy_rating_games`. Snapshots grant the service SELECT/INSERT only (including explicit revocation of inherited default privileges); clients have no direct table access. Missing/incomplete games fail closed and may be retried. Requests for the same season share a job; saved games survive backend restarts. Refresh is on demand after 15 minutes; existing game snapshots are not overwritten. Supported season years start at 2026.
+
+The OVR graph is explicitly a retrospective reconstruction, not a record of values previously shown by the site. Before each target-player point it accumulates all league boxscores in start-time order (simultaneous starts grouped), then uses the same OVR formula and current season position directory. It never compares old individual totals to future league production. A point appears only after an actual played game; DNP is excluded. Source corrections, position metadata and the slate snapshot time may explain differences from the frozen tournament rating. A live check reconstructed 81 games for 2026–27 and Maxey's six OVR points: 83,85,86,86,87,88.
+
+`GET /api/fantasy/profiles/:id` uses the server-only `read_fantasy_profile(uuid)` RPC. It returns mode-tagged public lineup history, shared player XP, and complete cumulative ranks per mode (including profiles outside the top 100). Profile tabs independently show unlimited, balanced and legacy weekly data. Completed-tournament averages/best/wins use settled results; in-progress totals remain visible separately. Level bonus totals are included. The profile calendar filters only the history list, not the summary statistics or all-time best players.
+
+The team filter now supports logos, search, keyboard navigation, Escape and outside click. The fantasy calendar uses Moscow date keys, Monday-start grids and separate blue/violet dots for confirmed unlimited/balanced lineups. The same calendar is used in the main fantasy picker and profile history. Legacy weekly dates are kept in their separate archive rather than marked as daily slates.
+
+Checks:
+```
+node --test backend/tests/fantasy-rating-history.test.js
+node --test vite-project/tests/fantasy-calendar.cjs
+./vite-project/node_modules/.bin/vue-tsc -p vite-project/tsconfig.app.json --noEmit --incremental false
+docker compose -p nba-dashboard -f supabase/docker-compose.yml exec -T db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < backend/tests/fantasy-profile.sql
+```
+The SQL fixtures roll back. No persistent test account is needed.
+
+Apply `20261031150000_balanced_ovr_410.sql` after the history migration to increase the balanced lineup cap to 410. The Node validator, UI budget/rules/help and DB trigger all use 410. Existing confirmed lineups and frozen player OVR are preserved. Exactly 410 is valid; 411 is rejected in balanced mode. Unlimited mode is unaffected.

@@ -49,7 +49,7 @@ function dayPeriod(id) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(id) || !Number.isFinite(+start) || new Date(+start+3*3600000).toISOString().slice(0,10)!==id) throw new Error('Некорректная дата')
     return { id, start:start.toISOString(), end:new Date(+start+DAY).toISOString(), next:new Date(+start+DAY+3*3600000).toISOString().slice(0,10) }
 }
-const OVR_CAP = 400
+const OVR_CAP = 410
 function validateDailyLineup(lineup, players, mode) {
     if (!['unlimited','balanced'].includes(mode)) throw new Error('Неизвестный режим')
     const picks = validateLineup(lineup, players)
