@@ -56,7 +56,7 @@ class CalendarProvider:
                 self.pending.pop(path, None)
 
     @staticmethod
-    def normalize(event):
+    def normalize(event, fallback_type=None):
         competition = event.get("competitions", [{}])[0]
         competitors = competition.get("competitors", [])
         home = next((x for x in competitors if x.get("homeAway") == "home"), None)
@@ -79,6 +79,9 @@ class CalendarProvider:
             return int(float(value)) if value not in (None, "") and state != "pre" else None
         return {
             "GAME_ID": f'espn:{event["id"]}',
+            "GAME_SEASON_TYPE": (event.get("season") or {}).get("type", fallback_type),
+            "GAME_SEASON_YEAR": (event.get("season") or {}).get("year"),
+            "GAME_NOTES": competition.get("notes", []),
             "GAME_DATE_EST": tipoff.astimezone(ZoneInfo("America/New_York")).date().isoformat(),
             "GAME_DATE_MSK": tipoff.astimezone(MSK).date().isoformat(),
             "GAME_TIME_UTC": tipoff.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -128,7 +131,10 @@ class CalendarProvider:
         # Both regular season and postseason can contain upcoming fixtures.
         for season_type in (2, 3):
             data = self._get(f'teams/{mapping[team_id]}/schedule?season={season}&seasontype={season_type}', 300)
-            events.extend(data["events"])
+            selected = data.get("requestedSeason") or data.get("season") or {}
+            if selected.get("year") != season or selected.get("type") != season_type:
+                continue
+            events.extend({**e, "season": {**(e.get("season") or {}), "type": season_type}} for e in data["events"])
         games = {}
         for event in events:
             game = self.normalize(event)

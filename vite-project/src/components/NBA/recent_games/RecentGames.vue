@@ -75,6 +75,7 @@
         >
 
           <RouterLink :to="gameLocation(game)" class="block">
+          <GameCompetitionBadge :competition="game.competition" class="mb-3" />
           <div class="flex justify-between">
             <span class="text-gray-500">
               {{ game.statusTime ? `${game.statusTime} МСК` : 'Время уточняется' }}
@@ -112,6 +113,7 @@
 </template>
 
 <script setup lang="ts">
+import GameCompetitionBadge from '../GameCompetitionBadge.vue'
 import { dateKeyToDate } from '../../../composables/NBA/games/useGamesByDate'
 import { getDateKey } from '../../../composables/NBA/utils'
 import { gameLocation } from '../../../api/gameNavigation'

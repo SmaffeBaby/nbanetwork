@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type {GameCompetition} from '../types/gameCompetition'
 
 export type Team = {
     id: number
@@ -7,6 +8,7 @@ export type Team = {
 }
 
 export type Game = {
+    competition?:GameCompetition|null
     id: number | string
     home_team: Team
     visitor_team: Team

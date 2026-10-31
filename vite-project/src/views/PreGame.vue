@@ -7,6 +7,7 @@
    <div v-if="error" role="alert" class="mb-5 rounded-2xl bg-red-50 p-4 text-red-600">{{ error.message }} <button class="ml-2 underline" @click="retry()">Повторить</button></div>
    <p v-if="preview && preview.state!=='pre'" class="py-12 text-center text-gray-500">Матч уже начался. Открываем игру…</p>
    <template v-if="preview && preview.state==='pre'">
+    <GameCompetitionBadge :competition="preview.competition" class="mb-4" />
     <h1 class="mb-6 text-center text-2xl font-black text-gray-900 sm:text-3xl">{{ bySide.away.name }} — {{ bySide.home.name }}</h1>
     <div class="grid items-stretch gap-5 lg:grid-cols-[1fr_270px_1fr]">
      <PreGameLineup :team="bySide.away" class="order-2 lg:order-1" />
@@ -71,6 +72,7 @@ import { useBackNavigation } from '../composables/useBackNavigation'
 import {computed} from 'vue'
 import {usePageTitle} from '../composables/usePageTitle'
 import {useRoute} from 'vue-router'
+import GameCompetitionBadge from '../components/NBA/GameCompetitionBadge.vue'
 import Header from '../components/Headers/Header.vue'
 import PreGameLineup from '../components/NBA/GameFinal/PreGameLineup.vue'
 import GamePrediction from '../components/NBA/GameFinal/GamePrediction.vue'

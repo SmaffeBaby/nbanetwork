@@ -70,11 +70,12 @@ async function getGamePreview(id) {
     const raw=await getEspnSummary(id), recap=normalizeSummary(id,raw), competition=raw.header.competitions[0]
     const year=Number(raw.header.season.year), type=Number(raw.header.season.type), state=competition.status?.type || {}
     if(state.state!=='pre') return {gameId:id,source:'espn',state:state.state,completed:Boolean(state.completed),teams:[]}
-    const commonRequest=seasonAthletes(year,type).catch(()=>null)
-    const chartRequest=([2,3].includes(type)?require('./teamChart').teamChart(year,type):Promise.resolve(null)).catch(()=>null)
+    const statisticsType=type===5?2:type
+    const commonRequest=seasonAthletes(year,statisticsType).catch(()=>null)
+    const chartRequest=([2,3].includes(statisticsType)?require('./teamChart').teamChart(year,statisticsType):Promise.resolve(null)).catch(()=>null)
     const teams=await Promise.all(['away','home'].map(async side=>{
         const c=competition.competitors.find(c=>c.homeAway===side)
-        const results=await Promise.allSettled(['roster','depthcharts','statistics'].map(resource=>teamResource(c.id,resource,year,type,resource==='depthcharts'?5*60000:15*60000)))
+        const results=await Promise.allSettled(['roster','depthcharts','statistics'].map(resource=>teamResource(c.id,resource,year,statisticsType,resource==='depthcharts'?5*60000:15*60000)))
         const [common,chart]=await Promise.all([commonRequest,chartRequest])
         const [roster,depth,stats]=results.map(r=>r.status==='fulfilled'?r.value:null)
         const injuries=injuryReports(raw,c.id,roster,depth)
@@ -86,7 +87,7 @@ async function getGamePreview(id) {
             statistics:{...statistics,ranks:chartTeam?.ranks||{},rankingsComplete:chart?.complete||false},leaders:teamLeaders(common,roster),
             unavailable:[...['roster','depthcharts','statistics'].filter((_,i)=>results[i].status==='rejected'),...(!common?['leaders']:[])]}
     }))
-    return {gameId:id,source:'espn',dateUTC:recap.dateUTC,dateMSK:recap.dateMSK,venue:recap.venue,
+    return {gameId:id,competition:recap.competition,source:'espn',dateUTC:recap.dateUTC,dateMSK:recap.dateMSK,venue:recap.venue,
         season:`${year-1}-${String(year).slice(-2)}`,seasonType:type,state:state.state || 'pre',completed:Boolean(state.completed),statusName:state.name || '',
         status:recap.meta.status,votingOpen:state.state==='pre'&&!/CANCEL|POSTPON/i.test(state.name || '')&&Date.now()<Date.parse(recap.dateUTC),
         teams,updatedAt:new Date().toISOString()}

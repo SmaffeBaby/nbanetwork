@@ -14,6 +14,7 @@
         class="relative rounded-2xl bg-white p-4 shadow-md transition active:scale-[0.98] sm:p-5"
     >
 
+      <GameCompetitionBadge :competition="game?.competition" class="mb-3" />
       <div class="mb-3 flex items-center justify-between text-xs text-gray-500">
 
         <div class="flex items-center gap-2 uppercase tracking-wide">
@@ -116,6 +117,7 @@
 </template>
 
 <script setup lang="ts">
+import GameCompetitionBadge from '../GameCompetitionBadge.vue'
 import { toRef, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { getTeamLogo } from '../../../utils/getTeamLogo'

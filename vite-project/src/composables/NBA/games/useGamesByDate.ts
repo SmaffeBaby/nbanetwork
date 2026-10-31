@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import type {GameCompetition} from '../../../types/gameCompetition'
 import { useQueryClient } from '@tanstack/vue-query'
 import { getDateKey, toMSK } from '../utils'
 import { TEAM_ID_MAP } from '../../../constants/nbaTeams'
@@ -11,6 +12,7 @@ const TEAM_ID_TO_ABBR: Record<number, string> = Object.fromEntries(
 )
 
 export type DailyGameDTO = {
+    competition?:GameCompetition|null
     GAME_ID: string
     GAME_DATE_EST: string
     GAME_DATE_MSK?: string
@@ -25,6 +27,7 @@ export type DailyGameDTO = {
 }
 
 export type GamesPageGame = {
+    competition?:GameCompetition|null
     id: string
     datetime: string
     gameDay: string
@@ -148,6 +151,7 @@ export const normalizeGame = (game: DailyGameDTO): GamesPageGame => {
 
     return {
         id: game.GAME_ID,
+        competition:game.competition,
         datetime,
         gameDay: getGameDay(game),
         status,

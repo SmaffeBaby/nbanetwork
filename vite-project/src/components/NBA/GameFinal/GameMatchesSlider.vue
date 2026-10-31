@@ -7,6 +7,7 @@
     <div v-else ref="track" class="matches-track grid grid-flow-col gap-4 overflow-x-auto overscroll-x-contain pb-3 snap-x snap-mandatory" @scroll.passive="update">
       <RouterLink v-for="game in games" :key="game.id" :to="gameLocation(game)" class="min-w-0 snap-start rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500">
         <div class="mb-4 flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wide"><span :class="/final/i.test(game.status) ? 'text-slate-400' : 'text-blue-600'">{{ /final/i.test(game.status) ? 'Завершён' : game.period > 0 ? 'В игре' : /cancel|postpon/i.test(game.status) ? 'Перенесён / отменён' : 'Скоро' }}</span><span aria-hidden="true" class="text-slate-300">↗</span></div>
+        <GameCompetitionBadge :competition="game.competition" class="mb-3" />
         <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
           <div class="min-w-0 text-center"><img :src="`/logos/${game.visitor_team.abbreviation}.svg`" :alt="game.visitor_team.full_name" class="mx-auto h-12 w-12 object-contain" loading="lazy" /><p class="mt-2 text-xs font-black text-slate-700">{{ game.visitor_team.abbreviation }}</p></div>
           <span v-if="game.home_team_score !== null && game.visitor_team_score !== null && (/final/i.test(game.status) || game.period > 0)" class="whitespace-nowrap text-lg font-black tabular-nums text-slate-900">{{ hideScores ? '—' : game.visitor_team_score }} : {{ hideScores ? '—' : game.home_team_score }}</span><span v-else class="text-xs font-black text-slate-300">VS</span>
@@ -18,6 +19,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import GameCompetitionBadge from '../GameCompetitionBadge.vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, useId, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { gameLocation } from '../../../api/gameNavigation'

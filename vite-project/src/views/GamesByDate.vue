@@ -97,6 +97,7 @@
                 <span class="text-xs font-semibold uppercase text-gray-500">{{ game.status }}</span>
               </div>
 
+              <GameCompetitionBadge :competition="game.competition" />
               <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                 <div class="flex min-w-0 flex-col items-center gap-2">
                   <img :src="getTeamLogo(game.away.abbr)" :alt="game.away.name" class="h-14 w-14 object-contain" />
@@ -125,6 +126,7 @@
 </template>
 
 <script setup lang="ts">
+import GameCompetitionBadge from '../components/NBA/GameCompetitionBadge.vue'
 import Header from '../components/Headers/Header.vue'
 import { gameLocation } from '../api/gameNavigation'
 import GamesDatePicker from '../components/NBA/Games/GamesDatePicker.vue'

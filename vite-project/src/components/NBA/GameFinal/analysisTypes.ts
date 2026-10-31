@@ -1,9 +1,11 @@
+import type {GameCompetition} from '../../../types/gameCompetition'
 export type AnalysisArticle = {
   title: string; deck: string; dateUTC: string; hasPlayByPlay: boolean
   sections: { id: string; title: string; paragraphs: string[] }[]
   source: { name: string; url: string }
 }
 export type RelatedMatch = {
+  competition?:GameCompetition|null
   id: string; datetime: string; status: string; period: number
   home_team: { id: string | number; abbreviation: string; full_name: string }
   visitor_team: { id: string | number; abbreviation: string; full_name: string }

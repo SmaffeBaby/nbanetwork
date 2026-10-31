@@ -1,5 +1,6 @@
 <template>
   <RouterLink :to="gameLocation(game)" class="block cursor-pointer">
+    <GameCompetitionBadge :competition="game.competition" class="mb-3" />
     <div class="teams flex items-center justify-between mb-2">
       <div class="team team-visitor">
         <img :src="getTeamLogo(game.visitor_team.abbreviation)" class="team-logo" />
@@ -29,6 +30,7 @@
 </template>
 
 <script lang="ts" setup>
+import GameCompetitionBadge from '../GameCompetitionBadge.vue'
 import { gameLocation } from '../../../api/gameNavigation'
 
 

@@ -1,6 +1,7 @@
 const axios = require('axios')
 const fetchWithCache = require('../utils/fetchWithCache')
 const TEAM_MAP = require('../constants/teamMap')
+const {gameCompetition}=require('./gameCompetition')
 const { clockSeconds } = require('./periodBoxscore')
 const ALIASES = { NY: 'NYK', GS: 'GSW', SA: 'SAS', NO: 'NOP', UTAH: 'UTA', WSH: 'WAS' }
 const number = value => {
@@ -115,7 +116,7 @@ function normalizeSummary(gameId, data) {
     const quarters = Array.from({ length: Math.max(sides.home.linescores.length, sides.away.linescores.length) }, (_, index) =>
         `${sides.away.linescores[index]?.value ?? sides.away.linescores[index]?.displayValue ?? '—'} - ${sides.home.linescores[index]?.value ?? sides.home.linescores[index]?.displayValue ?? '—'}`)
     return {
-        gameId, source: 'espn', title: `${sides.away.name} — ${sides.home.name}`,
+        gameId, competition:gameCompetition(data), source: 'espn', title: `${sides.away.name} — ${sides.home.name}`,
         insight: status.state === 'pre' ? 'Матч ещё не начался. Статистика появится после начала игры.' : `${sides.away.abbr} ${sides.away.score} : ${sides.home.score} ${sides.home.abbr}`,
         storyline: [], quarters, supportsPeriodStats: Boolean(data.plays?.length),
         unavailableStats: ['secondChancePoints'],

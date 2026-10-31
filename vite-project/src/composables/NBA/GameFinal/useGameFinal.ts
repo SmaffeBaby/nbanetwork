@@ -43,6 +43,7 @@ export function useGameFinal(filters: Ref<Filters>) {
 
         return {
             gameId: detail.gameId,
+            competition:detail.competition,
             status: detail.status || 'TBD',
 
             dateUTC: detail.dateUTC,
@@ -116,6 +117,7 @@ export function useGameFinal(filters: Ref<Filters>) {
 
             game.value = {
                 gameId,
+                competition:data.competition,
                 status: meta?.status || 'Final',
 
                 dateUTC: data?.dateUTC,

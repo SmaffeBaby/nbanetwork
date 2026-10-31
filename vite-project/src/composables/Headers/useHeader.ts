@@ -7,6 +7,7 @@ import {
   ChevronDownIcon,
   FireIcon,
   NewspaperIcon,
+  TrophyIcon,
   SparklesIcon
 } from '@heroicons/vue/24/solid'
 import { useProfileNavigation } from '../useProfileNavigation'
@@ -101,7 +102,8 @@ export function useHeader() {
       to: '/playoffs',
       icon: FireIcon,
       isActive: route.path.startsWith('/playoffs')
-    }
+    },
+    {label:'Emirates NBA Cup',description:'Группы и сетка кубка НБА',to:'/nba-cup',icon:TrophyIcon,isActive:route.path==='/nba-cup'}
   ])
 
   const featuredLinks = computed<HeaderFeatureLink[]>(() => [
@@ -136,7 +138,7 @@ export function useHeader() {
   ])
 
   const teamsIsActive = computed(() => route.path.startsWith('/teams') || route.path.startsWith('/team/'))
-  const seasonIsActive = computed(() => route.path.startsWith('/chart') || route.path === '/standings' || route.path.startsWith('/playoffs'))
+  const seasonIsActive = computed(() => route.path === '/nba-cup' || route.path.startsWith('/chart') || route.path === '/standings' || route.path.startsWith('/playoffs'))
   const moreIsActive = computed(() => route.path === '/patch-note' || route.path.startsWith('/profile'))
 
   return {

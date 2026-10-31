@@ -1,5 +1,6 @@
 const fetchWithCache = require('../utils/fetchWithCache')
 const TEAM_MAP = require('../constants/teamMap')
+const {gameCompetition}=require('./gameCompetition')
 
 async function getGamesByDate(dateStr) {
     // Share the calendar cache with the date picker and recent games.
@@ -20,6 +21,7 @@ function normalizeGames(games) {
     })
     return games.map(game => ({
         id: game.GAME_ID,
+        competition: game.competition || gameCompetition(game),
         home_team: team(game.HOME_TEAM_ID, game.HOME_TEAM_ABBREVIATION),
         visitor_team: team(game.VISITOR_TEAM_ID, game.VISITOR_TEAM_ABBREVIATION),
         home_team_score: game.HOME_TEAM_SCORE,

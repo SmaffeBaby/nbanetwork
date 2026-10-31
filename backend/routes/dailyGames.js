@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const axios = require('axios')
+const { gameCompetition } = require('../services/gameCompetition')
 
 const fetchWithCache = require('../utils/fetchWithCache')
 const {
@@ -122,7 +123,7 @@ async function fetchAndCacheGames(date) {
         { timeout: 25000 }
     )
         .then(async (response) => {
-            const games = sanitizeGamesForDate(date, response.data)
+            const games = sanitizeGamesForDate(date, response.data).map(game=>({...game,competition:gameCompetition(game)}))
 
             try {
                 await writeGamesByDateCache(date, games)

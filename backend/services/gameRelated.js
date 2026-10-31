@@ -1,4 +1,5 @@
 const axios = require('axios')
+const {gameCompetition}=require('./gameCompetition')
 const fetchWithCache = require('../utils/fetchWithCache')
 const { getEspnSummary, normalizeSummary } = require('./espnGameService')
 const { getGamesByDate } = require('./gamesService')
@@ -6,12 +7,12 @@ const { dateKey } = require('./games/identity')
 const ALIASES = { NY: 'NYK', GS: 'GSW', SA: 'SAS', NO: 'NOP', UTAH: 'UTA', WSH: 'WAS' }
 const abbr = team => ALIASES[team?.abbreviation] || team?.abbreviation || ''
 const score = value => value == null ? null : Number.isFinite(Number(value?.value ?? value)) ? Number(value?.value ?? value) : null
-function scheduleGames(events) {
+function scheduleGames(events, seasonType) {
     return (events || []).flatMap(event => {
         const c = event.competitions?.[0], competitors = c?.competitors || []
         const home = competitors.find(p => p.homeAway === 'home'), away = competitors.find(p => p.homeAway === 'away')
         if (!home || !away || !/^\d{9}$/.test(String(event.id)) || !Number.isFinite(Date.parse(event.date)) || !c.status?.type?.completed || /CANCEL|POSTPON/i.test(c.status.type.name || '')) return []
-        return [{ id: `espn:${event.id}`, datetime: event.date, status: 'Final', period: 0,
+        return [{ id: `espn:${event.id}`, competition:gameCompetition(event,seasonType), datetime: event.date, status: 'Final', period: 0,
             home_team: { id: String(home.id || home.team?.id), abbreviation: abbr(home.team), full_name: home.team?.displayName || abbr(home.team) },
             visitor_team: { id: String(away.id || away.team?.id), abbreviation: abbr(away.team), full_name: away.team?.displayName || abbr(away.team) },
             home_team_score: score(home.score), visitor_team_score: score(away.score) }]
@@ -26,7 +27,7 @@ async function schedule(teamId, year, type) {
     return fetchWithCache({ key: `related-team-schedule:${teamId}:${year}:${type}`, ttl: 300000, fetcher: async () => {
         const { data } = await axios.get(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${teamId}/schedule`, { params: { season: year, seasontype: type }, timeout: 10000 })
         if (!Array.isArray(data.events)) throw new Error('Team schedule unavailable')
-        return scheduleGames(data.events)
+        return scheduleGames(data.events,type)
     } })
 }
 async function recentTeamGames(team, year, currentId, before) {
