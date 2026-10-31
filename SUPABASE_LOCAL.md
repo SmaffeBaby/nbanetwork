@@ -330,3 +330,30 @@ Checks: `node --test backend/tests/game-article.test.js` and rollback-only `back
 The eye button beside notifications (desktop header and mobile drawer) shows the account-wide score preference and opens a confirmation dialog. Cancel performs no write. Confirm persists `profiles.hide_scores`; failures remain visible in the dialog and allow retry. A global change clears per-game score exceptions, updates match headers/playoffs/calendars/sliders, and locks a previously revealed game overview again when hiding scores. The header indicator reflects the saved preference. Article contents remain a single immutable record and do not depend on the viewer's score preference.
 
 Additional checks: `node --test vite-project/tests/score-visibility.cjs`. `node tests/game-article.integration.js` in the backend container checks guest/authenticated article identity and related fixtures with a disposable user, cleaned up automatically unless explicitly retained for UI checks.
+
+## Daily fantasy (v2)
+
+Apply `20261031120000_daily_fantasy.sql` after earlier migrations, then rebuild backend/frontend. Fresh initialization and production deployment include it. Existing weekly tables, points and lineups remain archived and use scoring v1. Legacy maintenance continues for existing current-week entries; new weekly enrollment is disabled.
+
+Daily tournaments use Moscow calendar dates, including games that finish after midnight. `unlimited` and `balanced` each allow one immutable lineup/user/day with separate daily and cumulative standings. Balanced cap is 400 OVR, enforced in Node and a database trigger that overwrites client ratings/bonuses from the stored slate. All entries lock at the first scheduled tip-off. Days without games cannot be entered; up to 7 days may be selected ahead. Postponed games moved beyond the selected day are excluded. A daily worker retries unfinished slates and waits for complete final player totals; it does not cut off overnight games at midnight. Final snapshots are scored once; later source corrections do not automatically rewrite settled results.
+
+Scoring v2 retains PTS=1 and existing penalties/STL/BLK/DD/TD. PG/SG assists=2 and rebounds=1.2; SF/PF/C assists=1.5 and rebounds=1.5; win=6 for players who actually played. The roster's primary eligible position is frozen per slate, so moving a G-F between lineup slots cannot change coefficients. Generic G => PG/SG, F => SF/PF. Injuries are freshly checked at confirmation.
+
+Statistical OVR v1 is original, not licensed NBA 2K data. The current regular season's league statistics are compared within guard/wing/big roles, using tie-aware percentiles. Weights: per-game PTS .25, MIN .10, Bayesian TS .20, (AST − .8 TO) .20, REB .15, (STL+BLK) .10. TS prior is 50 shooting possessions at .57. The weighted percentile is shrunk toward .5 by season minutes/(minutes+150), mapped with `round(60+39*value)` and clamped 60–99. Players without season games receive neutral provisional 80, rather than a cheap zero rating. Public season source is validated by year/type and completeness. Ratings, primary roles, cap and lineup snapshots are server-owned; a slate is created only before first tip and never retrospectively rated from newer season results. Cache is 15 minutes at the source; the selected slate's snapshot is immutable. Future slates retain the snapshot from their first opening. Live-season sanity check on Oct 31: 430 rated players, range 76–89, consistent with early-season shrinkage.
+
+Personal player XP includes preserved legacy weekly XP and positive daily base results, once per user/player/day across both modes. Legacy-owned overlapping games are excluded from daily player XP. Profile XP is grouped by real game, with each player counted once across modes/legacy (maximum base score during the rules transition). Level bonus tiers remain .5/1/1.5/2 percent at levels 3/5/8/10, capped at 3 points/player/day/mode; bonuses do not generate XP. Future lineups snapshot XP known at confirmation. Public history includes mode labels and legacy entries; levels use authoritative server XP, rather than summing duplicate mode entries.
+
+Verification:
+```
+node --test backend/tests/fantasy-daily.test.js
+./vite-project/node_modules/.bin/vue-tsc -p vite-project/tsconfig.app.json --noEmit --incremental false
+docker compose -p nba-dashboard -f supabase/docker-compose.yml exec -T db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < backend/tests/fantasy-daily.sql
+```
+SQL checks run in a transaction and roll back all fixture data.
+
+`FantasyOvrBadge.vue` puts a keyboard-accessible ⓘ beside OVR on catalog cards and in player details. Its separate modal explains the metric/weights, player-specific percentiles and sample-size adjustment, the balanced cap, and the distinction from personal fantasy XP. Advanced formula is collapsed initially; Escape, backdrop, focus trap and focus restoration are supported.
+
+Live enrollment integration (creates and deletes its own disposable profile):
+```
+docker compose exec -T -w /app/tests backend node - < backend/tests/fantasy-daily.integration.js
+```

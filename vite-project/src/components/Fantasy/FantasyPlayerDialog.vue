@@ -8,16 +8,18 @@
             <div class="flex h-28 w-28 shrink-0 items-end overflow-hidden rounded-2xl bg-white/10 sm:h-36 sm:w-36"><img v-if="!photoFailed" :src="`https://a.espncdn.com/i/headshots/nba/players/full/${player.id}.png`" :alt="player.name" class="h-full w-full object-contain object-bottom" @error="photoFailed = true" /><span v-else class="m-auto text-3xl font-black">{{ player.name.split(' ').map(p=>p[0]).slice(0,2).join('') }}</span></div>
             <div class="min-w-0"><p class="flex items-center gap-2 text-xs font-bold text-blue-200"><img :src="`/logos/${player.team}.svg`" :alt="player.team" class="h-7 w-7 object-contain" />{{ player.team }} · {{ position }}</p><h2 :id="titleId" class="mt-2 break-words text-2xl font-black sm:text-3xl">{{ player.name }}</h2><p class="mt-2 text-sm text-blue-200">Сезон {{ data?.season || 'НБА' }} · {{ data ? `Матчей сыграно: ${data.gamesPlayed}` : 'Загружаем статистику' }}<span v-if="data?.ranks.gamesPlayed" class="ml-2 text-xs">{{ rankText('gamesPlayed') }}</span></p></div>
           </div>
+          <FantasyOvrBadge v-if="data?.rating || player.ovr" :rating="data?.rating || player" :name="player.name" class="mt-3" />
           <RouterLink :to="`/player/${encodeURIComponent(player.name)}`" class="mt-4 inline-flex rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-900" @click="$emit('close')">Страница игрока ↗</RouterLink>
         </header>
         <div class="space-y-5 p-5 sm:p-7">
           <p v-if="'injury' in player && player.injury" class="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">Травма / ограничение · {{ player.injury }}</p>
           <p v-if="loading" role="status" class="py-10 text-center text-slate-500">Загружаем статистику сезона…</p>
           <p v-else-if="error" role="alert" class="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">{{ error }} <button class="font-bold underline" @click="load">Повторить</button></p>
+
           <section v-if="data" class="rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
             <FantasySectionHeading title="Баллы фентези">
               <template #value><span class="text-2xl font-black text-blue-700">{{ points(data.fantasy.points) }}</span></template>
-              <p>{{ data.fantasy.profile ? 'Баллы в составе этого профиля за выбранную неделю: учитываются матчи после закрепления состава.' : 'Учтённые матчи выбранной недели. В составе профиля учитываются только игры после его закрепления.' }}</p>
+              <p>{{ data.fantasy.profile ? 'Баллы в составе этого профиля за выбранный турнир: учитываются матчи после закрепления состава.' : 'Учтённые матчи выбранного турнира. В составе профиля учитываются только игры после его закрепления.' }}</p>
               <p>Откройте матч ниже, чтобы увидеть начисления за статистику, бонусы и штрафы. Бонусы за дабл-дабл и трипл-дабл не складываются.</p>
             </FantasySectionHeading>
 
@@ -30,12 +32,12 @@
               <p class="flex justify-between gap-3"><span>Базовые баллы</span><strong>{{ points(data.fantasy.basePoints) }}</strong></p>
               <p class="mt-2 flex justify-between gap-3"><span>Бонус уровня {{ data.fantasy.bonusLevel }} · +{{ points(data.fantasy.bonusRate * 100) }}%</span><strong>+{{ points(data.fantasy.bonusPoints) }}</strong></p>
             </div>
-            <p v-if="!data.fantasy.games.length" class="mt-3 text-sm text-slate-500">Начислений за эту неделю пока нет. Баллы появятся после обработки завершённых матчей.</p>
+            <p v-if="!data.fantasy.games.length" class="mt-3 text-sm text-slate-500">Начислений за этот турнир пока нет. Баллы появятся после обработки завершённых матчей.</p>
           </section>
           <section v-if="data && playerXp !== undefined">
             <FantasySectionHeading title="Уровень фентези" class="mb-3">
-              <p>1 балл = 1 XP. Опыт — сумма положительных базовых недельных результатов игрока в этом профиле. Он сохраняется между неделями, даже если игрока нет в новом составе. Смена позиции не сбрасывает опыт.</p>
-              <p>Порог уровня N: 150 × N × (N − 1) XP. Уровень 2 — 300 XP, уровень 3 — 900 XP. Бонусы к положительным баллам за неделю: с уровня 3 — +0,5%, с 5 — +1%, с 8 — +1,5%, с 10 — +2%. Максимум +3 балла на игрока за неделю. Уровень и процент фиксируются при закреплении состава, бонус в XP не входит.</p>
+              <p>1 балл = 1 XP. Опыт — сумма положительных базовых результатов турниров игрока в этом профиле. Он сохраняется между игровыми днями, даже если игрока нет в новом составе. Смена позиции не сбрасывает опыт.</p>
+              <p>Порог уровня N: 150 × N × (N − 1) XP. Уровень 2 — 300 XP, уровень 3 — 900 XP. Бонусы к положительным баллам за турнир: с уровня 3 — +0,5%, с 5 — +1%, с 8 — +1,5%, с 10 — +2%. Максимум +3 балла на игрока за турнир. Уровень и процент фиксируются при закреплении состава, бонус в XP не входит.</p>
             </FantasySectionHeading>
             <FantasyPlayerLevel :xp="playerXp" />
           </section>
@@ -68,7 +70,7 @@
           </template>
           <p v-else-if="data" class="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">В текущем регулярном сезоне ещё нет сыгранных матчей или опубликованной статистики. График появится после первой игры.</p>
           <div>
-            <h3 class="font-extrabold text-slate-900">Матчи этой недели</h3>
+            <h3 class="font-extrabold text-slate-900">Матчи игрового дня</h3>
             <div v-if="games.length" class="mt-3 grid gap-3 sm:grid-cols-2">
               <RouterLink v-for="game in games" :key="game.id" :to="`/game/${game.id}`" class="group rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-blue-300 hover:bg-blue-50/40" @click="$emit('close')">
                 <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wide"><span :class="game.completed ? 'text-slate-400' : 'text-blue-600'">{{ game.completed ? 'Завершён' : Date.parse(game.start) <= Date.now() ? 'Начался' : 'Скоро' }}</span><span class="text-slate-400">↗</span></div>
@@ -76,7 +78,7 @@
                 <p class="text-center text-xs font-semibold text-slate-500">{{ dateTime(game.start) }} МСК</p>
               </RouterLink>
             </div>
-            <p v-else class="mt-3 text-sm text-slate-500">Матчей на этой неделе нет.</p>
+            <p v-else class="mt-3 text-sm text-slate-500">Матчей в этот день нет.</p>
           </div>
         </div>
       </section>
@@ -90,7 +92,8 @@ import { dateTime, points, type Match, type Player, type Pick, type PlayerDetail
 import FantasySectionHeading from './FantasySectionHeading.vue'
 import FantasyPlayerLevel from './FantasyPlayerLevel.vue'
 import FantasyRadar from './FantasyRadar.vue'
-const props = defineProps<{ player: Player | Pick; position: string; week?: string; profileId?: string; playerXp?: number }>()
+import FantasyOvrBadge from './FantasyOvrBadge.vue'
+const props = defineProps<{ player: Player | Pick; position: string; week?: string; mode?: 'unlimited' | 'balanced' | 'legacy'; profileId?: string; playerXp?: number }>()
 defineEmits<{ close: [] }>()
 const titleId = useId(), dialog = ref<HTMLElement | null>(null), data = ref<PlayerDetails | null>(null), loading = ref(true), error = ref(''), photoFailed = ref(false)
 const metrics = [['Очки','avgPoints'],['Подборы всего','avgRebounds'],['Подборы в нападении','avgOffensiveRebounds'],['Подборы в защите','avgDefensiveRebounds'],['Передачи','avgAssists'],['Перехваты','avgSteals'],['Блоки','avgBlocks'],['Потери','avgTurnovers'],['Минуты','avgMinutes']] as const
@@ -121,7 +124,8 @@ async function load() {
   if (!data.value) loading.value = true; error.value = ''
   try {
     const params = new URLSearchParams()
-    if (props.week) params.set('week', props.week)
+    if (props.week) params.set(props.mode === 'legacy' ? 'week' : 'day', props.week)
+    if (props.mode && props.mode !== 'legacy') params.set('mode', props.mode)
     if (props.profileId) params.set('profile', props.profileId)
     data.value = await authFetch(`/api/fantasy/players/${props.player.id}?${params}`, { signal:controller.signal })
     if (data.value?.rankingsUpdating && !controller.signal.aborted) rankPoll = setTimeout(() => void load(), 10000)
@@ -131,7 +135,7 @@ async function load() {
 }
 let previousFocus: HTMLElement | null = null, previousOverflow = ''
 function trap(event: KeyboardEvent) {
-  if(event.key !== 'Tab' || !dialog.value) return
+  if(event.key !== 'Tab' || !dialog.value || !(event.target instanceof Node) || !dialog.value.contains(event.target)) return
   const items = [...dialog.value.querySelectorAll<HTMLElement>('button:not(:disabled),a[href]')], first=items[0], last=items.at(-1)
   if(event.shiftKey && (document.activeElement === first || document.activeElement === dialog.value)) { event.preventDefault(); last?.focus() }
   else if(!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }

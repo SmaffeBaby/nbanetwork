@@ -8,9 +8,9 @@ async function request(path, params) {
     return data
 }
 async function schedule(week) {
-    return fetchWithCache({ key: `fantasy-schedule:${week.id}`, ttl: 60000, fetcher: async () => {
+    return fetchWithCache({ key: `fantasy-schedule:${week.id}:${week.end}`, ttl: 60000, fetcher: async () => {
         // Include the preceding UTC date because our week starts at 21:00 UTC.
-        const dates = Array.from({ length: 8 }, (_, i) => new Date(Date.parse(week.start) + i * DAY).toISOString().slice(0, 10).replaceAll('-', ''))
+        const dates = Array.from({ length: Math.ceil((Date.parse(week.end)-Date.parse(week.start))/DAY)+1 }, (_, i) => new Date(Date.parse(week.start) + i * DAY).toISOString().slice(0, 10).replaceAll('-', ''))
         const days = await Promise.all(dates.map(dates => request('scoreboard', { dates, limit: 100 })))
         if (days.some(day => !Array.isArray(day.events))) throw new Error('Расписание недоступно')
         const games = new Map()
@@ -36,15 +36,15 @@ async function catalog(week, fresh = false) {
 }
 module.exports = { request, schedule, catalog }
 
-async function playerDetails(id, week, profile) {
+async function playerDetails(id, week, profile, dailyMode) {
     const { seasonAthletes } = require('../gamePreview')
-    const now = new Date(Date.now()+3*3600000)
-    const year = now.getUTCFullYear() + (now.getUTCMonth() >= 6 ? 1 : 0)
-    const [data, games, fantasy] = await Promise.all([seasonAthletes(year, 2), schedule(week), playerFantasy(id, week, profile)])
+    const year = require('./ratings').seasonYear(week.id)
+    const [data, games, fantasy] = await Promise.all([seasonAthletes(year, 2), schedule(week), dailyMode ? require('./dailyDetails')(id,week,profile,dailyMode) : playerFantasy(id, week, profile)])
     const row = data.athletes.find(p => String(p.athlete.id) === id)
     const result = await require('./seasonStats').seasonPlayerStats(data,id,year)
     const stats = result.stats
-    return { id, fantasy, season:`${year-1}–${String(year).slice(-2)}`, gamesPlayed:stats.gamesPlayed ?? 0, ...result, schedule:games.filter(g => g.teams.some(t => t.abbr === (ALIASES[row?.athlete.teamShortName] || row?.athlete.teamShortName))).map(g=>({...g,matchup:g.teams.map(t=>t.abbr).join(' — ')})) }
+    const saved = dailyMode ? await require('./daily').slate(week.id) : null
+    return { id, fantasy, rating:saved?.ratings[id] || null, season:`${year-1}–${String(year).slice(-2)}`, gamesPlayed:stats.gamesPlayed ?? 0, ...result, schedule:games.filter(g => g.teams.some(t => t.abbr === (ALIASES[row?.athlete.teamShortName] || row?.athlete.teamShortName))).map(g=>({...g,matchup:g.teams.map(t=>t.abbr).join(' — ')})) }
 }
 module.exports.playerDetails = playerDetails
 

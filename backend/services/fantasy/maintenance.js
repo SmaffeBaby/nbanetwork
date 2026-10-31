@@ -35,7 +35,10 @@ async function syncFantasy() {
     } finally { running = false }
 }
 function startFantasyMaintenance() {
-    const tick = () => syncFantasy().catch(error => console.warn('Fantasy maintenance:', error.message))
+    const tick = () => {
+        void syncFantasy().catch(error => console.warn('Fantasy maintenance:', error.message))
+        void require('./daily').syncDaily().catch(error => console.warn('Daily fantasy maintenance:', error.message))
+    }
     void tick()
     setInterval(tick, 60000).unref()
 }
