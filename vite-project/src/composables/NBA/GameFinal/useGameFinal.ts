@@ -43,6 +43,7 @@ export function useGameFinal(filters: Ref<Filters>) {
 
         return {
             gameId: detail.gameId,
+            state:detail.state, period:detail.period, clock:detail.clock,
             competition:detail.competition,
             status: detail.status || 'TBD',
 
@@ -76,7 +77,7 @@ export function useGameFinal(filters: Ref<Filters>) {
     let requestId = 0
     const fetchGame = async () => {
         const currentRequest = ++requestId
-        loading.value = true
+        loading.value = !game.value
         error.value = null
         try {
             const period = filters.value?.period
@@ -117,6 +118,7 @@ export function useGameFinal(filters: Ref<Filters>) {
 
             game.value = {
                 gameId,
+                state:data.state, period:data.period, clock:data.clock,
                 competition:data.competition,
                 status: meta?.status || 'Final',
 

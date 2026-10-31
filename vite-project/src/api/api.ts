@@ -15,6 +15,8 @@ export type Game = {
     home_team_score: number
     visitor_team_score: number
     status: string
+    livePeriod?: number | null
+    clock?: string
     period: number
     datetime: string
 }

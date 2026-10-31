@@ -116,7 +116,7 @@ function normalizeSummary(gameId, data) {
     const quarters = Array.from({ length: Math.max(sides.home.linescores.length, sides.away.linescores.length) }, (_, index) =>
         `${sides.away.linescores[index]?.value ?? sides.away.linescores[index]?.displayValue ?? '—'} - ${sides.home.linescores[index]?.value ?? sides.home.linescores[index]?.displayValue ?? '—'}`)
     return {
-        gameId, competition:gameCompetition(data), source: 'espn', title: `${sides.away.name} — ${sides.home.name}`,
+        gameId, state:status.state || 'pre', period:Number(competition.status?.period || 0), clock:competition.status?.displayClock || '', competition:gameCompetition(data), source: 'espn', title: `${sides.away.name} — ${sides.home.name}`,
         insight: status.state === 'pre' ? 'Матч ещё не начался. Статистика появится после начала игры.' : `${sides.away.abbr} ${sides.away.score} : ${sides.home.score} ${sides.home.abbr}`,
         storyline: [], quarters, supportsPeriodStats: Boolean(data.plays?.length),
         unavailableStats: ['secondChancePoints'],

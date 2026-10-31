@@ -1,4 +1,4 @@
-import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
+import { computed, onUnmounted, ref, watch, type Ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { supabase } from '../../../lib/supabase'
 import { isRealtimeEnabled } from '../../../lib/realtime'
@@ -6,498 +6,124 @@ import { useAuthStore } from '../../../stores/auth'
 import { authFetch } from '../../../api/authFetch'
 
 export type GameComment = {
-    id: string
-    game_id: string
-    user_id: string
-    message: string
-    image_data: string | null
-    reply_to_id: string | null
-    created_at: string
-    profiles?: {
-        first_name: string
-        last_name: string
-        avatar_img: string | null
-    } | null
+    id:string; game_id:string; user_id:string; message:string; image_data:string|null; reply_to_id:string|null; created_at:string
+    profiles?:{first_name:string;last_name:string;avatar_img:string|null}|null
 }
+type RawGameComment=Omit<GameComment,'profiles'>&{profiles?:GameComment['profiles']|GameComment['profiles'][]}
+type Snapshot={comments:GameComment[];readThrough:string}
+type Context={gameId:string;userId:string}
+type NewComment=Context&{message:string;imageData:string|null;replyToId:string|null}
+const commentKey=(userId:string,gameId:string)=>['game-comments',userId,gameId]
+const unreadKey=(userId:string,gameId:string)=>['game-comments-unread',userId,gameId]
+const headers=(userId:string)=>({'X-Profile-Id':userId})
+const normalize=(c:RawGameComment):GameComment=>({...c,profiles:Array.isArray(c.profiles)?c.profiles[0]??null:c.profiles??null})
+const fileToDataUrl=(file:File)=>new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(file)})
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024
-
-type RawGameComment = Omit<GameComment, 'profiles'> & {
-    profiles?: GameComment['profiles'] | GameComment['profiles'][]
-}
-
-type NewGameComment = {
-    gameId: string
-    message: string
-    imageData: string | null
-    replyToId: string | null
-}
-
-function normalizeComment(comment: RawGameComment): GameComment {
-    return {
-        ...comment,
-        profiles: Array.isArray(comment.profiles)
-            ? comment.profiles[0] ?? null
-            : comment.profiles ?? null
-    }
-}
-
-function fileToDataUrl(file: File) {
-    return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(String(reader.result))
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-    })
-}
-
-export function useGameComments(gameId: Ref<string>) {
-    const auth = useAuthStore()
-    const queryClient = useQueryClient()
-    const message = ref('')
-    const imageData = ref<string | null>(null)
-    const imageName = ref('')
-    const replyTo = ref<GameComment | null>(null)
-    const unreadCount = ref(0)
-    const error = ref<string | null>(null)
-
-    let channel: ReturnType<typeof supabase.channel> | null = null
-    const commentsQueryKey = computed(() => ['game-comments', gameId.value])
-
-    const canSend = computed(() =>
-        Boolean(auth.user && (message.value.trim() || imageData.value))
-    )
-
-    const ensureAuthReady = async () => {
-        if (!auth.user) {
-            await auth.init()
-            auth.subscribeAuthState()
+export function useGameComments(gameId:Ref<string>,active:Ref<boolean>) {
+    const auth=useAuthStore(),queryClient=useQueryClient()
+    const message=ref(''),imageData=ref<string|null>(null),imageName=ref(''),replyTo=ref<GameComment|null>(null),mutationError=ref<string|null>(null)
+    const userId=computed(()=>auth.user?.id||''),key=computed(()=>commentKey(userId.value,gameId.value))
+    const enabled=computed(()=>!!userId.value&&!!gameId.value&&active.value&&!auth.loading)
+    const current=(c:Context)=>c.userId===userId.value&&c.gameId===gameId.value
+    const query=useQuery({
+        queryKey:key,enabled,staleTime:10000,gcTime:5*60000,retry:1,
+        refetchInterval:()=>enabled.value?(isRealtimeEnabled()?30000:10000):false,refetchIntervalInBackground:false,
+        queryFn:async({queryKey,signal}):Promise<Snapshot>=>{
+            const owner=String(queryKey[1]),id=String(queryKey[2])
+            if(!owner)return {comments:[],readThrough:''}
+            const data=await authFetch(`/api/game-comments/${encodeURIComponent(id)}`,{signal,headers:headers(owner)})
+            return {comments:((data.comments||[]) as RawGameComment[]).map(normalize),readThrough:data.readThrough||''}
         }
-
-        if (!auth.user) {
-            const { data } = await supabase.auth.getSession()
-            if (data.session?.user) {
-                await auth.init()
-            }
-        }
-    }
-
-    const fetchCommentsData = async () => {
-        await ensureAuthReady()
-
-        if (!auth.user || !gameId.value) return []
-
-        const data = await authFetch(`/api/game-comments/${encodeURIComponent(gameId.value)}`)
-        return ((data.comments ?? []) as unknown as RawGameComment[]).map(normalizeComment)
-    }
-
-    const commentsQuery = useQuery({
-        queryKey: commentsQueryKey,
-        enabled: computed(() => Boolean(gameId.value)),
-        refetchInterval: 5000,
-        queryFn: fetchCommentsData
     })
+    const comments=computed(()=>userId.value?[...(query.data.value?.comments||[])].sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.id.localeCompare(b.id)):[])
+    const loading=computed(()=>enabled.value&&query.isPending.value)
+    const error=computed(()=>mutationError.value||query.error.value?.message||null)
+    const canSend=computed(()=>enabled.value&&!!(message.value.trim()||imageData.value))
+    const clearReplyTo=()=>{replyTo.value=null}
+    const removeImage=()=>{imageData.value=null;imageName.value=''}
+    async function fetchComments(){mutationError.value=null;if(enabled.value)await query.refetch()}
 
-    const sortedComments = computed(() =>
-        [...(commentsQuery.data.value ?? [])].sort((a, b) =>
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        )
-    )
-
-    const fetchComments = async () => {
-        error.value = null
-
+    let lastRead='',readPending=false,queuedRead=false,readGeneration=0
+    async function markAsRead(){
+        const through=query.data.value?.readThrough,c={userId:userId.value,gameId:gameId.value},generation=readGeneration
+        if(!enabled.value||!through||through<=lastRead||document.hidden)return
+        if(readPending){queuedRead=true;return}
+        readPending=true
         try {
-            await commentsQuery.refetch()
-        } catch (e: any) {
-            error.value = e?.message || 'Не удалось загрузить комментарии'
-        }
+            await authFetch(`/api/game-comments/${encodeURIComponent(c.gameId)}/read`,{method:'PUT',headers:headers(c.userId),body:JSON.stringify({readThrough:through})})
+            if(current(c)&&generation===readGeneration){lastRead=through;queryClient.setQueryData(unreadKey(c.userId,c.gameId),{count:0})}
+        } catch(e:any){if(current(c)&&generation===readGeneration)mutationError.value=e.message||'Не удалось сохранить прочтение'}
+        finally{if(generation===readGeneration){readPending=false;if(queuedRead){queuedRead=false;void markAsRead()}}}
     }
-
-    const fetchUnreadCount = async () => {
-        await ensureAuthReady()
-
-        if (!auth.user || !gameId.value) {
-            unreadCount.value = 0
-            return
-        }
-
-        const { data: readData } = await supabase
-            .from('game_comment_reads')
-            .select('read_at')
-            .eq('game_id', gameId.value)
-            .eq('user_id', auth.user.id)
-            .maybeSingle()
-
-        let query = supabase
-            .from('game_comments')
-            .select('id', { count: 'exact', head: true })
-            .eq('game_id', gameId.value)
-            .neq('user_id', auth.user.id)
-
-        if (readData?.read_at) {
-            query = query.gt('created_at', readData.read_at)
-        }
-
-        const { count } = await query
-        unreadCount.value = count ?? 0
+    async function attachImage(event:Event){
+        const input=event.target as HTMLInputElement,file=input.files?.[0],c={userId:userId.value,gameId:gameId.value}
+        if(!file)return
+        input.value=''
+        if(!enabled.value)return
+        if(!file.type.startsWith('image/')){mutationError.value='Можно прикрепить только изображение';return}
+        if(file.size>5*1024*1024){mutationError.value='Изображение должно быть меньше 5 МБ';return}
+        try{const data=await fileToDataUrl(file);if(current(c)){imageData.value=data;imageName.value=file.name;mutationError.value=null}}catch{if(current(c))mutationError.value='Не удалось открыть изображение'}
     }
-
-    const markAsRead = async () => {
-        await ensureAuthReady()
-
-        if (!auth.user || !gameId.value) return
-
-        const { error: readError } = await supabase
-            .from('game_comment_reads')
-            .upsert({
-                game_id: gameId.value,
-                user_id: auth.user.id,
-                read_at: new Date().toISOString()
-            }, { onConflict: 'game_id,user_id' })
-
-        if (readError) return
-
-        unreadCount.value = 0
-    }
-
-    const attachImage = async (event: Event) => {
-        const input = event.target as HTMLInputElement
-        const file = input.files?.[0]
-        if (!file) return
-
-        if (!file.type.startsWith('image/')) {
-            error.value = 'Можно прикрепить только изображение'
-            input.value = ''
-            return
-        }
-
-        if (file.size > MAX_IMAGE_SIZE) {
-            error.value = 'Изображение должно быть меньше 5 МБ'
-            input.value = ''
-            return
-        }
-
-        imageData.value = await fileToDataUrl(file)
-        imageName.value = file.name
-        input.value = ''
-    }
-
-    const removeImage = () => {
-        imageData.value = null
-        imageName.value = ''
-    }
-
-    const setReplyTo = (comment: GameComment) => {
-        replyTo.value = comment
-    }
-
-    const clearReplyTo = () => {
-        replyTo.value = null
-    }
-
-    const sendCommentMutation = useMutation({
-        mutationFn: async (newComment: NewGameComment) => {
-            await ensureAuthReady()
-
-            if (!auth.user) {
-                error.value = 'Сессия устарела. Обновите страницу или войдите снова.'
-                throw new Error(error.value)
-            }
-
-            if (!newComment.gameId) {
-                throw new Error('Игра не найдена')
-            }
-
-            if (!newComment.message.trim() && !newComment.imageData) {
-                throw new Error('Комментарий пустой')
-            }
-
-            error.value = null
-
-            const data = await authFetch('/api/game-comments', {
-                method: 'POST',
-                body: JSON.stringify({
-                    gameId: newComment.gameId,
-                    message: newComment.message,
-                    imageData: newComment.imageData,
-                    replyToId: newComment.replyToId
-                })
-            })
-
-            if (!data?.comment) {
-                throw new Error('Сервер не вернул сохранённый комментарий')
-            }
-
-            return normalizeComment(data.comment as RawGameComment)
+    const sendMutation=useMutation({
+        mutationFn:async(c:NewComment)=>{
+            if(!current(c)||!enabled.value)throw new Error('Аккаунт или игра изменились. Обновите комментарии.')
+            const data=await authFetch('/api/game-comments',{method:'POST',headers:headers(c.userId),body:JSON.stringify({gameId:c.gameId,message:c.message,imageData:c.imageData,replyToId:c.replyToId})})
+            if(!data.comment)throw new Error('Сервер не вернул сохранённый комментарий')
+            return normalize(data.comment)
         },
-        onSuccess: (inserted) => {
-            if (inserted) {
-                queryClient.setQueryData<GameComment[]>(commentsQueryKey.value, (old = []) => [
-                    ...old.filter(comment =>
-                        comment.id !== inserted.id
-                    ),
-                    inserted
-                ])
-            }
-
-            message.value = ''
-            clearReplyTo()
-            removeImage()
-            void markAsRead()
-            void commentsQuery.refetch()
+        onSuccess:(inserted,c)=>{
+            if(!current(c))return
+            queryClient.setQueryData<Snapshot>(commentKey(c.userId,c.gameId),old=>({comments:[...(old?.comments||[]).filter(x=>x.id!==inserted.id),inserted],readThrough:old?.readThrough||''}))
+            message.value='';removeImage();clearReplyTo();mutationError.value=null
         },
-        onError: (e: any) => {
-            error.value = e?.message || 'Не удалось отправить комментарий'
-            void commentsQuery.refetch()
-        }
+        onError:(e:any,c)=>{if(current(c))mutationError.value=e.message||'Не удалось отправить комментарий'}
     })
-
-    const sendComment = async () => {
-        await ensureAuthReady()
-
-        if (!auth.user) {
-            error.value = 'Сессия устарела. Обновите страницу или войдите снова.'
-            return
-        }
-
-        if (!canSend.value) return
-
-        if (sendCommentMutation.isPending.value) return
-
-        const newComment = {
-            gameId: gameId.value,
-            message: message.value.trim(),
-            imageData: imageData.value,
-            replyToId: replyTo.value?.id ?? null
-        }
-
-        try {
-            await sendCommentMutation.mutateAsync(newComment)
-        } catch {
-        }
+    async function sendComment(){
+        if(!canSend.value||sendMutation.isPending.value)return
+        mutationError.value=null
+        try{await sendMutation.mutateAsync({gameId:gameId.value,userId:userId.value,message:message.value.trim(),imageData:imageData.value,replyToId:replyTo.value?.id??null})}catch{}
     }
-
-    const subscribe = () => {
-        if (!isRealtimeEnabled()) return
-        if (channel || !gameId.value) return
-
-        channel = supabase
-            .channel(`game-comments-${gameId.value}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'game_comments',
-                    filter: `game_id=eq.${gameId.value}`
-                },
-                async (payload) => {
-                    const incoming = payload.new as GameComment
-
-                    if (payload.eventType === 'DELETE') {
-                        queryClient.setQueryData<GameComment[]>(commentsQueryKey.value, (old = []) =>
-                            old.filter(comment => comment.id !== (payload.old as { id?: string }).id)
-                        )
-                        await fetchUnreadCount()
-                        return
-                    }
-
-                    const existing = commentsQuery.data.value ?? []
-                    if (!existing.some(comment => comment.id === incoming.id)) {
-                        await fetchComments()
-                        await nextTick()
-                    }
-
-                    if (incoming.user_id !== auth.user?.id) {
-                        await fetchUnreadCount()
-                    }
-                }
-            )
-            .subscribe()
-    }
-
-    const unsubscribe = async () => {
-        if (!channel) return
-
-        await supabase.removeChannel(channel)
-        channel = null
-    }
-
-    onMounted(async () => {
-        await ensureAuthReady()
-        await fetchComments()
-        await fetchUnreadCount()
-        subscribe()
-    })
-
-    onUnmounted(() => {
-        void unsubscribe()
-    })
-
-    watch(
-        () => auth.user?.id,
-        async () => {
-            await fetchComments()
-            await fetchUnreadCount()
-            subscribe()
-        }
-    )
-
-    const deleteCommentMutation = useMutation({
-        mutationFn: async (commentId: string) => {
-            await ensureAuthReady()
-
-            if (!auth.user) {
-                throw new Error('Сессия устарела. Обновите страницу или войдите снова.')
-            }
-
-            await authFetch(`/api/game-comments/${encodeURIComponent(commentId)}`, {
-                method: 'DELETE'
-            })
-
-            return commentId
+    const deleteMutation=useMutation({
+        mutationFn:async(c:Context&{id:string})=>{
+            if(!current(c))throw new Error('Аккаунт или игра изменились')
+            await authFetch(`/api/game-comments/${encodeURIComponent(c.id)}`,{method:'DELETE',headers:headers(c.userId)})
+            return c
         },
-        onSuccess: (commentId) => {
-            queryClient.setQueryData<GameComment[]>(commentsQueryKey.value, (old = []) =>
-                old.filter(comment => comment.id !== commentId)
-            )
-            if (replyTo.value?.id === commentId) clearReplyTo()
-            void fetchUnreadCount()
+        onSuccess:c=>{
+            if(!current(c))return
+            queryClient.setQueryData<Snapshot>(commentKey(c.userId,c.gameId),old=>old?{...old,comments:old.comments.filter(x=>x.id!==c.id)}:undefined)
+            if(replyTo.value?.id===c.id)clearReplyTo()
         },
-        onError: (e: any) => {
-            error.value = e?.message || 'Не удалось удалить комментарий'
-            void commentsQuery.refetch()
-        }
+        onError:(e:any,c)=>{if(current(c))mutationError.value=e.message||'Не удалось удалить комментарий'}
     })
-
-    const deleteComment = async (comment: GameComment) => {
-        if (deleteCommentMutation.isPending.value) return
-        if (comment.user_id !== auth.user?.id && !auth.user?.isAdmin) return
-
-        try {
-            await deleteCommentMutation.mutateAsync(comment.id)
-        } catch {
-        }
+    async function deleteComment(comment:GameComment){
+        if(deleteMutation.isPending.value||!enabled.value||(comment.user_id!==userId.value&&!auth.user?.isAdmin))return
+        try{await deleteMutation.mutateAsync({id:comment.id,userId:userId.value,gameId:gameId.value})}catch{}
     }
-
-    return {
-        user: computed(() => auth.user),
-        comments: sortedComments,
-        message,
-        imageData,
-        imageName,
-        replyTo,
-        loading: computed(() => commentsQuery.isFetching.value && sortedComments.value.length === 0),
-        sending: computed(() => sendCommentMutation.isPending.value),
-        deleting: computed(() => deleteCommentMutation.isPending.value),
-        unreadCount,
-        error,
-        canSend,
-        attachImage,
-        removeImage,
-        setReplyTo,
-        clearReplyTo,
-        sendComment,
-        deleteComment,
-        markAsRead,
-        fetchComments,
-        fetchUnreadCount
-    }
+    // Only the open, unlocked discussion owns a comments subscription.
+    watch([enabled,userId,gameId],([allowed,owner,id],_,cleanup)=>{
+        if(!allowed||!isRealtimeEnabled())return
+        let timer:ReturnType<typeof setTimeout>|undefined
+        const channel=supabase.channel(`game-comments-${owner}-${id}`).on('postgres_changes',{event:'*',schema:'public',table:'game_comments',filter:`game_id=eq.${id}`},()=>{clearTimeout(timer);timer=setTimeout(()=>{void query.refetch()},200)}).subscribe()
+        cleanup(()=>{clearTimeout(timer);void supabase.removeChannel(channel)})
+    },{immediate:true})
+    watch([userId,gameId],()=>{readGeneration++;readPending=false;queuedRead=false;lastRead='';message.value='';removeImage();clearReplyTo();mutationError.value=null})
+    onUnmounted(()=>{readGeneration++})
+    return {user:computed(()=>auth.user),comments,message,imageData,imageName,replyTo,loading,sending:sendMutation.isPending,deleting:deleteMutation.isPending,error,canSend,attachImage,removeImage,setReplyTo:(c:GameComment)=>{replyTo.value=c},clearReplyTo,sendComment,deleteComment,markAsRead,fetchComments}
 }
 
-export function useGameCommentsUnread(gameId: Ref<string>) {
-    const auth = useAuthStore()
-    const unreadCount = ref(0)
-
-    let channel: ReturnType<typeof supabase.channel> | null = null
-    let pollTimer: ReturnType<typeof window.setInterval> | null = null
-
-    const ensureAuthReady = async () => {
-        if (!auth.user) {
-            await auth.init()
-            auth.subscribeAuthState()
-        }
-    }
-
-    const fetchUnreadCount = async () => {
-        await ensureAuthReady()
-
-        if (!auth.user || !gameId.value) {
-            unreadCount.value = 0
-            return
-        }
-
-        const { data: readData } = await supabase
-            .from('game_comment_reads')
-            .select('read_at')
-            .eq('game_id', gameId.value)
-            .eq('user_id', auth.user.id)
-            .maybeSingle()
-
-        let query = supabase
-            .from('game_comments')
-            .select('id', { count: 'exact', head: true })
-            .eq('game_id', gameId.value)
-            .neq('user_id', auth.user.id)
-
-        if (readData?.read_at) {
-            query = query.gt('created_at', readData.read_at)
-        }
-
-        const { count } = await query
-        unreadCount.value = count ?? 0
-    }
-
-    const subscribe = () => {
-        if (!isRealtimeEnabled()) return
-        if (channel || !gameId.value) return
-
-        channel = supabase
-            .channel(`game-comments-unread-${gameId.value}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'game_comments',
-                    filter: `game_id=eq.${gameId.value}`
-                },
-                () => {
-                    void fetchUnreadCount()
-                }
-            )
-            .subscribe()
-    }
-
-    onMounted(async () => {
-        await ensureAuthReady()
-        await fetchUnreadCount()
-        subscribe()
-
-        pollTimer = window.setInterval(() => {
-            void fetchUnreadCount()
-        }, 5000)
-    })
-
-    onUnmounted(() => {
-        if (channel) void supabase.removeChannel(channel)
-        if (pollTimer) window.clearInterval(pollTimer)
-    })
-
-    watch(
-        () => auth.user?.id,
-        () => {
-            void fetchUnreadCount()
-            subscribe()
-        }
-    )
-
-    return {
-        unreadCount,
-        setUnreadCount: (count: number) => {
-            unreadCount.value = count
-        },
-        fetchUnreadCount
-    }
+export function useGameCommentsUnread(gameId:Ref<string>,active:Ref<boolean>) {
+    const auth=useAuthStore(),client=useQueryClient(),userId=computed(()=>auth.user?.id||'')
+    const key=computed(()=>unreadKey(userId.value,gameId.value)),enabled=computed(()=>!!userId.value&&!!gameId.value&&!auth.loading&&!active.value)
+    const query=useQuery({queryKey:key,enabled,staleTime:15000,gcTime:5*60000,retry:1,refetchInterval:()=>enabled.value?30000:false,refetchIntervalInBackground:false,queryFn:async({queryKey,signal})=>{
+        const owner=String(queryKey[1]),id=String(queryKey[2]);if(!owner)return {count:0}
+        return await authFetch(`/api/game-comments/${encodeURIComponent(id)}/unread`,{signal,headers:headers(owner)}) as {count:number}
+    }})
+    watch([enabled,userId,gameId],([allowed,owner,id],_,cleanup)=>{
+        if(!allowed||!isRealtimeEnabled())return
+        let timer:ReturnType<typeof setTimeout>|undefined
+        const channel=supabase.channel(`game-comments-unread-${owner}-${id}`).on('postgres_changes',{event:'*',schema:'public',table:'game_comments',filter:`game_id=eq.${id}`},()=>{clearTimeout(timer);timer=setTimeout(()=>{void query.refetch()},200)}).subscribe()
+        cleanup(()=>{clearTimeout(timer);void supabase.removeChannel(channel)})
+    },{immediate:true})
+    return {unreadCount:computed(()=>userId.value?query.data.value?.count||0:0),setUnreadCount:(count:number)=>{if(userId.value)client.setQueryData(key.value,{count})}}
 }

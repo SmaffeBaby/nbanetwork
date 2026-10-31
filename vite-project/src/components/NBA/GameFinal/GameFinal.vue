@@ -9,7 +9,7 @@
 
     <GamePrediction v-if="game" :game-id="gameId" :teams="{home:game.home,away:game.away}" hide-empty-closed />
 
-    <TabsContent :comments-unread-count="commentsUnreadCount">
+    <TabsContent :comments-unread-count="commentsUnreadCount" @comments-active-change="commentsActive=$event">
       <template #controls>
         <button
             type="button"
@@ -61,15 +61,11 @@
         <GameComments
             :game-id="gameId"
             :active="active"
+            :unread-count="commentsUnreadCount"
             @unread-change="setUnreadCount"
         />
       </template>
 
-      <template #data>
-        <div v-if="game" class="max-w-full overflow-auto rounded-lg border bg-gray-50 p-3 text-left text-[11px] sm:p-4 sm:text-xs">
-          <pre>{{ game }}</pre>
-        </div>
-      </template>
     </TabsContent>
 
     <GameRelatedMatches :game-id="gameId" />
@@ -103,5 +99,6 @@ const filters = ref({
 })
 
 const { gameId, game, recap, loading, error } = useGameFinal(filters)
-const { unreadCount: commentsUnreadCount, setUnreadCount } = useGameCommentsUnread(ref(gameId))
+const commentsActive=ref(false)
+const { unreadCount: commentsUnreadCount, setUnreadCount } = useGameCommentsUnread(ref(gameId),commentsActive)
 </script>

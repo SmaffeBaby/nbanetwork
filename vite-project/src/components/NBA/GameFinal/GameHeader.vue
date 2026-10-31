@@ -1,34 +1,26 @@
 <template>
   <div class="space-y-4">
 
-    <div v-if="loading" class="text-center text-gray-400 animate-pulse text-sm">
+    <div v-if="loading && !game" class="text-center text-gray-400 animate-pulse text-sm">
       Loading game...
     </div>
 
-    <div v-else-if="error" class="text-center text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-sm">
+    <div v-else-if="error && !game" class="text-center text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-sm">
       {{ error }}
     </div>
 
     <div
-        v-else
+        v-else-if="game"
         class="relative rounded-2xl bg-white p-4 shadow-md transition active:scale-[0.98] sm:p-5"
     >
 
+      <p v-if="error" role="status" class="mb-3 text-xs text-amber-700">Не удалось обновить матч. Показываем последние полученные данные.</p>
       <GameCompetitionBadge :competition="game?.competition" class="mb-3" />
       <div class="mb-3 flex items-center justify-between text-xs text-gray-500">
 
-        <div class="flex items-center gap-2 uppercase tracking-wide">
-
-          <span>{{ game?.status }}</span>
-
-          <span
-              v-if="isLive"
-              class="flex items-center gap-1 text-red-500 font-semibold"
-          >
-            <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-            LIVE
-          </span>
-
+        <div class="flex flex-wrap items-center gap-2">
+          <span v-if="isLive" class="inline-flex items-center gap-1.5 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-black tracking-wider text-white"><span aria-hidden="true" class="h-1.5 w-1.5 rounded-full bg-white motion-safe:animate-pulse"/>LIVE</span>
+          <span class="font-semibold tabular-nums" :class="isLive?'text-rose-600':'text-slate-500'">{{ isLive && game.period ? (game.period<=4?'Q'+game.period:'ОТ'+(game.period-4)) + (game.clock?' · '+game.clock:'') : game.status }}</span>
         </div>
 
         <button

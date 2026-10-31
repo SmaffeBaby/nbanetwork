@@ -8,7 +8,7 @@ const { getGamesByDate, normalizeGames } = require('../services/gamesService')
 router.get('/upcoming-games', async (_req, res) => {
     try {
         const games = await fetchWithCache({
-            key: 'upcoming-games-v1',
+            key: 'upcoming-games-v2',
             ttl: 15000,
             fetcher: async () => {
                 const response = await axios.get('http://python-backend:8000/games/upcoming', { timeout: 25000 })

@@ -11,10 +11,42 @@ function authorName(profile) {
     return name || 'Пользователь'
 }
 
-router.get('/game-comments/:gameId', requireUser, async (req, res) => {
+function commentAccount(req,res,next) {
+    if(req.headers['x-profile-id'] && req.headers['x-profile-id']!==req.user.id) return res.status(409).json({error:'Аккаунт изменился. Обновите комментарии.'})
+    res.set('Cache-Control','private, no-store')
+    next()
+}
+router.get('/game-comments/:gameId/unread', requireUser, commentAccount, async(req,res)=>{
+    try {
+        const db=getAdmin(), gameId=req.params.gameId
+        const {data:read,error:readError}=await db.from('game_comment_reads').select('read_at').eq('game_id',gameId).eq('user_id',req.user.id).maybeSingle().abortSignal(AbortSignal.timeout(8000))
+        if(readError)throw readError
+        let query=db.from('game_comments').select('id',{count:'exact',head:true}).eq('game_id',gameId).neq('user_id',req.user.id)
+        if(read?.read_at)query=query.gt('created_at',read.read_at)
+        const {count,error}=await query.abortSignal(AbortSignal.timeout(8000))
+        if(error)throw error
+        res.json({count:count||0})
+    } catch(error){res.status(503).json({error:'Не удалось обновить непрочитанные комментарии'})}
+})
+router.put('/game-comments/:gameId/read', requireUser, commentAccount, async(req,res)=>{
+    const timestamp=Date.parse(req.body?.readThrough)
+    if(!Number.isFinite(timestamp))return res.status(400).json({error:'Некорректное время прочтения'})
+    const readAt=new Date(Math.min(timestamp,Date.now())).toISOString(),db=getAdmin(),row={game_id:req.params.gameId,user_id:req.user.id,read_at:readAt}
+    try {
+        const {error:insertError}=await db.from('game_comment_reads').upsert(row,{onConflict:'game_id,user_id',ignoreDuplicates:true}).abortSignal(AbortSignal.timeout(8000))
+        if(insertError)throw insertError
+        // An older in-flight request must never move the read cursor backwards.
+        const {error}=await db.from('game_comment_reads').update({read_at:readAt}).eq('game_id',row.game_id).eq('user_id',row.user_id).lt('read_at',readAt).abortSignal(AbortSignal.timeout(8000))
+        if(error)throw error
+        res.json({readAt})
+    } catch(error){res.status(503).json({error:'Не удалось сохранить прочтение комментариев'})}
+})
+
+router.get('/game-comments/:gameId', requireUser, commentAccount, async (req, res) => {
     try {
         const admin = getAdmin()
         const { gameId } = req.params
+        const readThrough=new Date().toISOString()
 
         const { data, error } = await admin
             .from('game_comments')
@@ -33,19 +65,22 @@ router.get('/game-comments/:gameId', requireUser, async (req, res) => {
                 )
             `)
             .eq('game_id', gameId)
+            .lte('created_at',readThrough)
             .order('created_at', { ascending: true })
+            .order('id', {ascending:true})
+            .abortSignal(AbortSignal.timeout(8000))
 
         if (error) {
             return res.status(500).json({ error: error.message })
         }
 
-        res.json({ comments: data || [] })
+        res.json({ comments: data || [],readThrough })
     } catch (error) {
         res.status(500).json({ error: error.message || 'Social service is unavailable' })
     }
 })
 
-router.post('/game-comments', requireUser, async (req, res) => {
+router.post('/game-comments', requireUser, commentAccount, async (req, res) => {
     try {
         const admin = getAdmin()
         const { id, gameId, message = '', imageData = null, replyToId = null } = req.body || {}
@@ -135,7 +170,7 @@ router.post('/game-comments', requireUser, async (req, res) => {
     }
 })
 
-router.delete('/game-comments/:commentId', requireUser, async (req, res) => {
+router.delete('/game-comments/:commentId', requireUser, commentAccount, async (req, res) => {
     try {
         const admin = getAdmin()
         const { commentId } = req.params

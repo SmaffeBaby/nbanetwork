@@ -1,7 +1,7 @@
 const { getAdmin } = require('../lib/supabase')
 
 const TABLE = 'nba_games_by_date_cache'
-const SOURCE = 'espn-calendar-v4'
+const SOURCE = 'espn-calendar-v5'
 const MINUTE = 60 * 1000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR

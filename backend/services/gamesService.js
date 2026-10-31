@@ -27,7 +27,9 @@ function normalizeGames(games) {
         home_team_score: game.HOME_TEAM_SCORE,
         visitor_team_score: game.VISITOR_TEAM_SCORE,
         status: game.GAME_STATUS,
-        period: String(game.GAME_STATUS_ID) === '2' ? 1 : 0,
+        period: String(game.GAME_STATUS_ID) === '2' ? Number(game.GAME_PERIOD) || 1 : 0,
+        livePeriod: String(game.GAME_STATUS_ID) === '2' ? Number(game.GAME_PERIOD) || null : null,
+        clock: String(game.GAME_STATUS_ID) === '2' ? game.GAME_CLOCK || '' : '',
         datetime: game.GAME_TIME_UTC
     }))
 }

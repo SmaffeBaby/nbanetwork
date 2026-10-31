@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta, timezone
 
 
-def select_upcoming_games(games, now=None, limit=6):
+def select_upcoming_games(games, now=None, limit=6, all_live=False):
     now = now or datetime.now(timezone.utc)
     selected = {}
     for game in games:
@@ -22,4 +22,8 @@ def select_upcoming_games(games, now=None, limit=6):
         game_id = str(game.get('GAME_ID', ''))
         if game_id:
             selected[game_id] = (status_id == '2', start, game)
-    return [item[2] for item in sorted(selected.values(), key=lambda item: (not item[0], item[1], str(item[2]['GAME_ID'])))[:limit]]
+    ordered = sorted(selected.values(), key=lambda item: (not item[0], item[1], str(item[2]['GAME_ID'])))
+    if all_live:
+        # Every live game gets a card; the limit applies only to future fixtures.
+        return [item[2] for item in ordered if item[0]] + [item[2] for item in ordered if not item[0]][:limit]
+    return [item[2] for item in ordered[:limit]]

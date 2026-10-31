@@ -21,9 +21,7 @@ export function useGameHeader(gameRef: any) {
         return !auth.loading && store.isVisible(id, defaultVisible.value)
     })
 
-    const isLive = computed(() =>
-        gameRef?.value?.status?.toLowerCase?.() === 'live'
-    )
+    const isLive = computed(() => gameRef.value?.state === 'in')
 
     function toggleScore() {
         const id = gameId.value

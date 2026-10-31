@@ -834,8 +834,8 @@ def get_upcoming_games():
     try:
         for offset in range(-1, 15):
             candidates.extend(calendar_provider.games_on_date(today + timedelta(days=offset)))
-            games = select_upcoming_games(candidates, now)
-            if len(games) >= 6:
+            games = select_upcoming_games(candidates, now, all_live=True)
+            if sum(1 for game in games if str(game.get('GAME_STATUS_ID')) != '2') >= 6:
                 break
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Upcoming games source unavailable") from exc

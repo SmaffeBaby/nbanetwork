@@ -70,7 +70,8 @@ class CalendarProvider:
         if home_abbr not in NBA_TEAMS or away_abbr not in NBA_TEAMS:
             return None
         tipoff = datetime.fromisoformat(event["date"].replace("Z", "+00:00"))
-        status = (competition.get("status") or event.get("status") or {}).get("type", {})
+        live_status = competition.get("status") or event.get("status") or {}
+        status = live_status.get("type", {})
         state = status.get("state", "pre")
         def score(team):
             value = team.get("score")
@@ -90,6 +91,8 @@ class CalendarProvider:
             "HOME_TEAM_SCORE": score(home), "VISITOR_TEAM_SCORE": score(away),
             "GAME_STATUS": "Final" if status.get("completed") else (status.get("shortDetail", "TBD") if state != "pre" else "Scheduled"),
             "GAME_STATUS_ID": 3 if status.get("completed") else (2 if state == "in" else 1),
+            "GAME_PERIOD": live_status.get("period"),
+            "GAME_CLOCK": live_status.get("displayClock"),
         }
 
     def games_on_date(self, date):

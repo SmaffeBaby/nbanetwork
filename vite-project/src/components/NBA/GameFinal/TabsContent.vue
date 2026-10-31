@@ -44,9 +44,6 @@
           <slot name="comments" :active="activeTab === 'comments' && !isLocked" />
         </div>
 
-        <div v-else>
-          <slot name="data" />
-        </div>
 
       </div>
 
@@ -77,12 +74,13 @@ import { EyeIcon } from '@heroicons/vue/24/outline'
 import Categories from '../../Categories/Categories.vue'
 import type { CategoryOption } from '../../../types/categories'
 
-type Tab = 'overview' | 'players' | 'teamStats' | 'injury' | 'broadcasts' | 'comments' | 'data'
+type Tab = 'overview' | 'players' | 'teamStats' | 'injury' | 'broadcasts' | 'comments'
 
 const props = defineProps<{
   commentsUnreadCount?: number
 }>()
 
+const emit=defineEmits<{commentsActiveChange:[active:boolean]}>()
 const auth = useAuthStore()
 const activeTab = ref<Tab>('overview')
 const revealed = ref(false)
@@ -98,8 +96,7 @@ const tabOptions = computed<CategoryOption<Tab>[]>(() => [
     label: 'Комментарии',
     badge: normalizedCommentsUnreadCount.value || undefined,
     dividerBefore: true
-  },
-  { value: 'data', label: 'Данные' }
+  }
 ])
 
 const reveal = () => {
@@ -109,6 +106,7 @@ const reveal = () => {
 const isLocked = computed(() =>
     !revealed.value && activeTab.value !== 'injury' && (auth.loading || auth.user?.hideScores !== false)
 )
+watch(()=>activeTab.value==='comments'&&!isLocked.value,active=>emit('commentsActiveChange',active),{immediate:true})
 watch(() => auth.user?.hideScores, (value, previous) => { if (value === true && previous === false) revealed.value = false })
 </script>
 

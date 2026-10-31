@@ -18,6 +18,8 @@
       <NewsSlider />
     </div>
 
+    <LiveGamesList class="relative z-0 pt-16 px-2 sm:px-6" />
+
     <div class="relative z-0 pt-16 px-2 sm:px-6">
       <DailyGamesList />
     </div>
@@ -41,6 +43,7 @@
 import Header from '../components/Headers/Header.vue'
 import HomeSearchHero from '../components/Home/HomeSearchHero.vue'
 import NewsSlider from '../components/News/NewsSlider.vue'
+import LiveGamesList from '../components/NBA/main_slider/LiveGamesList.vue'
 import DailyGamesList from '../components/NBA/main_slider/DailyGamesList.vue'
 import RecentGames from '../components/NBA/recent_games/RecentGames.vue'
 import Map from '../components/NBA/MAP/Map.vue'

@@ -7,14 +7,14 @@
       </div>
 
       <span
-          v-if="unreadCount"
+          v-if="displayUnread"
           class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-800"
       >
-        {{ unreadCount }}
+        {{ displayUnread }}
       </span>
     </div>
 
-    <div class="h-[60vh] min-h-[360px] overflow-y-auto bg-gray-50 p-3 sm:h-[420px] sm:p-4">
+    <div ref="viewport" @scroll.passive="onScroll" class="h-[60vh] min-h-[360px] overflow-y-auto bg-gray-50 p-3 sm:h-[420px] sm:p-4">
       <div v-if="!user" class="flex h-full items-center justify-center text-sm text-gray-500">
         Войдите, чтобы читать и отправлять комментарии.
       </div>
@@ -106,6 +106,8 @@
                   v-if="comment.image_data"
                   :src="comment.image_data"
                   alt="Comment attachment"
+                  loading="lazy"
+                  @load="followImages"
                   class="mt-3 max-h-72 rounded-lg border object-contain"
                   :class="isOwnComment(comment) ? 'border-blue-500' : 'border-gray-100'"
               />
@@ -138,7 +140,8 @@
     </div>
 
     <div class="border-t border-gray-200 bg-white p-3 sm:p-4">
-      <p v-if="error" class="mb-2 text-sm text-red-600">{{ error }}</p>
+      <p v-if="error" role="alert" class="mb-2 text-sm text-red-600">{{ error }} <button v-if="user" type="button" class="font-bold underline" @click="fetchComments">Повторить</button></p>
+      <button v-if="newMessages" type="button" class="mb-3 w-full rounded-xl bg-blue-50 p-2 text-sm font-bold text-blue-700" @click="scrollToBottom">Новые сообщения · {{ newMessages }} ↓</button>
 
       <div
           v-if="replyTo"
@@ -202,7 +205,7 @@
             :disabled="!user || sending"
             class="block min-w-0 flex-1 resize-none rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder="Напишите комментарий..."
-            @focus="markAsRead"
+            @focus="scrollToBottom"
         />
 
         <button
@@ -219,13 +222,14 @@
 </template>
 
 <script setup lang="ts">
-import { toRef, watch } from 'vue'
+import { computed, nextTick, ref, toRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useGameComments, type GameComment } from '../../../composables/NBA/GameFinal/useGameComments'
 
 const props = defineProps<{
   gameId: string
   active: boolean
+  unreadCount?:number
 }>()
 
 const emit = defineEmits<{
@@ -242,7 +246,6 @@ const {
   loading,
   sending,
   deleting,
-  unreadCount,
   error,
   canSend,
   attachImage,
@@ -252,9 +255,8 @@ const {
   sendComment,
   deleteComment,
   markAsRead,
-  fetchComments,
-  fetchUnreadCount
-} = useGameComments(toRef(props, 'gameId'))
+  fetchComments
+} = useGameComments(toRef(props, 'gameId'),toRef(props,'active'))
 
 const formatTime = (date: string) => {
   return new Intl.DateTimeFormat('ru-RU', {
@@ -289,7 +291,7 @@ const getInitials = (comment: GameComment) => {
 const getReplyTarget = (comment: GameComment) => {
   if (!comment.reply_to_id) return null
 
-  return comments.value.find(item => item.id === comment.reply_to_id) ?? null
+  return commentsById.value.get(comment.reply_to_id) ?? null
 }
 
 const getReplyPreview = (comment: GameComment) => {
@@ -308,19 +310,19 @@ const scrollToComment = (commentId: string | null) => {
   })
 }
 
-watch(unreadCount, (count) => {
-  emit('unreadChange', count)
-}, { immediate: true })
-
-watch(
-  () => props.active,
-  async (active) => {
-    if (!active) return
-
-    await fetchComments()
-    await markAsRead()
-    await fetchUnreadCount()
-  },
-  { immediate: true }
-)
+const viewport=ref<HTMLElement|null>(null),nearBottom=ref(true),newMessages=ref(0)
+const displayUnread=computed(()=>Math.max(props.unreadCount||0,newMessages.value))
+const commentsById=computed(()=>new Map(comments.value.map(c=>[c.id,c])))
+function onScroll(){const el=viewport.value;if(!el)return;nearBottom.value=el.scrollHeight-el.scrollTop-el.clientHeight<64;if(nearBottom.value){newMessages.value=0;void markAsRead()}}
+async function scrollToBottom(){await nextTick();if(viewport.value)viewport.value.scrollTop=viewport.value.scrollHeight;nearBottom.value=true;newMessages.value=0;void markAsRead()}
+function followImages(){if(nearBottom.value)void scrollToBottom()}
+watch(displayUnread,count=>emit('unreadChange',count),{immediate:true})
+let knownIds=new Set<string>()
+watch([()=>props.active,loading,()=>comments.value.at(-1)?.id,()=>user.value?.id,()=>comments.value.length],async([active,pending,,owner],[previousActive,,,previousOwner])=>{
+ if(!active||pending||!owner)return
+ const arrivals=comments.value.filter(c=>!knownIds.has(c.id)&&c.user_id!==owner).length
+ knownIds=new Set(comments.value.map(c=>c.id))
+ if(!previousActive||owner!==previousOwner||nearBottom.value){await scrollToBottom();return}
+ newMessages.value+=arrivals
+},{immediate:true,flush:'post'})
 </script>
