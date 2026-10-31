@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { type RouteLocationRaw, useRoute } from 'vue-router'
 import {
   ArchiveBoxIcon,
+  ChartBarIcon,
   CalendarDaysIcon,
   ChevronDownIcon,
   FireIcon,
@@ -86,6 +87,7 @@ export function useHeader() {
   ])
 
   const seasonLinks = computed<HeaderFeatureLink[]>(() => [
+    {label:'Чарт',description:'Командные показатели и лидеры НБА',to:'/chart',icon:ChartBarIcon,isActive:route.path.startsWith('/chart')},
     {
       label: 'Регулярный чемпионат',
       description: 'Таблица Востока и Запада',
@@ -134,7 +136,7 @@ export function useHeader() {
   ])
 
   const teamsIsActive = computed(() => route.path.startsWith('/teams') || route.path.startsWith('/team/'))
-  const seasonIsActive = computed(() => route.path === '/standings' || route.path.startsWith('/playoffs'))
+  const seasonIsActive = computed(() => route.path.startsWith('/chart') || route.path === '/standings' || route.path.startsWith('/playoffs'))
   const moreIsActive = computed(() => route.path === '/patch-note' || route.path.startsWith('/profile'))
 
   return {

@@ -157,12 +157,9 @@
           <div
               v-for="(g, gameIndex) in modalSeries.series.games"
               :key="g.GAME_ID"
-              role="button"
-              tabindex="0"
-              class="grid cursor-pointer gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-emerald-300 hover:shadow-md sm:grid-cols-[1fr_auto] sm:items-center"
-              @click="goToGame(g)"
-              @keydown.enter="goToGame(g)"
+              class="relative grid cursor-pointer gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-emerald-300 hover:shadow-md sm:grid-cols-[1fr_auto] sm:items-center"
           >
+            <GameLink :game="g" :label="`Открыть матч ${formatTeam(g.away.team)} — ${formatTeam(g.home.team)}`" />
             <div class="min-w-0">
               <div class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                 Игра {{ gameIndex + 1 }} / {{ g.GAME_DATE }}
@@ -200,7 +197,7 @@
               <button
                   v-if="hideSpoilers"
                   type="button"
-                  class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700"
+                  class="relative z-[2] rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700"
                   @click.stop="toggleGameVisibility(g.GAME_ID)"
               >
                 {{ isGameVisible(g.GAME_ID) ? 'Скрыть' : 'Показать' }}
@@ -214,6 +211,7 @@
 </template>
 
 <script setup lang="ts">
+import GameLink from '../GameLink.vue'
 import { nextTick, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import type { ConferenceFilter } from '../../../composables/NBA/Playoffs/usePlayoffBracket'
@@ -238,7 +236,7 @@ const {
 const seasonsReady = ref(false)
 
 const { getTeamAbbr, getLogo, getTeamConference } = usePlayoffTeams(formatTeam)
-const { goToTeam, goToGame } = usePlayoffNavigation()
+const { goToTeam } = usePlayoffNavigation()
 const {
   hideSpoilers,
   isGameVisible,

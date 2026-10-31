@@ -16,6 +16,7 @@ const routes = [
     { path: '/reset-password', name: 'ResetPassword', component: () => import('../views/ResetPassword.vue') },
     { path: '/profile/:id', name: 'PublicProfile', component: () => import('../views/PublicProfile.vue') },
     { path: '/standings', component: Standings },
+    { path: '/chart/:metric?', name:'TeamChart', component:()=>import('../views/TeamChart.vue') },
     { path: '/playoffs', name: 'Playoffs', component: () => import('../views/Playoffs.vue')},
     { path: '/teams', component: Teams },
     { path: '/fantasy', name: 'Fantasy', component: () => import('../views/Fantasy.vue') },

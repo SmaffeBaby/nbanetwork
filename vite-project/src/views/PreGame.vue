@@ -38,8 +38,16 @@
     </section>
     <section class="mt-8 rounded-3xl bg-white p-5 shadow-sm sm:p-7">
      <h2 class="text-2xl font-black text-gray-900">Команды в сезоне {{ preview.season }}</h2><p class="mt-1 text-sm text-gray-500">{{ preview.seasonType===3?'Плей-офф':preview.seasonType===1?'Предсезонные игры':'Регулярный сезон' }} · средние показатели за матч</p>
-     <div class="mt-6 grid grid-cols-[1fr_1.3fr_1fr] gap-2 border-b pb-3 text-center text-xs font-bold text-gray-500"><span>{{ bySide.away.abbr }} · игр: {{ bySide.away.statistics.gamesPlayed ?? '—' }}</span><span>Показатель</span><span>{{ bySide.home.abbr }} · игр: {{ bySide.home.statistics.gamesPlayed ?? '—' }}</span></div>
-     <div v-for="(label,key) in statLabels" :key="key" class="grid grid-cols-[1fr_1.3fr_1fr] gap-2 border-b border-gray-50 py-3 text-center text-sm"><strong class="text-gray-900">{{ statValue(teamValue('away',key)) }}</strong><span class="text-gray-500">{{ label }}</span><strong class="text-gray-900">{{ statValue(teamValue('home',key)) }}</strong></div>
+     <div class="mt-6 grid grid-cols-[1fr_1.3fr_1fr] items-center gap-2 border-b border-slate-200 pb-4 text-center text-xs font-bold text-slate-500">
+      <RouterLink :to="`/team/${bySide.away.abbr}`" class="flex min-w-0 flex-col items-center gap-2 hover:text-blue-600"><img :src="`/logos/${bySide.away.abbr}.svg`" :alt="bySide.away.name" class="h-12 w-12 object-contain sm:h-14 sm:w-14" /><span>Матчей: {{ bySide.away.statistics.gamesPlayed ?? '—' }}</span></RouterLink><span>Показатель</span>
+      <RouterLink :to="`/team/${bySide.home.abbr}`" class="flex min-w-0 flex-col items-center gap-2 hover:text-blue-600"><img :src="`/logos/${bySide.home.abbr}.svg`" :alt="bySide.home.name" class="h-12 w-12 object-contain sm:h-14 sm:w-14" /><span>Матчей: {{ bySide.home.statistics.gamesPlayed ?? '—' }}</span></RouterLink>
+     </div>
+     <div v-for="(label,key) in statLabels" :key="key" class="grid grid-cols-[1fr_1.3fr_1fr] items-center gap-2 border-b border-slate-100 py-3 text-center text-sm">
+      <div class="flex flex-wrap items-center justify-center gap-1.5"><strong class="text-slate-900">{{ statValue(teamValue('away',key)) }}</strong><span v-if="teamRank('away',key)" class="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700" :title="rankTitle('away',key)">#{{ teamRank('away',key).place }} из {{ teamRank('away',key).total }}</span></div><span class="text-slate-500">{{ label }}</span>
+      <div class="flex flex-wrap items-center justify-center gap-1.5"><strong class="text-slate-900">{{ statValue(teamValue('home',key)) }}</strong><span v-if="teamRank('home',key)" class="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700" :title="rankTitle('home',key)">#{{ teamRank('home',key).place }} из {{ teamRank('home',key).total }}</span></div>
+     </div>
+     <p class="mt-4 text-xs leading-5 text-slate-400">Место среди команд с сыгранными матчами этого этапа сезона. Равные значения делят место. <RouterLink :to="{path:'/chart',query:{season:String(Number(preview.season.slice(0,4))+1),type:preview.seasonType===3?'3':'2'}}" class="font-bold text-blue-600 hover:underline">Все командные показатели →</RouterLink></p>
+     <p v-if="preview.teams.some((t:any)=>!t.statistics.rankingsComplete)" class="mt-2 text-xs text-amber-600">Места временно недоступны: ожидаем полную статистику лиги.</p>
     </section>
     <section class="mt-8">
      <h2 class="mb-4 text-2xl font-black text-gray-900">Лидеры команд</h2>
@@ -76,6 +84,8 @@ const bySide=computed(()=>Object.fromEntries((preview.value?.teams || []).map((t
 usePageTitle(()=>bySide.value.away && bySide.value.home ? `${bySide.value.away.name} — ${bySide.value.home.name} — Перед матчем` : null)
 const updatedLabel=computed(()=>preview.value?.updatedAt?new Date(preview.value.updatedAt).toLocaleTimeString('ru-RU',{timeZone:'Europe/Moscow',hour:'2-digit',minute:'2-digit'})+' МСК':'—')
 const teamValue=(side:string,key:string)=>bySide.value[side]?.statistics.values.find((s:any)=>s.key===key)?.value ?? null
+const teamRank=(side:string,key:string)=>bySide.value[side]?.statistics.ranks?.[key]||null
+const rankTitle=(side:string,key:string)=>{const r=teamRank(side,key);return r?`${r.place}-е место среди ${r.total} команд сезона`:''}
 const injuryGroups=[{key:'out',label:'Не сыграют / маловероятное участие'},{key:'uncertain',label:'Под вопросом / решение перед матчем'}]
 const hideImage=(event:Event)=>{(event.target as HTMLImageElement).style.display='none'}
 </script>

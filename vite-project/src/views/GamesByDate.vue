@@ -86,10 +86,9 @@
               :key="game.id"
               class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
           >
-            <button
-                type="button"
+            <RouterLink
+                :to="gameLocation(game)"
                 class="flex h-full w-full flex-col gap-4 text-left"
-                @click="goToGame(game)"
             >
               <div class="flex items-center justify-between gap-3">
                 <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
@@ -117,7 +116,7 @@
                   </span>
                 </div>
               </div>
-            </button>
+            </RouterLink>
           </li>
         </ul>
       </section>
@@ -127,6 +126,7 @@
 
 <script setup lang="ts">
 import Header from '../components/Headers/Header.vue'
+import { gameLocation } from '../api/gameNavigation'
 import GamesDatePicker from '../components/NBA/Games/GamesDatePicker.vue'
 import { getTeamLogo } from '../utils/getTeamLogo'
 import { useGamesByDatePage } from '../composables/NBA/games/useGamesByDatePage'
@@ -146,7 +146,6 @@ const {
   goToPreviousDay,
   goToNextDay,
   goToToday,
-  goToGame,
   displayScore
 } = useGamesByDatePage()
 </script>

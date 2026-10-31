@@ -72,9 +72,9 @@
             v-for="game in gamesList"
             :key="getGameId(game)"
             class="bg-white p-4 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
-            @click="goToGame(game)"
         >
 
+          <RouterLink :to="gameLocation(game)" class="block">
           <div class="flex justify-between">
             <span class="text-gray-500">
               {{ game.statusTime ? `${game.statusTime} МСК` : 'Время уточняется' }}
@@ -102,6 +102,7 @@
 
           </div>
 
+          </RouterLink>
         </li>
 
       </ul>
@@ -111,10 +112,9 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
 import { dateKeyToDate } from '../../../composables/NBA/games/useGamesByDate'
 import { getDateKey } from '../../../composables/NBA/utils'
-import { openGame } from '../../../api/gameNavigation'
+import { gameLocation } from '../../../api/gameNavigation'
 
 import { useRecentGames } from '../../../composables/NBA/recent_games/useRecentGames'
 import { getTeamLogo } from '../../../utils/getTeamLogo'
@@ -122,7 +122,6 @@ import {
   formatDateWithWeekday,
 } from '../../../composables/NBA/recent_games/useGameHelpers'
 
-const router = useRouter()
 
 const {
   gamesList,
@@ -140,9 +139,4 @@ const {
 const getGameId = (g: any) =>
     g?.Game_ID ?? g?.GAME_ID ?? ''
 
-const goToGame = (game: any) => {
-  const id = getGameId(game)
-  if (!id) return
-  openGame(router, game)
-}
 </script>

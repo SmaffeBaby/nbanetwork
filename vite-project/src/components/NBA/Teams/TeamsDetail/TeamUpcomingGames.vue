@@ -9,7 +9,7 @@
       {{ error }}
     </div>
 
-    <div v-if="loading" class="cursor-pointer rounded-2xl border border-gray-100 bg-white px-3 py-10">
+    <div v-if="loading" class="relative cursor-pointer rounded-2xl border border-gray-100 bg-white px-3 py-10">
       <div
           role="status"
           class="flex items-center justify-center"
@@ -32,11 +32,9 @@
       <div
           v-for="game in games"
           :key="game.GAME_ID"
-          tabindex="0"
-          @click="openGame(router, { ...game, preGame: true })"
-          @keydown.enter="openGame(router, { ...game, preGame: true })"
-          class="cursor-pointer rounded-2xl border border-gray-100 bg-white p-3 shadow-sm"
+          class="relative cursor-pointer rounded-2xl border border-gray-100 bg-white p-3 shadow-sm"
       >
+        <GameLink :game="{...game,preGame:true}" />
         <div class="flex items-center justify-between gap-3">
           <div class="text-sm font-medium text-gray-900">{{ game.FORMATTED_DATE }}</div>
           <div class="shrink-0 text-sm font-semibold text-gray-600">{{ game.MOSCOW_TIME }}</div>
@@ -71,12 +69,9 @@
         <tr
             v-for="game in games"
             :key="game.GAME_ID"
-          tabindex="0"
-          @click="openGame(router, { ...game, preGame: true })"
-          @keydown.enter="openGame(router, { ...game, preGame: true })"
-            class="cursor-pointer border-t hover:bg-gray-50 transition"
+            class="relative cursor-pointer border-t hover:bg-gray-50 transition"
         >
-          <td class="px-3 py-2 whitespace-nowrap">
+          <td class="px-3 py-2 whitespace-nowrap"><GameLink :game="{...game,preGame:true}" />
             {{ game.FORMATTED_DATE }}
           </td>
 
@@ -107,9 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { openGame } from '../../../../api/gameNavigation'
-const router = useRouter()
+import GameLink from '../../GameLink.vue'
 
 import { toRef } from 'vue'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'

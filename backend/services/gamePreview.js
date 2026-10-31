@@ -71,15 +71,19 @@ async function getGamePreview(id) {
     const year=Number(raw.header.season.year), type=Number(raw.header.season.type), state=competition.status?.type || {}
     if(state.state!=='pre') return {gameId:id,source:'espn',state:state.state,completed:Boolean(state.completed),teams:[]}
     const commonRequest=seasonAthletes(year,type).catch(()=>null)
+    const chartRequest=([2,3].includes(type)?require('./teamChart').teamChart(year,type):Promise.resolve(null)).catch(()=>null)
     const teams=await Promise.all(['away','home'].map(async side=>{
         const c=competition.competitors.find(c=>c.homeAway===side)
         const results=await Promise.allSettled(['roster','depthcharts','statistics'].map(resource=>teamResource(c.id,resource,year,type,resource==='depthcharts'?5*60000:15*60000)))
-        const common=await commonRequest
+        const [common,chart]=await Promise.all([commonRequest,chartRequest])
         const [roster,depth,stats]=results.map(r=>r.status==='fulfilled'?r.value:null)
         const injuries=injuryReports(raw,c.id,roster,depth)
+        const chartTeam=chart?.teams.find(t=>t.id===String(c.id))
+        const statistics=teamStats(stats)
+        if(chartTeam){statistics.gamesPlayed=chartTeam.gamesPlayed;statistics.values=statistics.values.map(v=>({...v,value:chartTeam.gamesPlayed>0?chartTeam.stats[v.key]??null:null}))}
         return {side,id:String(c.id),name:c.team.displayName,abbr:side==='home'?recap.meta.homeAbbr:recap.meta.awayAbbr,
             record:c.record?.find(r=>r.type==='total')?.summary || '',lineup:lineup(raw,c.id,depth,injuries),injuries,
-            statistics:teamStats(stats),leaders:teamLeaders(common,roster),
+            statistics:{...statistics,ranks:chartTeam?.ranks||{},rankingsComplete:chart?.complete||false},leaders:teamLeaders(common,roster),
             unavailable:[...['roster','depthcharts','statistics'].filter((_,i)=>results[i].status==='rejected'),...(!common?['leaders']:[])]}
     }))
     return {gameId:id,source:'espn',dateUTC:recap.dateUTC,dateMSK:recap.dateMSK,venue:recap.venue,

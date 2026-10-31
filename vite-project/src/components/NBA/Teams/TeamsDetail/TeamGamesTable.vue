@@ -34,13 +34,13 @@
     </div>
 
     <div class="space-y-3 md:hidden">
-      <button
+      <article
           v-for="game in sortedGames"
           :key="game.Game_ID"
-          type="button"
-          class="w-full rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]"
-          @click="goToGame(game)"
+          class="relative w-full rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]"
+
       >
+        <GameLink :game="game" />
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <div class="flex items-center gap-2">
@@ -94,7 +94,7 @@
             <div class="text-sm font-semibold text-gray-900">{{ item.value }}</div>
           </div>
         </div>
-      </button>
+      </article>
     </div>
 
     <div class="hidden overflow-x-auto rounded-xl border md:block">
@@ -122,11 +122,11 @@
         <tr
             v-for="game in sortedGames"
             :key="game.Game_ID"
-            @click="goToGame(game)"
-            class="border-t hover:bg-gray-50 transition cursor-pointer"
+
+            class="relative border-t hover:bg-gray-50 transition cursor-pointer"
         >
 
-          <td class="px-4 py-3">
+          <td class="px-4 py-3"><GameLink :game="game" />
             <div class="flex items-center gap-3">
 
               <img
@@ -203,13 +203,12 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { openGame } from '../../../../api/gameNavigation'
+import GameLink from '../../GameLink.vue'
+
 import { toRef } from 'vue'
 import { useTeamGameTable } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamGameTable'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 
-const router = useRouter()
 
 const props = defineProps<{
   teamId: number
@@ -227,10 +226,7 @@ const {
   getSortIcon,
 } = useTeamGameTable(teamIdRef, seasonRef)
 
-const goToGame = (game: any) => {
-  if (!game?.Game_ID) return
-  return openGame(router, game)
-}
+
 
 const mobileStats = (game: any) => [
   { label: 'PTS', value: game.PTS },

@@ -3,7 +3,7 @@ const teams:Record<string,string>={ATL:'Atlanta Hawks',BOS:'Boston Celtics',BKN:
 export function routeTitle(route:{path:string;params:Record<string,any>;query?:Record<string,any>}) {
  const {path,params}=route
  if(path==='/')return 'Basketsfera'
- const fixed:Record<string,string>={'/fantasy':'Фентези НБА','/profile':'Настройки профиля','/standings':'Турнирная таблица НБА','/playoffs':'Плей-офф НБА','/teams':'Команды НБА','/news':'Новости баскетбола','/patch-note':'Патч ноут','/player-stats':'Статистика игроков НБА','/player-stats/all':'Статистика игроков НБА','/player-stats/playoffs':'Статистика игроков — Плей-офф'}
+ const fixed:Record<string,string>={'/fantasy':'Фентези НБА','/profile':'Настройки профиля','/chart':'Чарт команд НБА','/standings':'Турнирная таблица НБА','/playoffs':'Плей-офф НБА','/teams':'Команды НБА','/news':'Новости баскетбола','/patch-note':'Патч ноут','/player-stats':'Статистика игроков НБА','/player-stats/all':'Статистика игроков НБА','/player-stats/playoffs':'Статистика игроков — Плей-офф'}
  if(fixed[path])return siteTitle(fixed[path]+(path==='/news'&&route.query?.tag?` — #${route.query.tag}`:''))
  if(path.startsWith('/team/')){
   const abbr=String(params.abbr||'').toUpperCase(),sections:Record<string,string>={contracts:'Контракты',games:'Матчи',roster:'Состав',stats:'Статистика',about:'О команде',upcoming:'Ближайшие матчи',history:'История игр',form:'Форма команды',articles:'Статьи'}

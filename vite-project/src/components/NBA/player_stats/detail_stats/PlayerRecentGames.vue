@@ -32,13 +32,13 @@
     </label>
 
     <div class="space-y-3 sm:hidden">
-      <button
+      <article
           v-for="(g, i) in filteredGames"
           :key="g.Game_ID || i"
-          type="button"
-          class="w-full rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]"
-          @click="goToGame(g)"
+          class="relative w-full rounded-2xl border border-gray-100 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]"
+
       >
+        <GameLink :game="g" />
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
@@ -100,7 +100,7 @@
             </div>
           </div>
         </div>
-      </button>
+      </article>
     </div>
 
     <div class="hidden overflow-x-auto sm:block">
@@ -130,11 +130,11 @@
         <tr
             v-for="(g, i) in filteredGames"
             :key="g.Game_ID || i"
-            class="border-b hover:bg-gray-50 transition cursor-pointer active:scale-[0.99]"
-            @click="goToGame(g)"
+            class="relative border-b hover:bg-gray-50 transition cursor-pointer active:scale-[0.99]"
+
         >
 
-          <td class="px-3 py-2 whitespace-nowrap">
+          <td class="px-3 py-2 whitespace-nowrap"><GameLink :game="g" />
             <div class="flex items-center gap-2">
               <span>{{ g.GAME_DATE }}</span>
 
@@ -203,14 +203,13 @@
 </template>
 
 <script setup lang="ts">
+import GameLink from '../../GameLink.vue'
 import { computed, ref, toRef } from 'vue'
-import { useRouter } from 'vue-router'
-import { openGame } from '../../../../api/gameNavigation'
+
 import { getTeamLogo } from '../../../../utils/getTeamLogo.ts'
 import type { GameRaw, SortKey } from '../../../../composables/NBA/player_stats/usePlayerRecentGames.ts'
 import { usePlayerRecentGames } from '../../../../composables/NBA/player_stats/usePlayerRecentGames.ts'
 
-const router = useRouter()
 
 const props = defineProps<{ games: GameRaw[]; team?: string }>()
 const seasonTypeFilter = defineModel<'ALL' | 'Regular' | 'Playoffs'>('seasonTypeFilter')
@@ -232,10 +231,7 @@ const getArrow = (field: SortKey) =>
 const getWinLossClass = (g: GameRaw) =>
     getWinLoss(g) === 'W' ? 'text-green-600' : 'text-red-500'
 
-const goToGame = (game: any) => {
-  if (!game?.Game_ID) return
-  return openGame(router, game)
-}
+
 
 const filteredGames = computed(() => {
   let games = sortedGames.value

@@ -1,5 +1,5 @@
 <template>
-  <div role="link" tabindex="0" class="cursor-pointer" @click="openGame(router, game)" @keydown.enter="openGame(router, game)">
+  <RouterLink :to="gameLocation(game)" class="block cursor-pointer">
     <div class="teams flex items-center justify-between mb-2">
       <div class="team team-visitor">
         <img :src="getTeamLogo(game.visitor_team.abbreviation)" class="team-logo" />
@@ -25,14 +25,12 @@
       <BellAlertIcon class="h-4 w-4" />
       <span>{{ formatStart(game.datetime) }} МСК</span>
     </div>
-  </div>
+  </RouterLink>
 </template>
 
 <script lang="ts" setup>
-import { useRouter } from 'vue-router'
-import { openGame } from '../../../api/gameNavigation'
+import { gameLocation } from '../../../api/gameNavigation'
 
-const router = useRouter()
 
 import { isLiveGame } from '../../../composables/NBA/main_slider/useDailyGames'
 
