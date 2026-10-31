@@ -20,6 +20,7 @@ services:
     environment:
       - CONTRACT_IMPORT_DIR=/var/lib/nba-contracts/snapshots
       - NODE_ENV=production
+      - SITE_URL=${SITE_URL:-https://basketsfera.ru}
       - SUPABASE_URL=http://kong:8000
       - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-}
       - VK_VIDEO_OWNER_ID=${VK_VIDEO_OWNER_ID:--202211208}
