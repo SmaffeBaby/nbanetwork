@@ -25,7 +25,7 @@
     </section>
     <p v-if="error" role="alert" class="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{{ error }} <button class="ml-2 font-bold underline" @click="refresh">Повторить</button></p>
     <p v-if="!board && loading" class="py-8 text-center text-slate-500" role="status">Загружаем фентези…</p>
-    <section v-if="board" class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
+    <section v-if="board" ref="builder" class="scroll-mt-28 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div><p class="text-xs font-bold uppercase tracking-widest text-blue-600">{{ entry ? 'Состав закреплён' : 'Собери состав' }}</p><h2 class="mt-1 text-xl font-extrabold text-slate-900">Моя пятёрка <span v-if="entry" class="ml-2 text-blue-600">{{ points(entry.points) }} оч.</span></h2></div>
         <p v-if="entry" class="text-sm text-slate-500">Место #{{ entry.rank }} · {{ entry.player_games }} выходов на площадку</p>
@@ -63,17 +63,34 @@
     </section>
 
     <section v-if="board && !entry && !closed" class="space-y-4">
-      <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div><h2 class="text-xl font-extrabold text-slate-900">Выбери {{ activeSlot }}</h2><p class="mt-1 text-sm text-slate-500">Следующий матч — прямо на карточке игрока</p></div>
-        <PublicProfileTeamFilter v-model="team" :teams="eligibleTeams" /><label class="text-sm text-slate-600"><span class="sr-only">Найти игрока или команду</span><input v-model="search" type="search" placeholder="Игрок или команда…" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 sm:w-64" /></label>
+      <div class="fantasy-catalog-dock sticky z-30 space-y-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg shadow-slate-900/5 backdrop-blur-xl sm:p-4" aria-label="Состав и фильтры фентези">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-xs font-black text-slate-800">Моя пятёрка · {{ picks.length }}/5 <span v-if="mode==='balanced'" class="ml-2" :class="totalOvr>cap?'text-rose-600':'text-indigo-600'">{{ totalOvr }}/{{ cap }} OVR</span></p>
+          <div class="flex items-center gap-3"><button class="text-xs font-bold text-blue-600" @click="showBuilder">К составу ↑</button><button type="button" :aria-expanded="filtersOpen" aria-controls="fantasy-catalog-filters" class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600 lg:hidden" @click="filtersOpen=!filtersOpen">Фильтры {{ filtersOpen?'−':'+' }}</button></div>
+        </div>
+        <div class="grid grid-cols-5 gap-1.5 sm:gap-2">
+          <button v-for="slot in slots" :key="slot" type="button" :aria-label="`${slot}: ${pickAt(slot)?.name || 'Выбрать игрока'}`" :aria-pressed="activeSlot===slot" class="flex min-w-0 items-center gap-2 rounded-xl border px-2 py-2 text-left transition" :class="activeSlot===slot?'border-blue-500 bg-blue-50 text-blue-700':'border-slate-200 bg-white text-slate-600 hover:border-blue-300'" @click="activeSlot=slot;reviewing=false">
+            <img v-if="pickAt(slot)" :src="`https://a.espncdn.com/i/headshots/nba/players/full/${pickAt(slot)!.id}.png`" alt="" class="hidden h-9 w-10 shrink-0 object-contain sm:block" @error="($event.target as HTMLImageElement).style.visibility='hidden'" />
+            <span class="min-w-0 flex-1"><strong class="block text-xs">{{ slot }}</strong><span class="mt-1 block truncate text-[10px] sm:text-xs">{{ pickAt(slot)?.name || '＋ Выбрать' }}</span><span v-if="pickAt(slot)?.ovr" class="mt-0.5 block text-[10px] font-bold text-indigo-600">{{ pickAt(slot)?.ovr }} OVR</span></span>
+          </button>
+        </div>
+        <div id="fantasy-catalog-filters" class="flex-col gap-3 lg:flex" :class="filtersOpen?'flex':'hidden'">
+          <div class="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr]">
+            <PublicProfileTeamFilter v-model="team" :teams="eligibleTeams" class="sm:!w-full" />
+            <FantasySortSelect v-model="sort" class="sm:!w-full" />
+            <label class="text-xs font-semibold uppercase text-slate-500">Поиск<input v-model="search" type="search" aria-label="Найти игрока или команду" placeholder="Игрок или команда…" class="mt-1 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal normal-case text-slate-700 shadow-sm" /></label>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-3"><h2 class="text-sm font-extrabold text-slate-900">Выбери {{ activeSlot }} <span class="font-normal text-slate-400">· {{ filtered.length }} игроков</span></h2><div class="flex flex-wrap gap-3 sm:gap-5"><label class="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-500"><input v-model="healthyOnly" type="checkbox" class="h-4 w-4 accent-blue-600" />Только доступные</label><label v-if="mode==='balanced'" class="flex cursor-pointer items-center gap-2 text-xs font-semibold text-indigo-700"><input v-model="budgetOnly" type="checkbox" class="h-4 w-4 accent-indigo-600" />С учетом рейтинга</label></div></div>
+        </div>
+        <p v-if="mode==='balanced' && budgetOnly" aria-live="polite" class="rounded-lg bg-indigo-50 px-3 py-2 text-[11px] leading-5 text-indigo-800">{{ budget.maxOvr ? `Подходящие ${activeSlot}: до ${budget.maxOvr} OVR` : `Для ${activeSlot} нет вариантов в рамках лимита — измените другие позиции` }}. {{ budget.remainingSlots ? `Резервируем бюджет для свободных позиций: ${budget.remainingSlots}.` : 'Бюджет заменяемого игрока возвращён в расчёт.' }}</p>
       </div>
-      <div class="flex flex-wrap gap-2"><button v-for="slot in slots" :key="slot" class="rounded-full px-4 py-2 text-sm font-bold" :class="activeSlot === slot ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200'" @click="activeSlot = slot">{{ slot }}</button><select v-model="sort" aria-label="Сортировка игроков" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs"><option value="ovr">Сначала выше OVR</option><option value="budget">Сначала ниже OVR</option><option value="name">По имени</option></select><label class="ml-auto flex items-center gap-2 text-sm text-slate-500"><input v-model="healthyOnly" type="checkbox" /> Только доступные</label></div>
+      <p v-if="sort==='popular'" class="text-xs leading-5 text-slate-500">{{ popularity.sampleSize ? `По подтверждённым составам ${popularity.period==='day'?'за выбранный день':'за последние 30 дней'} в режиме «${modeLabel}». Составов: ${popularity.sampleSize}.` : 'В этом режиме пока нет подтверждённых составов за выбранный день и последние 30 дней. При равной популярности показываем сначала выше OVR.' }}</p>
       <p v-if="playersLoading && !players.length" role="status" class="py-8 text-center text-slate-500">Проверяем расписание и составы команд…</p>
       <div v-else-if="playersError && !players.length" role="alert" class="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">{{ playersError }} <button class="font-bold underline" @click="loadPlayers">Повторить</button></div>
       <div v-else-if="filtered.length" class="grid grid-cols-1 gap-4 min-[460px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        <FantasyPlayerCard v-for="player in visiblePlayers" :key="player.id" :player="player" :position="activeSlot" :week="board.week.id" :mode="archive ? 'legacy' : mode" :profile-id="auth.user?.id" :player-xp="auth.user ? progress.totals[player.id] ?? 0 : undefined" :selected="pickAt(activeSlot)?.id === player.id" selectable :disabled="!!player.injury || player.remaining < 1 || picks.some(p => p.id === player.id && p.slot !== activeSlot) || saving" @select="selectPlayer(player)" />
+        <FantasyPlayerCard v-for="player in visiblePlayers" :key="player.id" :player="player" :position="activeSlot" :popularity="sort==='popular'?{count:popularity.counts[player.id]||0,total:popularity.sampleSize}:undefined" :week="board.week.id" :mode="archive ? 'legacy' : mode" :profile-id="auth.user?.id" :player-xp="auth.user ? progress.totals[player.id] ?? 0 : undefined" :selected="pickAt(activeSlot)?.id === player.id" selectable :disabled="!!player.injury || player.remaining < 1 || picks.some(p => p.id === player.id && p.slot !== activeSlot) || saving" @select="selectPlayer(player)" />
       </div>
-      <p v-else class="rounded-2xl bg-white p-8 text-center text-slate-500">Игроки не найдены. Измените поиск или фильтр; в межсезонье каталог может быть пустым.</p>
+      <p v-else class="rounded-2xl bg-white p-8 text-center text-slate-500">Игроки не найдены. Измените поиск, команду или фильтры; для лимита OVR может потребоваться заменить другие позиции.</p>
       <button v-if="filtered.length > limit" class="block w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-bold text-slate-700" @click="limit += 30">Показать ещё</button>
     </section>
 
@@ -95,6 +112,8 @@ import Header from '../components/Headers/Header.vue'
 import FantasyPlayerCard from '../components/Fantasy/FantasyPlayerCard.vue'
 import FantasyRules from '../components/Fantasy/FantasyRules.vue'
 import FantasyCalendar from '../components/Fantasy/FantasyCalendar.vue'
+import FantasySortSelect from '../components/Fantasy/FantasySortSelect.vue'
+import { lineupBudget } from '../components/Fantasy/lineupBudget'
 import { playerProgress } from '../components/Fantasy/progress'
 import { slots, points, dateTime, weekLabel, type Slot, type Player, type Pick, type Board, type Mode } from '../components/Fantasy/types'
 import { useRoute } from 'vue-router'
@@ -115,7 +134,10 @@ const modeLabel = computed(() => modes.find(m => m.id === mode.value)!.name)
 const cap = computed(() => board.value?.ovrCap || 410)
 const totalOvr = computed(() => picks.value.reduce((sum,p) => sum + (p.ovr || 0), 0))
 const maxDate = new Date(Date.now() + 7*86400000 + 3*3600000).toISOString().slice(0,10)
-const sort = ref('ovr')
+const sort = ref('ovr'),budgetOnly=ref(false),filtersOpen=ref(false),builder=ref<HTMLElement|null>(null)
+const budget=computed(()=>lineupBudget(players.value,picks.value,activeSlot.value,cap.value))
+const popularity=computed(()=>board.value?.popularity || {sampleSize:0,period:'day',counts:{} as Record<string,number>})
+function showBuilder(){builder.value?.scrollIntoView({behavior:'smooth',block:'start'})}
 const activeSlot = ref<Slot>('PG'), search = ref(''), healthyOnly = ref(false), overall = ref(false), selectedWeek = ref(typeof route.query.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(route.query.day) ? route.query.day : typeof route.query.week === 'string' ? route.query.week : ''), limit = ref(30)
 const loading = ref(false), playersLoading = ref(false), saving = ref(false), reviewing = ref(false), success = ref(false)
 const error = ref(''), playersError = ref(''), now = ref(Date.now())
@@ -125,9 +147,17 @@ const currentLineup = computed(() => (entry.value?.lineup || []).map(p => ({ ...
 const progress = computed(() => ({ ...playerProgress(board.value?.history.filter(e=>e.mode===mode.value) || []), totals: board.value?.playerXp || {} }))
 const leaders = computed(() => (overall.value ? board.value?.overall : board.value?.leaderboard) || [])
 const pickAt = (slot: Slot) => picks.value.find(p => p.slot === slot)
-const filtered = computed(() => players.value.filter(p => p.positions.includes(activeSlot.value) && (team.value === 'all' || p.team === team.value) && (!healthyOnly.value || (!p.injury && p.remaining > 0)) && `${p.name} ${p.team}`.toLowerCase().includes(search.value.trim().toLowerCase())).sort((a,b) => sort.value === 'name' ? a.name.localeCompare(b.name) : (sort.value === 'budget' ? 1 : -1) * ((a.ovr || 80)-(b.ovr || 80)) || a.name.localeCompare(b.name)))
+const filtered = computed(() => players.value.filter(p => p.positions.includes(activeSlot.value)
+  && (team.value==='all'||p.team===team.value) && (!healthyOnly.value||(!p.injury&&p.remaining>0))
+  && (!(mode.value==='balanced'&&budgetOnly.value)||budget.value.options.get(p.id)?.fits)
+  && `${p.name} ${p.team}`.toLowerCase().includes(search.value.trim().toLowerCase()))
+  .sort((a,b)=>{
+    if(sort.value==='name')return a.name.localeCompare(b.name)
+    if(sort.value==='popular'){const diff=(popularity.value.counts[b.id]||0)-(popularity.value.counts[a.id]||0);if(diff)return diff}
+    return (sort.value==='budget'?1:-1)*((a.ovr||80)-(b.ovr||80))||a.name.localeCompare(b.name)
+  }))
 const visiblePlayers = computed(() => filtered.value.slice(0, limit.value))
-watch([activeSlot, search, healthyOnly, team], () => { limit.value = 30 })
+watch([activeSlot, search, healthyOnly, team, sort, budgetOnly], () => { limit.value = 30 })
 let requestId = 0
 async function loadBoard() {
   const id = ++requestId
@@ -158,12 +188,13 @@ async function loadPlayers() {
     const data = await authFetch(`/api/fantasy/players?${params}`)
     if (id !== playerRequestId) return
     players.value = data.players
+    if (board.value) board.value.popularity=data.popularity
     playersError.value = ''
   } catch (e: any) { if (id === playerRequestId) playersError.value = e.message }
   finally { if (id === playerRequestId) playersLoading.value = false }
 }
 function selectPlayer(player: Player) {
-  if (saving.value || entry.value || closed.value || player.injury || player.remaining < 1) return
+  if (saving.value || entry.value || closed.value || player.injury || player.remaining < 1 || picks.value.some(p=>p.id===player.id&&p.slot!==activeSlot.value) || (mode.value==='balanced'&&budgetOnly.value&&!budget.value.options.get(player.id)?.fits)) return
   picks.value = [...picks.value.filter(p => p.slot !== activeSlot.value), { id: player.id, name: player.name, team: player.team, slot: activeSlot.value, ovr: player.ovr }]
   reviewing.value = false
   const next = slots.find(slot => !pickAt(slot))
@@ -200,3 +231,11 @@ let poll: ReturnType<typeof setInterval>, clock: ReturnType<typeof setInterval>
 onMounted(() => { refresh(); poll = setInterval(() => { if (!document.hidden && !saving.value) refresh() }, 60000); clock = setInterval(() => { now.value = Date.now() }, 1000) })
 onUnmounted(() => { clearInterval(poll); clearInterval(clock); requestId++; playerRequestId++ })
 </script>
+
+<style scoped>
+.fantasy-catalog-dock { top: 72px; }
+@media (min-width: 1180px) {
+  .fantasy-catalog-dock { top: 96px; transition: top 180ms ease; }
+  :global(body:has(.desktop-header-hidden) .fantasy-catalog-dock) { top: 8px; }
+}
+</style>

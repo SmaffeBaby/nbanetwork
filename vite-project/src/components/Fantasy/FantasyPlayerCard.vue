@@ -11,6 +11,7 @@
     <FantasyOvrBadge :rating="player" :name="player.name" class="absolute left-3 top-[116px] z-20" />
     <div class="space-y-2 p-4">
       <p class="text-xs font-bold uppercase tracking-wide text-slate-400">{{ player.team }}</p>
+      <p v-if="popularity && popularity.total>0" class="text-[11px] font-semibold text-indigo-600">Выборов: {{ popularity.count }} · {{ points(popularity.count*100/popularity.total) }}% составов</p>
       <h3 class="text-base font-extrabold leading-5 text-slate-900"><button type="button" class="text-left hover:text-blue-600" @click.stop="detailsOpen = true">{{ player.name }}</button></h3>
       <p v-if="'injury' in player && player.injury" class="rounded-lg bg-rose-50 p-2 text-xs font-semibold text-rose-700">Травма / ограничение · {{ player.injury }}</p>
       <template v-if="'schedule' in player">
@@ -37,7 +38,7 @@ import FantasyOvrBadge from './FantasyOvrBadge.vue'
 import { computed, ref, watch, defineAsyncComponent } from 'vue'
 const FantasyPlayerDialog = defineAsyncComponent(() => import('./FantasyPlayerDialog.vue'))
 import { dateTime, points, type Player, type Pick } from './types'
-const props = defineProps<{ player: Player | Pick; position: string; selected?: boolean; selectable?: boolean; disabled?: boolean; fantasyPoints?: number; week?: string; mode?: 'unlimited' | 'balanced' | 'legacy'; profileId?: string; playerXp?: number }>()
+const props = defineProps<{ player: Player | Pick; position: string; selected?: boolean; selectable?: boolean; disabled?: boolean; fantasyPoints?: number; week?: string; mode?: 'unlimited' | 'balanced' | 'legacy'; profileId?: string; playerXp?: number; popularity?: {count:number;total:number} }>()
 defineEmits<{ select: [] }>()
 const photoFailed = ref(false), detailsOpen = ref(false)
 const nextMatch = computed(() => 'schedule' in props.player ? props.player.schedule.find(g => Date.parse(g.start) > Date.now()) || props.player.schedule.at(-1) : undefined)

@@ -14,7 +14,8 @@ RUN npm ci
 COPY vite-project/. .
 
 # Собираем Vite проект
-RUN npm run build
+ARG BUILD_NODE_OPTIONS=--max-old-space-size=768
+RUN NODE_OPTIONS=$BUILD_NODE_OPTIONS npm run build
 
 # Используем nginx для отдачи готового фронтенда
 FROM nginx:alpine

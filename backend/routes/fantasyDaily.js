@@ -27,19 +27,25 @@ async function getBoard(req,res) {
     try {
         const id=p.day || await defaultDay(), info=await dayInfo(id)
         const db=getAdmin()
-        const [daily,legacy]=await Promise.all([
+        const [daily,legacy,popularity]=await Promise.all([
             db.rpc('read_daily_fantasy',{p_day:id,p_mode:p.mode,p_user:p.profile}).abortSignal(AbortSignal.timeout(10000)),
-            p.profile?db.rpc('read_fantasy',{p_week:id,p_user:p.profile}).abortSignal(AbortSignal.timeout(10000)):Promise.resolve({data:{history:[]}})
+            p.profile?db.rpc('read_fantasy',{p_week:id,p_user:p.profile}).abortSignal(AbortSignal.timeout(10000)):Promise.resolve({data:{history:[]}}),
+            db.rpc('fantasy_popularity',{p_day:id,p_mode:p.mode}).abortSignal(AbortSignal.timeout(8000))
         ])
-        if(daily.error || legacy.error) throw daily.error || legacy.error
-        res.set('Cache-Control','no-store').json({...daily.data,...info,week:info.day,selectedWeek:id,mode:p.mode,
+        if(daily.error || legacy.error || popularity.error) throw daily.error || legacy.error || popularity.error
+        res.set('Cache-Control','no-store').json({...daily.data,...info,week:info.day,selectedWeek:id,mode:p.mode,popularity:popularity.data,
             history:[...daily.data.history,...legacy.data.history.map(e=>({...e,mode:'legacy'}))].sort((a,b)=>b.week.localeCompare(a.week))})
     } catch(error) {fail(res,error)}
 }
 async function getPlayers(req,res) {
     let p
     try {p=params(req)} catch(error) {return res.status(400).json({error:error.message})}
-    try {res.set('Cache-Control','no-store').json(await dayInfo(p.day || await defaultDay()))} catch(error) {fail(res,error)}
+    try {
+        const id=p.day || await defaultDay()
+        const [info,popularity]=await Promise.all([dayInfo(id),getAdmin().rpc('fantasy_popularity',{p_day:id,p_mode:p.mode}).abortSignal(AbortSignal.timeout(8000))])
+        if(popularity.error)throw popularity.error
+        res.set('Cache-Control','no-store').json({...info,popularity:popularity.data})
+    } catch(error) {fail(res,error)}
 }
 async function details(req,res) {
     let p

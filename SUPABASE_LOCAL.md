@@ -128,10 +128,7 @@ accept an explicit active state and store an ESPN-verified snapshot. The restric
 legacy NBA/unprefixed ESPN duplicates in both lists. Repeated requests are idempotent.
 Old saved snapshots remain readable and are consolidated when that game is marked again.
 
-Checks: `node --test backend/tests/game-identity.test.js`,
 `cd vite-project && node --test tests/game-identity.cjs`, and the rollback-only
-`backend/tests/game-marks.sql` database test. The optional local integration test
-`backend/tests/game-marks.integration.js` creates and removes its own temporary Auth user.
 
 ## Pre-game pages and predictions
 
@@ -152,9 +149,7 @@ completion/cancellation. Postgres cron removes polls and their votes 24 hours la
 15-minute cleanup interval). Backend maintenance also runs the same cleanup as a fallback.
 It does not delete users' profile images, favorites, watched games or comments.
 
-Checks: `node --test backend/tests/game-preview.test.js`, `backend/tests/game-predictions.sql`
 (rollback-only), `cd vite-project && node --test tests/pre-game.cjs`.
-The optional local `backend/tests/game-predictions.integration.js` creates and removes only its
 own temporary test account and verifies real preview/voting API behavior.
 
 ## Page titles and patch-note editor
@@ -171,8 +166,6 @@ previous save finishes. Per-account `sessionStorage` drafts survive focus loss, 
 and reloads in the same tab; successful save or explicit close clears the draft.
 
 Checks: `cd vite-project && node --test tests/titles-and-patch-drafts.cjs` and
-`node --test backend/tests/patch-notes.test.js`. The optional local
-`backend/tests/patch-notes.integration.js` checks API permissions on a temporary test account
 using invalid payloads; it never publishes a test patch note.
 
 ## First production contracts import and history recovery
@@ -193,7 +186,6 @@ explicitly requested user's missing history, back up that production row, lock i
 merge, and append only missing game IDs/matches. Preserve existing production entries and
 unrelated fields (especially favorites); never replace the production profile/database with
 a local dump. `set_profile_game` also preserves unrelated legacy entries with absent IDs or
-null comparisons. Regression check: `backend/tests/preserve-legacy-game-marks.sql` (rollback).
 
 
 ## Registration email and password recovery
@@ -235,8 +227,6 @@ serve both website and Supabase over 443, with 8010 kept private.
 Validation:
 
 ```sh
-node --test backend/tests/auth-mail.test.js
-docker exec -i nba-dashboard-db-1 psql -U postgres -d postgres -v ON_ERROR_STOP=1 < backend/tests/auth-registration.sql
 npm run build --prefix vite-project
 ```
 
@@ -272,9 +262,6 @@ Links appear in public profiles and open with `noopener noreferrer`.
 Validation:
 
 ```sh
-node --test vite-project/tests/profile-experience.test.mjs
-node --test backend/tests/experience.test.js
-docker exec -i nba-dashboard-db-1 psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < backend/tests/profile-experience.sql
 ```
 
 ## Fantasy league
@@ -290,8 +277,6 @@ The backend worker checks every minute and stores each final player box score on
 Checks:
 
 ```sh
-node --test backend/tests/fantasy.test.js
-docker exec -i nba-dashboard-db-1 psql -U postgres -d postgres -v ON_ERROR_STOP=1 < backend/tests/fantasy.sql
 ```
 
 The SQL checks roll back all test records.
@@ -307,7 +292,6 @@ Apply `supabase/migrations/20261029193000_fantasy_player_bonuses.sql` after the 
 
 Player XP sums positive weekly base results in that profile across positions. Level N begins at `150 * N * (N - 1)` XP. On lineup confirmation the database snapshots each player's level and bonus rate from prior weeks: level 3 = 0.5%, 5 = 1%, 8 = 1.5%, 10+ = 2%. The weekly bonus is `round(min(3, max(0, basePoints) * rate), 1)`, added once to the player's weekly result and both profile leaderboards. Bonuses do not generate player or profile XP. Existing lineups keep zero bonus; past results are unchanged. Game-level breakdowns stay base-only; the player dialog shows the weekly bonus separately. The two information buttons expand scoring and level explanations.
 
-Verify with `node --test backend/tests/fantasy-scoring.test.js vite-project/tests/fantasy-progress.cjs` and the rollback-only `backend/tests/fantasy-bonuses.sql` through psql.
 
 ## Profile tabs and social lists
 
@@ -325,11 +309,9 @@ Apply `supabase/migrations/20261029210000_game_recap_articles.sql`, then rebuild
 
 `GET /api/game-related/:ESPN_ID` provides the last three completed regular/postseason games before that fixture for each team, plus the other fixtures on the same Moscow date. It excludes the reviewed game, deduplicates schedules, checks the team and start time, and can fall back to the previous NBA season near the start of a season. Each group reports its own loading failure so a schedule failure does not hide the same-day games. The overview retains spoiler protection around the article. Both match sliders sit outside the game tabs and remain visible in every section, including before the overview is revealed. Their scores follow the account hideScores preference and default to hidden for guests or while auth loads; the numbers are omitted from rendered text when hidden.
 
-Checks: `node --test backend/tests/game-article.test.js` and rollback-only `backend/tests/game-articles.sql` through psql. The article is shown as escaped text, with an ESPN source link; quarter tables keep away/home ordering and include overtimes.
 
 The eye button beside notifications (desktop header and mobile drawer) shows the account-wide score preference and opens a confirmation dialog. Cancel performs no write. Confirm persists `profiles.hide_scores`; failures remain visible in the dialog and allow retry. A global change clears per-game score exceptions, updates match headers/playoffs/calendars/sliders, and locks a previously revealed game overview again when hiding scores. The header indicator reflects the saved preference. Article contents remain a single immutable record and do not depend on the viewer's score preference.
 
-Additional checks: `node --test vite-project/tests/score-visibility.cjs`. `node tests/game-article.integration.js` in the backend container checks guest/authenticated article identity and related fixtures with a disposable user, cleaned up automatically unless explicitly retained for UI checks.
 
 ## Daily fantasy (v2)
 
@@ -345,18 +327,13 @@ Personal player XP includes preserved legacy weekly XP and positive daily base r
 
 Verification:
 ```
-node --test backend/tests/fantasy-daily.test.js
 ./vite-project/node_modules/.bin/vue-tsc -p vite-project/tsconfig.app.json --noEmit --incremental false
-docker compose -p nba-dashboard -f supabase/docker-compose.yml exec -T db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < backend/tests/fantasy-daily.sql
 ```
 SQL checks run in a transaction and roll back all fixture data.
 
 `FantasyOvrBadge.vue` puts a keyboard-accessible ⓘ beside OVR on catalog cards and in player details. Its separate modal explains the metric/weights, player-specific percentiles and sample-size adjustment, the balanced cap, and the distinction from personal fantasy XP. Advanced formula is collapsed initially; Escape, backdrop, focus trap and focus restoration are supported.
 
 Live enrollment integration (creates and deletes its own disposable profile):
-```
-docker compose exec -T -w /app/tests backend node - < backend/tests/fantasy-daily.integration.js
-```
 
 ## Fantasy player tabs, OVR history and profile stats
 
@@ -372,10 +349,7 @@ The team filter now supports logos, search, keyboard navigation, Escape and outs
 
 Checks:
 ```
-node --test backend/tests/fantasy-rating-history.test.js
-node --test vite-project/tests/fantasy-calendar.cjs
 ./vite-project/node_modules/.bin/vue-tsc -p vite-project/tsconfig.app.json --noEmit --incremental false
-docker compose -p nba-dashboard -f supabase/docker-compose.yml exec -T db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < backend/tests/fantasy-profile.sql
 ```
 The SQL fixtures roll back. No persistent test account is needed.
 
@@ -393,9 +367,16 @@ Inbox reads remove score, winner, fantasy points and rank fields on the server w
 
 Checks:
 ```
-node --test backend/tests/notification-rules.test.js backend/tests/notification-api.test.js
-node --test vite-project/tests/notifications.cjs
 ./vite-project/node_modules/.bin/vue-tsc -p vite-project/tsconfig.app.json --noEmit --incremental false
-docker compose -p nba-dashboard -f supabase/docker-compose.yml exec -T db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 < backend/tests/notifications.sql
 ```
 SQL tests roll back all fixtures, including generated events. A live request without a session returns 401. Visual verification in the signed-in Chrome account was not performed because computer-use access to Chrome was not approved; no real account preferences were changed during verification.
+
+## Fantasy catalog controls
+
+Apply `20261031190000_fantasy_popularity.sql` and rebuild backend/frontend. The catalog has a compact sticky lineup/filter dock bounded by the player catalog, with a mobile filter disclosure and a shortcut back to the full lineup confirmation. The desktop dock adjusts its offset when the site header hides. Position cards show the selected player and OVR while scrolling.
+
+Sort options use a custom accessible listbox, including popularity. `fantasy_popularity(date,text)` returns only anonymous counts/sample size for confirmed lineups in the selected mode. When at least one lineup exists for that day, that day's counts are used; otherwise the inclusive last 30 calendar days ending on the selected day are used. The period/sample are labelled; a zero sample is not represented as actual popularity. Ties use OVR descending, then player name. An index supports the day/mode aggregation.
+
+The balanced-only optional OVR filter excludes candidates that cannot complete the five-player lineup within the cap. Replacing an active slot returns its current OVR first. The reserve uses distinct, available future-game players from all catalog teams (independent of the visible search/team filters), solving a minimum-cost assignment to open positions; it does not reserve the same multi-position player twice. It displays the highest OVR among actually feasible candidates. Server validation remains authoritative and the cap stays 410.
+
+One-off project verification files were removed at the user’s request after validation. Checks covered popularity per mode/day, the 30-day fallback, 410/411 OVR, replacement budget, distinct-player reserves, desktop/mobile sticky positioning and dropdown interactions. The frontend builder now caps Node heap at 768 MB by default (`BUILD_NODE_OPTIONS`) to fit the local 4 GB Docker VM.
