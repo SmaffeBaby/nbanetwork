@@ -37,8 +37,7 @@
 
           <img
               :src="getPlayerImage({
-                  PLAYER_ID: p.PLAYER_ID,
-                  TEAM_ID: p.TEAM_ID
+                  PLAYER_ID: p.PLAYER_ID
               })"
               :data-player-id="p.PLAYER_ID"
               @error="handleImageError"
@@ -106,8 +105,7 @@
 
           <img
               :src="getPlayerImage({
-                  PLAYER_ID: p.PLAYER_ID,
-                  TEAM_ID: p.TEAM_ID
+                  PLAYER_ID: p.PLAYER_ID
               })"
               :data-player-id="p.PLAYER_ID"
               @error="handleImageError"

@@ -43,7 +43,7 @@
         <div class="mt-5 grid grid-cols-5 gap-2">
           <button v-for="slot in slots" :key="slot" class="min-w-0 rounded-xl border p-2 text-center transition sm:p-4" :class="activeSlot === slot ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500'" @click="activeSlot = slot; reviewing = false">
             <strong class="text-sm">{{ slot }}</strong>
-            <img v-if="pickAt(slot)" :src="`https://a.espncdn.com/i/headshots/nba/players/full/${pickAt(slot)!.id}.png`" alt="" class="mx-auto mt-2 h-12 w-full object-contain" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'" />
+            <img v-if="pickAt(slot)" :src="getEspnPlayerImage(pickAt(slot)!.id, board?.week.id)" alt="" class="mx-auto mt-2 h-12 w-full object-contain" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'" />
             <span v-else class="my-3 block text-xl text-slate-300" aria-hidden="true">＋</span>
             <span class="block truncate text-[10px] sm:text-xs">{{ pickAt(slot)?.name || 'Выбрать' }}</span><span v-if="pickAt(slot)?.ovr" class="mt-1 block text-[10px] font-black text-indigo-600">{{ pickAt(slot)?.ovr }} OVR</span>
           </button>
@@ -70,7 +70,7 @@
         </div>
         <div class="grid grid-cols-5 gap-1.5 sm:gap-2">
           <button v-for="slot in slots" :key="slot" type="button" :aria-label="`${slot}: ${pickAt(slot)?.name || 'Выбрать игрока'}`" :aria-pressed="activeSlot===slot" class="flex min-w-0 items-center gap-2 rounded-xl border px-2 py-2 text-left transition" :class="activeSlot===slot?'border-blue-500 bg-blue-50 text-blue-700':'border-slate-200 bg-white text-slate-600 hover:border-blue-300'" @click="activeSlot=slot;reviewing=false">
-            <img v-if="pickAt(slot)" :src="`https://a.espncdn.com/i/headshots/nba/players/full/${pickAt(slot)!.id}.png`" alt="" class="hidden h-9 w-10 shrink-0 object-contain sm:block" @error="($event.target as HTMLImageElement).style.visibility='hidden'" />
+            <img v-if="pickAt(slot)" :src="getEspnPlayerImage(pickAt(slot)!.id, board?.week.id)" alt="" class="hidden h-9 w-10 shrink-0 object-contain sm:block" @error="($event.target as HTMLImageElement).style.visibility='hidden'" />
             <span class="min-w-0 flex-1"><strong class="block text-xs">{{ slot }}</strong><span class="mt-1 block truncate text-[10px] sm:text-xs">{{ pickAt(slot)?.name || '＋ Выбрать' }}</span><span v-if="pickAt(slot)?.ovr" class="mt-0.5 block text-[10px] font-bold text-indigo-600">{{ pickAt(slot)?.ovr }} OVR</span></span>
           </button>
         </div>
@@ -115,6 +115,7 @@
   </main>
 </template>
 <script setup lang="ts">
+import { getEspnPlayerImage } from '../utils/playerImage'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import PublicProfileTeamFilter from '../components/NBA/PublicProfile/PublicProfileTeamFilter.vue'
 import { teamsFullNames } from '../constants/TeamFullName'

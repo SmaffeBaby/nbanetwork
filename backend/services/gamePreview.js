@@ -4,7 +4,7 @@ const { getEspnSummary, normalizeSummary } = require('./espnGameService')
 const BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba'
 const unavailable = status => /^(out|doubtful|suspension|suspended|inactive)$/i.test(status || '')
 function athlete(a) {
-    return { id:String(a.id), name:a.displayName || a.fullName || '', image:a.headshot?.href || `https://a.espncdn.com/i/headshots/nba/players/full/${a.id}.png`, position:a.position?.abbreviation || '' }
+    return { id:String(a.id), name:a.displayName || a.fullName || '', image:`/api/player-image/${encodeURIComponent(`espn:${a.id}`)}`, position:a.position?.abbreviation || '' }
 }
 function seasonMatches(data, year) { return Number(data?.season?.year) === Number(year) }
 async function teamResource(team, resource, year, type, ttl) {
@@ -87,8 +87,14 @@ async function getGamePreview(id) {
             statistics:{...statistics,ranks:chartTeam?.ranks||{},rankingsComplete:chart?.complete||false},leaders:teamLeaders(common,roster),
             unavailable:[...['roster','depthcharts','statistics'].filter((_,i)=>results[i].status==='rejected'),...(!common?['leaders']:[])]}
     }))
+    const season = `${year-1}-${String(year).slice(-2)}`
+    for (const team of teams) {
+        for (const player of [...team.lineup.players, ...team.injuries, ...team.leaders.flatMap(group => group.players)]) {
+            if (player.image) player.image += `/${season}`
+        }
+    }
     return {gameId:id,competition:recap.competition,source:'espn',dateUTC:recap.dateUTC,dateMSK:recap.dateMSK,venue:recap.venue,
-        season:`${year-1}-${String(year).slice(-2)}`,seasonType:type,state:state.state || 'pre',completed:Boolean(state.completed),statusName:state.name || '',
+        season,seasonType:type,state:state.state || 'pre',completed:Boolean(state.completed),statusName:state.name || '',
         status:recap.meta.status,votingOpen:state.state==='pre'&&!/CANCEL|POSTPON/i.test(state.name || '')&&Date.now()<Date.parse(recap.dateUTC),
         teams,updatedAt:new Date().toISOString()}
 }

@@ -3,7 +3,7 @@
     <button type="button" :aria-label="`Открыть статистику: ${player.name}`" class="relative block w-full text-left h-40 overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100" @click.stop="detailsOpen = true">
       <span class="absolute left-3 top-3 z-10 rounded-lg bg-white/90 px-2 py-1 text-xs font-black text-slate-700">{{ position }}</span>
       <img :src="`/logos/${player.team}.svg`" :alt="player.team" class="absolute right-3 top-3 z-10 h-10 w-10 object-contain drop-shadow-sm" />
-      <img v-if="!photoFailed" :src="`https://a.espncdn.com/i/headshots/nba/players/full/${player.id}.png`" :alt="player.name" class="absolute bottom-0 left-0 h-36 w-full object-contain object-bottom transition duration-300" loading="lazy" @error="photoFailed = true" />
+      <img v-if="!photoFailed" :src="getEspnPlayerImage(player.id, week)" :alt="player.name" class="absolute bottom-0 left-0 h-36 w-full object-contain object-bottom transition duration-300" loading="lazy" @error="photoFailed = true" />
       <span v-else class="absolute inset-0 flex items-center justify-center text-5xl font-black text-slate-300">{{ initials }}</span>
 
       <span v-if="selected" class="absolute bottom-2 right-3 rounded-full bg-blue-600 px-2 py-1 text-xs font-bold text-white">✓ В составе</span>
@@ -34,6 +34,7 @@
   <FantasyPlayerDialog v-if="detailsOpen" :player="player" :position="position" :week="week" :mode="mode" :profile-id="profileId" :player-xp="playerXp" @close="detailsOpen = false" />
 </template>
 <script setup lang="ts">
+import { getEspnPlayerImage } from '../../utils/playerImage'
 import FantasyPlayerLevel from './FantasyPlayerLevel.vue'
 import FantasyOvrBadge from './FantasyOvrBadge.vue'
 import { computed, ref, watch, defineAsyncComponent } from 'vue'

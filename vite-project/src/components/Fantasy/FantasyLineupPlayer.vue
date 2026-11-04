@@ -1,7 +1,7 @@
 <template>
   <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="flex items-center gap-3 bg-gradient-to-r from-blue-50 to-slate-50 px-3 py-2">
-      <img v-if="!photoFailed" :src="`https://a.espncdn.com/i/headshots/nba/players/full/${player.id}.png`" alt="" loading="lazy" class="h-16 w-16 shrink-0 rounded-lg bg-white object-contain object-bottom" @error="photoFailed = true" />
+      <img v-if="!photoFailed" :src="getEspnPlayerImage(player.id, period)" alt="" loading="lazy" class="h-16 w-16 shrink-0 rounded-lg bg-white object-contain object-bottom" @error="photoFailed = true" />
       <span v-else aria-hidden="true" class="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-white text-xs font-bold text-blue-700">{{ player.slot }}</span>
       <div class="min-w-0 flex-1">
         <p class="text-xs font-bold text-blue-700">{{ player.slot }} <span class="text-slate-500">· {{ player.team }}<template v-if="player.ovr != null"> · {{ player.ovr }} OVR</template></span></p>
@@ -19,6 +19,7 @@
 </template>
 
 <script setup lang="ts">
+import { getEspnPlayerImage } from '../../utils/playerImage'
 import { onUnmounted, ref } from 'vue'
 import { authFetch } from '../../api/authFetch'
 import FantasyScoreBreakdown from './FantasyScoreBreakdown.vue'

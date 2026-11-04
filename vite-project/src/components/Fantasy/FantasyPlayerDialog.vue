@@ -5,7 +5,7 @@
         <header class="relative overflow-hidden bg-gradient-to-br from-slate-950 to-blue-950 p-5 text-white sm:p-7">
           <button type="button" aria-label="Закрыть карточку игрока" class="absolute right-4 top-4 z-10 rounded-full bg-white/15 px-3 py-1 text-2xl hover:bg-white/25" @click="$emit('close')">×</button>
           <div class="flex items-center gap-4 pr-9">
-            <div class="flex h-28 w-28 shrink-0 items-end overflow-hidden rounded-2xl bg-white/10 sm:h-36 sm:w-36"><img v-if="!photoFailed" :src="`https://a.espncdn.com/i/headshots/nba/players/full/${player.id}.png`" :alt="player.name" class="h-full w-full object-contain object-bottom" @error="photoFailed = true" /><span v-else class="m-auto text-3xl font-black">{{ player.name.split(' ').map(p=>p[0]).slice(0,2).join('') }}</span></div>
+            <div class="flex h-28 w-28 shrink-0 items-end overflow-hidden rounded-2xl bg-white/10 sm:h-36 sm:w-36"><img v-if="!photoFailed" :src="getEspnPlayerImage(player.id, week)" :alt="player.name" class="h-full w-full object-contain object-bottom" @error="photoFailed = true" /><span v-else class="m-auto text-3xl font-black">{{ player.name.split(' ').map(p=>p[0]).slice(0,2).join('') }}</span></div>
             <div class="min-w-0"><p class="flex items-center gap-2 text-xs font-bold text-blue-200"><img :src="`/logos/${player.team}.svg`" :alt="player.team" class="h-7 w-7 object-contain" />{{ player.team }} · {{ position }}</p><h2 :id="titleId" class="mt-2 break-words text-2xl font-black sm:text-3xl">{{ player.name }}</h2><p class="mt-2 text-sm text-blue-200">Сезон {{ data?.season || 'НБА' }} · {{ data ? `Матчей сыграно: ${data.gamesPlayed}` : 'Загружаем статистику' }}<span v-if="data?.ranks.gamesPlayed" class="ml-2 text-xs">{{ rankText('gamesPlayed') }}</span></p></div>
           </div>
           <div class="mt-4 flex flex-wrap items-center gap-3">
@@ -90,6 +90,7 @@
   </Teleport>
 </template>
 <script setup lang="ts">
+import { getEspnPlayerImage } from '../../utils/playerImage'
 import { computed, nextTick, onMounted, onUnmounted, ref, useId } from 'vue'
 import { authFetch } from '../../api/authFetch'
 import { dateTime, points, type Match, type Player, type Pick, type PlayerDetails } from './types'

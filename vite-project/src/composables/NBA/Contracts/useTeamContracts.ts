@@ -1,3 +1,4 @@
+import { playerImageUrl } from '../../../utils/playerImage'
 import { computed, ref, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { getCurrentNbaSeason } from '../../../utils/generateNbaSeasons'
@@ -52,10 +53,10 @@ const DEFAULT_CAPS: Partial<Record<ContractCapKey, Record<string, number>>> = {
 }
 
 export const getPlayerImage = (playerId?: string | number | null, slug?: string | null) => {
-    if (playerId) return `${API_BASE}/api/player-image/${playerId}`
+    if (playerId) return `${API_BASE}${playerImageUrl(playerId)}`
 
     return slug
-        ? `https://www.basketball-reference.com/req/202106291/images/headshots/${slug}.jpg`
+        ? `${API_BASE}${playerImageUrl(`bbref:${slug}`)}`
         : ''
 }
 
