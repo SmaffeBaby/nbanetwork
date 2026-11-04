@@ -44,12 +44,16 @@ export function usePlayerGames(
     const rawGames = ref<GameRaw[]>([])
     const seasonTypeFilter = ref<'ALL' | 'Regular' | 'Playoffs'>('ALL')
 
-    watch([player, season], async ([p, s]) => {
+    watch([player, season], async ([p, s], _, onCleanup) => {
+        rawGames.value = []
         if (!p || !s) return
+        let stale = false
+        onCleanup(() => { stale = true })
 
         const { games, fetchGames } = usePlayerGameLog(p.PLAYER_ID, s)
 
         await fetchGames()
+        if (stale) return
 
         rawGames.value = (games.value || []).map((g: any) => {
             const { home, away } = parseMatchup(g.MATCHUP)

@@ -2,7 +2,7 @@
   <div class="space-y-4">
 
     <div class="text-sm text-gray-500">
-      Предстоящих игр: {{ games.length }}
+      {{ limit === undefined ? 'Предстоящих игр' : 'Ближайших игр' }}: {{ games.length }}
     </div>
 
     <div v-if="error" class="text-sm text-red-500">
@@ -104,13 +104,15 @@
 <script setup lang="ts">
 import GameLink from '../../GameLink.vue'
 
-import { toRef } from 'vue'
+import { computed, toRef } from 'vue'
 import { getTeamLogo } from '../../../../utils/getTeamLogo'
 import { useTeamUpcomingGames } from '../../../../composables/NBA/Teams/TeamsDetail/useTeamUpcomingGames'
 
 const props = defineProps<{
   teamId: number
+  limit?: number
 }>()
 
-const { games, loading, error, parseMatchup } = useTeamUpcomingGames(toRef(props, 'teamId'))
+const { games: upcoming, loading, error, parseMatchup } = useTeamUpcomingGames(toRef(props, 'teamId'))
+const games = computed(() => props.limit === undefined ? upcoming.value : upcoming.value.slice(0,props.limit))
 </script>

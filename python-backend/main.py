@@ -8,7 +8,7 @@ from difflib import SequenceMatcher
 from urllib.request import Request, urlopen
 from nba_api.stats.endpoints import leaguestandings
 from nba_api.stats.endpoints import leaguedashplayerstats, playergamelog
-from nba_api.stats.endpoints import playercareerstats
+from nba_api.stats.endpoints import commonplayerinfo, playerawards, playercareerstats
 from nba_api.stats.static import players as static_players
 from calendar_service import CalendarProvider
 
@@ -657,6 +657,40 @@ def get_player_career(player_name: str):
 
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/player-awards/{player_id}")
+def get_player_awards(player_id: int):
+    try:
+        result = playerawards.PlayerAwards(player_id=player_id, timeout=15).get_dict()["resultSets"][0]
+        awards = []
+        for row in result["rowSet"]:
+            award = dict(zip(result["headers"], row))
+            if not award.get("DESCRIPTION"):
+                continue
+            awards.append({
+                "name": award["DESCRIPTION"],
+                "season": award.get("SEASON"),
+                "team": award.get("TEAM"),
+                "selection": award.get("ALL_NBA_TEAM_NUMBER"),
+                "month": award.get("MONTH"),
+                "week": award.get("WEEK"),
+                "championship": award["DESCRIPTION"].strip().lower() == "nba champion",
+            })
+        return {"awards": awards}
+    except Exception:
+        raise HTTPException(status_code=503, detail="Player awards unavailable")
+
+
+@app.get("/player-bio/{player_id}")
+def get_player_bio(player_id: int):
+    try:
+        data = commonplayerinfo.CommonPlayerInfo(player_id=player_id, timeout=10).get_dict()
+        result = next(item for item in data["resultSets"] if item["name"] == "CommonPlayerInfo")
+        player = dict(zip(result["headers"], result["rowSet"][0]))
+        return {"birthDate": player.get("BIRTHDATE"), "country": player.get("COUNTRY"), "position": player.get("POSITION")}
+    except Exception:
+        raise HTTPException(status_code=503, detail="Player biography unavailable")
+
 
 @app.get("/player-gamelog/{player_id}/{season}")
 def get_player_gamelog(player_id: int, season: str):

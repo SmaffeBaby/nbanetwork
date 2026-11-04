@@ -15,4 +15,5 @@ export const dateTime = (date: string) => new Intl.DateTimeFormat('ru-RU', { tim
 export const weekLabel = (date: string) => new Intl.DateTimeFormat('ru-RU', { timeZone: 'Europe/Moscow', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${date}T12:00:00Z`))
 
 export type FantasyScore = { basePoints: number; bonusPoints: number; bonusRate: number; bonusLevel: number; points: number; profile: boolean; games: { id: string; start: string; matchup: string; points: number; breakdown: { key: string; label: string; count: number; weight: number; points: number }[] }[] }
-export type PlayerDetails = { rating?: Rating | null; fantasy: FantasyScore; id: string; season: string; gamesPlayed: number; stats: Record<string, number>; ranks: Record<string, { place: number; total: number } | null>; rankingsUpdating: boolean; reboundsRankedAt: string | null; rankedAt: string; schedule: Match[] }
+export type PlayerStatData = { stats: Record<string, number>; ranks?: Record<string, { place: number; total: number } | null>; rankingsUpdating?: boolean; reboundsRankedAt?: string | null; rankedAt?: string }
+export type PlayerDetails = PlayerStatData & { rating?: Rating | null; fantasy: FantasyScore; id: string; season: string; gamesPlayed: number; schedule: Match[] }

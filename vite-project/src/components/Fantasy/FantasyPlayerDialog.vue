@@ -6,7 +6,7 @@
           <button type="button" aria-label="Закрыть карточку игрока" class="absolute right-4 top-4 z-10 rounded-full bg-white/15 px-3 py-1 text-2xl hover:bg-white/25" @click="$emit('close')">×</button>
           <div class="flex items-center gap-4 pr-9">
             <div class="flex h-28 w-28 shrink-0 items-end overflow-hidden rounded-2xl bg-white/10 sm:h-36 sm:w-36"><img v-if="!photoFailed" :src="getEspnPlayerImage(player.id, week)" :alt="player.name" class="h-full w-full object-contain object-bottom" @error="photoFailed = true" /><span v-else class="m-auto text-3xl font-black">{{ player.name.split(' ').map(p=>p[0]).slice(0,2).join('') }}</span></div>
-            <div class="min-w-0"><p class="flex items-center gap-2 text-xs font-bold text-blue-200"><img :src="`/logos/${player.team}.svg`" :alt="player.team" class="h-7 w-7 object-contain" />{{ player.team }} · {{ position }}</p><h2 :id="titleId" class="mt-2 break-words text-2xl font-black sm:text-3xl">{{ player.name }}</h2><p class="mt-2 text-sm text-blue-200">Сезон {{ data?.season || 'НБА' }} · {{ data ? `Матчей сыграно: ${data.gamesPlayed}` : 'Загружаем статистику' }}<span v-if="data?.ranks.gamesPlayed" class="ml-2 text-xs">{{ rankText('gamesPlayed') }}</span></p></div>
+            <div class="min-w-0"><p class="flex items-center gap-2 text-xs font-bold text-blue-200"><img :src="`/logos/${player.team}.svg`" :alt="player.team" class="h-7 w-7 object-contain" />{{ player.team }} · {{ position }}</p><h2 :id="titleId" class="mt-2 break-words text-2xl font-black sm:text-3xl">{{ player.name }}</h2><p class="mt-2 text-sm text-blue-200">Сезон {{ data?.season || 'НБА' }} · {{ data ? `Матчей сыграно: ${data.gamesPlayed}` : 'Загружаем статистику' }}<span v-if="data?.ranks?.gamesPlayed" class="ml-2 text-xs">{{ `#${data.ranks.gamesPlayed.place} из ${data.ranks.gamesPlayed.total}` }}</span></p></div>
           </div>
           <div class="mt-4 flex flex-wrap items-center gap-3">
           <FantasyOvrBadge v-if="data?.rating || player.ovr" :rating="data?.rating || player" :name="player.name" />
@@ -41,34 +41,8 @@
           </section>
           </div>
           <div v-show="activeTab==='stats'" :id="`${titleId}-panel-stats`" role="tabpanel" :aria-labelledby="`${titleId}-tab-stats`" class="space-y-5">
-          <template v-if="data?.gamesPlayed">
-            <div>
-              <h3 class="font-extrabold text-slate-900">В среднем за матч</h3>
-              <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <div v-for="[label,key] in metrics" :key="key" class="rounded-xl bg-slate-50 p-3">
-                  <div class="flex flex-wrap items-center justify-between gap-2"><p class="text-xl font-black text-slate-900">{{ statValue(key) }}</p><span class="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700" :title="rankTitle(key)">{{ rankText(key) }}</span></div>
-                  <p class="mt-1 text-xs text-slate-500">{{ label }}</p>
-                </div>
-              </div>
-            </div>
-            <div>
-              <h3 class="font-extrabold text-slate-900">Броски</h3>
-              <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                <div v-for="shot in shooting" :key="shot.pct" class="rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50/60 to-white p-4">
-                  <p class="text-xs font-bold text-slate-600">{{ shot.label }}</p>
-                  <div class="mt-2 flex flex-wrap items-center justify-between gap-2"><p class="text-2xl font-black text-slate-900">{{ statValue(shot.pct, true) }}</p><span class="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-bold text-blue-700" :title="rankTitle(shot.pct)">{{ rankText(shot.pct) }}</span></div>
-                  <p class="mt-1 text-[11px] text-slate-400">Точность за сезон</p>
-                  <div class="mt-3 space-y-2 border-t border-blue-100 pt-3 text-xs"><div v-for="[label,key] in [['Попадания',shot.made],['Попытки',shot.attempts]]" :key="key" class="flex flex-wrap items-center justify-between gap-1"><span class="text-slate-500">{{ label }} / матч</span><span class="font-bold text-slate-900">{{ statValue(key!) }} <span class="ml-1 font-medium text-blue-600" :title="rankTitle(key!)">{{ rankText(key!) }}</span></span></div></div>
-                </div>
-              </div>
-              <p class="mt-3 text-[11px] leading-5 text-slate-500">Место среди игроков НБА с хотя бы одним матчем в регулярном сезоне. Больше значение — выше место, включая потери. Равные значения делят место. Для точности бросков учитываются только игроки с попытками соответствующего типа. Без минимальной квалификации НБА.</p>
-              <p v-if="data.rankingsUpdating" role="status" class="mt-1 text-[11px] text-blue-600">Обновляем сезонные места по подборам в нападении и защите…</p>
-              <p v-else-if="!data.reboundsRankedAt" class="mt-1 text-[11px] text-slate-400">Места по подборам в нападении и защите временно недоступны.</p>
-              <p v-if="data.reboundsRankedAt" class="mt-1 text-[11px] text-slate-400">Места по подборам обновлены {{ dateTime(data.reboundsRankedAt) }} МСК. Сезонные данные кешируются до 15 минут.</p>
-            </div>
-            <FantasyRadar :stats="data.stats" />
-          </template>
-          <p v-else-if="data" class="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">В текущем регулярном сезоне ещё нет сыгранных матчей или опубликованной статистики. График появится после первой игры.</p>
+            <PlayerStatSummary v-if="data" :data="data" />
+
           </div>
           <div v-show="activeTab==='rating'" :id="`${titleId}-panel-rating`" role="tabpanel" :aria-labelledby="`${titleId}-tab-rating`">
             <FantasyRatingHistory v-if="activeTab==='rating'" :player-id="player.id" :season="seasonYear" :slate-ovr="data?.rating?.ovr || player.ovr" />
@@ -97,7 +71,7 @@ import { dateTime, points, type Match, type Player, type Pick, type PlayerDetail
 import FantasyScoreBreakdown from './FantasyScoreBreakdown.vue'
 import FantasySectionHeading from './FantasySectionHeading.vue'
 import FantasyPlayerLevel from './FantasyPlayerLevel.vue'
-import FantasyRadar from './FantasyRadar.vue'
+import PlayerStatSummary from './PlayerStatSummary.vue'
 import FantasyOvrBadge from './FantasyOvrBadge.vue'
 import FantasyPlayerTabs from './FantasyPlayerTabs.vue'
 import FantasyRatingHistory from './FantasyRatingHistory.vue'
@@ -107,25 +81,6 @@ const titleId = useId(), dialog = ref<HTMLElement | null>(null), data = ref<Play
 const activeTab=ref('fantasy')
 const tabs=[{id:'fantasy',label:'Фентези'},{id:'stats',label:'Статистика'},{id:'rating',label:'Рейтинг OVR'},{id:'games',label:'Матчи'}]
 const seasonYear=computed(()=>{const date=new Date(`${props.week || new Date(Date.now()+3*3600000).toISOString().slice(0,10)}T12:00:00Z`);return date.getUTCFullYear()+(date.getUTCMonth()>=6?1:0)})
-const metrics = [['Очки','avgPoints'],['Подборы всего','avgRebounds'],['Подборы в нападении','avgOffensiveRebounds'],['Подборы в защите','avgDefensiveRebounds'],['Передачи','avgAssists'],['Перехваты','avgSteals'],['Блоки','avgBlocks'],['Потери','avgTurnovers'],['Минуты','avgMinutes']] as const
-const shooting = [
-  { label:'Двухочковые', pct:'twoPointPct', made:'avgTwoPointFieldGoalsMade', attempts:'avgTwoPointFieldGoalsAttempted' },
-  { label:'Трёхочковые', pct:'threePointFieldGoalPct', made:'avgThreePointFieldGoalsMade', attempts:'avgThreePointFieldGoalsAttempted' },
-  { label:'Штрафные', pct:'freeThrowPct', made:'avgFreeThrowsMade', attempts:'avgFreeThrowsAttempted' }
-]
-function statValue(key: string, percent = false) {
-  const attemptKey = shooting.find(s=>s.pct===key)?.attempts
-  if (data.value?.stats[key] == null || (percent && attemptKey && !(data.value.stats[attemptKey]! > 0))) return '—'
-  return `${points(data.value.stats[key]!)}${percent ? '%' : ''}`
-}
-function rankText(key: string) {
-  const rank=data.value?.ranks[key]
-  return rank ? `#${rank.place} из ${rank.total}` : 'Место —'
-}
-function rankTitle(key: string) {
-  const rank=data.value?.ranks[key]
-  return rank ? `${rank.place}-е место среди ${rank.total} игроков сезона` : 'Недостаточно данных для сезонного места'
-}
 const games = computed(() => data.value?.schedule.length ? data.value.schedule : 'schedule' in props.player ? props.player.schedule : [])
 const fallbackTeams = (game: Match) => game.matchup.split(' — ').map(abbr=>({abbr}))
 const controller = new AbortController()

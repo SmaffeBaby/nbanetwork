@@ -75,6 +75,7 @@ export function useTeamUpcomingGames(teamId: Ref<number>) {
         games,
         loading,
         error,
-        parseMatchup
+        parseMatchup,
+        retry:loadGames
     }
 }
