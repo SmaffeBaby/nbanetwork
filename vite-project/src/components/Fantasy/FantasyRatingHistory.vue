@@ -17,7 +17,7 @@
       <RouterLink v-if="current" :to="`/game/${current.gameId.replace('espn:','')}`" class="flex flex-wrap justify-between gap-2 rounded-xl bg-blue-50 p-4 text-sm font-bold text-blue-900">{{ current.matchup }} · {{ shortDate(current.date) }} ↗ <span>{{ current.ovr }} OVR · {{ delta > 0 ? '+' : '' }}{{ delta }}</span></RouterLink>
     </template>
     <p v-else-if="result?.status==='ready'" class="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">В этом регулярном сезоне пока нет сыгранных матчей игрока.</p>
-    <p class="text-xs leading-5 text-slate-500">Ретроспективный расчёт по сохранённым протоколам ESPN и формуле OVR. После каждой игры учитываем накопленную на тот момент статистику всей лиги; игры с одинаковым временем начала обрабатываются вместе. Для сравнения используем позиции игроков из текущей базы сезона. Это восстановленная динамика, а не архив показанных ранее оценок. Исправления источника и время фиксации тура могут давать отличие от OVR на карточке. Бонусы уровня и личный XP здесь не учитываются.</p>
+    <p class="text-xs leading-5 text-slate-500">Ретроспективный расчёт по сохранённым протоколам ESPN с учётом прошлого сезона. После каждой игры учитываем накопленную на тот момент статистику всей лиги; игры с одинаковым временем начала обрабатываются вместе. Для сравнения используем позиции игроков из текущей базы сезона. Это восстановленная динамика, а не архив показанных ранее оценок. Исправления источника и время фиксации тура могут давать отличие от OVR на карточке. Бонусы уровня и личный XP здесь не учитываются.</p>
   </section>
 </template>
 <script setup lang="ts">
@@ -28,7 +28,7 @@ type History={status:'ready'|'loading'|'error';points:Point[];loaded:number;tota
 const props=defineProps<{playerId:string;season:number;slateOvr?:number}>()
 const result=ref<History|null>(null),loading=ref(false),error=ref(''),selected=ref(0)
 const series=computed(()=>result.value?.points||[]),current=computed(()=>series.value[selected.value])
-const delta=computed(()=>current.value?current.value.ovr-(series.value[selected.value-1]?.ovr||80):0)
+const delta=computed(()=>current.value?current.value.ovr-(series.value[selected.value-1]?.ovr ?? current.value.ovr):0)
 const low=computed(()=>Math.max(60,Math.min(75,...series.value.map(p=>p.ovr))-2)),high=computed(()=>Math.min(99,Math.max(85,...series.value.map(p=>p.ovr))+2))
 const ticks=computed(()=>[low.value,Math.round((low.value+high.value)/2),high.value])
 const x=(i:number)=>series.value.length===1?328:48+i*560/(series.value.length-1)

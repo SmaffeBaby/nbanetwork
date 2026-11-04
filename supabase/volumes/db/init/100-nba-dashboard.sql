@@ -1870,3 +1870,111 @@ REVOKE ALL ON FUNCTION public.fantasy_popularity(date,text) FROM PUBLIC,anon,aut
 GRANT EXECUTE ON FUNCTION public.fantasy_popularity(date,text) TO service_role;
 NOTIFY pgrst,'reload schema';
 COMMIT;
+
+BEGIN;
+-- Keep each frozen OVR snapshot and confirmed lineup. Only entry windows change.
+ALTER TABLE public.fantasy_days ADD COLUMN IF NOT EXISTS player_locks jsonb NOT NULL DEFAULT '{}'::jsonb CHECK(jsonb_typeof(player_locks)='object');
+GRANT UPDATE(locks_at,player_locks) ON public.fantasy_days TO service_role;
+CREATE OR REPLACE FUNCTION public.guard_daily_fantasy() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE d fantasy_days; p jsonb; r jsonb; total integer:=0; xp numeric; lvl integer; bonuses jsonb:='{}'; canonical jsonb:='[]';
+BEGIN
+ IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'Fantasy lineup immutable'; END IF;
+ SELECT * INTO STRICT d FROM fantasy_days WHERE day=NEW.day FOR SHARE;
+ IF clock_timestamp()>=d.locks_at OR clock_timestamp()<d.starts_at-interval '7 days' THEN RAISE EXCEPTION 'Fantasy day locked'; END IF;
+ IF (SELECT count(DISTINCT x->>'id') FROM jsonb_array_elements(NEW.lineup) x)<>5
+ OR (SELECT count(DISTINCT x->>'slot') FROM jsonb_array_elements(NEW.lineup) x WHERE x->>'slot' IN ('PG','SG','SF','PF','C'))<>5 THEN RAISE EXCEPTION 'Invalid lineup'; END IF;
+ FOR p IN SELECT * FROM jsonb_array_elements(NEW.lineup) LOOP
+  r:=d.ratings->(p->>'id');
+  IF r IS NULL OR NOT (r->'positions' ? (p->>'slot')) THEN RAISE EXCEPTION 'Invalid player'; END IF;
+  IF d.player_locks->>(p->>'id') IS NULL OR clock_timestamp()>=(d.player_locks->>(p->>'id'))::timestamptz THEN RAISE EXCEPTION 'Player game already started'; END IF;
+  total:=total+(r->>'ovr')::integer;
+  canonical:=canonical||jsonb_build_array(jsonb_build_object('id',p->>'id','slot',p->>'slot','name',r->>'name','team',r->>'team','ovr',(r->>'ovr')::integer,'scoringPosition',r->>'scoringPosition'));
+  SELECT coalesce(sum(a.xp),0) INTO xp FROM fantasy_player_xp_awards a WHERE a.user_id=NEW.user_id AND a.player_id=p->>'id' AND a.period<NEW.day;
+  lvl:=floor((1+sqrt(1+xp/37.5))/2)::integer;
+  bonuses:=bonuses||jsonb_build_object(p->>'id',jsonb_build_object('level',lvl,'rate',fantasy_bonus_rate(lvl)));
+ END LOOP;
+ IF NEW.mode='balanced' AND total>public.fantasy_ovr_cap() THEN RAISE EXCEPTION 'OVR cap exceeded'; END IF;
+ NEW.lineup:=canonical; NEW.player_bonuses:=bonuses; NEW.confirmed_at:=clock_timestamp();
+ -- Recheck after XP queries so a tip-off crossed during validation cannot slip through.
+ IF NEW.confirmed_at>=d.locks_at OR EXISTS(
+  SELECT 1 FROM jsonb_array_elements(canonical) x
+  WHERE d.player_locks->>(x->>'id') IS NULL OR NEW.confirmed_at>=(d.player_locks->>(x->>'id'))::timestamptz
+ ) THEN RAISE EXCEPTION 'Player game already started'; END IF;
+ RETURN NEW;
+END $$;
+NOTIFY pgrst,'reload schema';
+COMMIT;
+
+BEGIN;
+ALTER TABLE public.profile_notifications DROP CONSTRAINT IF EXISTS profile_notifications_kind_check;
+ALTER TABLE public.profile_notifications ADD CONSTRAINT profile_notifications_kind_check
+ CHECK(kind IN ('game_comment','article_published','article_comment','fantasy_lineup','fantasy_game','fantasy_final','game_result','fantasy_balance_reset'));
+
+CREATE OR REPLACE FUNCTION public.upgrade_fantasy_ratings(p_day date,p_ratings jsonb,p_first_tipoff timestamptz)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE d fantasy_days;
+BEGIN
+ SELECT * INTO d FROM fantasy_days WHERE day=p_day FOR UPDATE;
+ IF NOT FOUND OR d.rating_version<>1 OR d.settled_at IS NOT NULL
+    OR p_first_tipoff IS NULL OR clock_timestamp()>=least(p_first_tipoff,d.locks_at)
+    OR EXISTS(SELECT 1 FROM fantasy_daily_scores WHERE day=p_day) THEN
+  RETURN false;
+ END IF;
+
+ WITH removed AS (
+  DELETE FROM fantasy_daily_entries e WHERE e.day=p_day AND e.mode='balanced'
+   AND (SELECT sum((p_ratings->(p->>'id')->>'ovr')::integer)
+        FROM jsonb_array_elements(e.lineup) p)>public.fantasy_ovr_cap()
+  RETURNING user_id,day,mode
+ )
+ INSERT INTO profile_notifications(recipient_id,kind,event_key,payload)
+ SELECT user_id,'fantasy_balance_reset','fantasy_balance_reset:v2:'||day||':'||mode,
+        jsonb_build_object('to','/fantasy?day='||day||'&mode='||mode,'day',day,'mode',mode)
+ FROM removed ON CONFLICT(recipient_id,event_key) DO NOTHING;
+
+ UPDATE fantasy_days SET ratings=p_ratings,rating_version=2 WHERE day=p_day;
+ IF clock_timestamp()>=p_first_tipoff THEN
+  RAISE EXCEPTION 'Fantasy rating update crossed first tip-off';
+ END IF;
+ RETURN true;
+END $$;
+REVOKE ALL ON FUNCTION public.upgrade_fantasy_ratings(date,jsonb,timestamptz) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.upgrade_fantasy_ratings(date,jsonb,timestamptz) TO service_role;
+NOTIFY pgrst,'reload schema';
+COMMIT;
+
+BEGIN;
+CREATE OR REPLACE FUNCTION public.upgrade_fantasy_ratings(p_day date,p_ratings jsonb,p_first_tipoff timestamptz)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE d fantasy_days;
+BEGIN
+ SELECT * INTO d FROM fantasy_days WHERE day=p_day FOR UPDATE;
+ IF NOT FOUND OR d.rating_version NOT IN (1,2) OR d.settled_at IS NOT NULL
+    OR p_first_tipoff IS NULL OR clock_timestamp()>=least(p_first_tipoff,d.locks_at)
+    OR EXISTS(SELECT 1 FROM jsonb_each(p_ratings) r WHERE r.value->>'version' IS DISTINCT FROM '3')
+    OR EXISTS(SELECT 1 FROM fantasy_daily_scores WHERE day=p_day) THEN
+  RETURN false;
+ END IF;
+
+ WITH removed AS (
+  DELETE FROM fantasy_daily_entries e WHERE e.day=p_day AND e.mode='balanced'
+   AND (SELECT sum((p_ratings->(p->>'id')->>'ovr')::integer)
+        FROM jsonb_array_elements(e.lineup) p)>public.fantasy_ovr_cap()
+  RETURNING user_id,day,mode
+ )
+ INSERT INTO profile_notifications(recipient_id,kind,event_key,payload)
+ SELECT user_id,'fantasy_balance_reset','fantasy_balance_reset:v3:'||day||':'||mode,
+        jsonb_build_object('to','/fantasy?day='||day||'&mode='||mode,'day',day,'mode',mode)
+ FROM removed ON CONFLICT(recipient_id,event_key) DO NOTHING;
+
+ UPDATE fantasy_days SET ratings=p_ratings,rating_version=3 WHERE day=p_day;
+ IF clock_timestamp()>=p_first_tipoff THEN
+  RAISE EXCEPTION 'Fantasy rating update crossed first tip-off';
+ END IF;
+ RETURN true;
+END $$;
+REVOKE ALL ON FUNCTION public.upgrade_fantasy_ratings(date,jsonb,timestamptz) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.upgrade_fantasy_ratings(date,jsonb,timestamptz) TO service_role;
+NOTIFY pgrst,'reload schema';
+COMMIT;

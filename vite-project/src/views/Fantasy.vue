@@ -98,7 +98,17 @@
       <div class="flex flex-wrap items-center justify-between gap-3"><h2 class="text-xl font-extrabold text-slate-900">Рейтинг профилей</h2><div class="flex gap-2"><button class="rounded-lg px-3 py-2 text-sm font-bold" :class="!overall ? 'bg-blue-50 text-blue-700' : 'text-slate-500'" @click="overall = false">{{ archive ? 'За неделю' : 'За день' }}</button><button class="rounded-lg px-3 py-2 text-sm font-bold" :class="overall ? 'bg-blue-50 text-blue-700' : 'text-slate-500'" @click="overall = true">За всё время</button></div></div>
       <div v-if="!overall" class="mt-4 flex items-center justify-between gap-3 text-sm"><button class="rounded-lg border border-slate-200 px-3 py-2" :disabled="loading" aria-label="Предыдущий день" @click="changeWeek(archive ? -7 : -1)">←</button><span>{{ weekLabel(board.selectedWeek) }}</span><button class="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-30" :disabled="board.selectedWeek >= maxDate || loading" aria-label="Следующий день" @click="changeWeek(archive ? 7 : 1)">→</button></div>
       <p v-if="!leaders.length" class="py-10 text-center text-sm text-slate-500">Пока нет участников. Закрепите состав и откройте рейтинг.</p>
-      <ol v-else class="mt-4 divide-y divide-slate-100"><li v-for="leader in leaders" :key="leader.user_id" class="flex items-center gap-3 py-4" :class="leader.user_id === auth.user?.id ? 'rounded-xl bg-blue-50 px-3' : ''"><span class="w-8 text-lg font-black" :class="leader.rank <= 3 ? 'text-amber-500' : 'text-slate-400'">{{ leader.rank }}</span><RouterLink :to="`/profile/${leader.user_id}`" class="min-w-0 flex-1 truncate text-sm font-bold text-slate-800 hover:text-blue-600">{{ [leader.first_name, leader.last_name].filter(Boolean).join(' ') || 'Участник' }}<span v-if="leader.user_id === auth.user?.id" class="ml-1 text-blue-600">· вы</span></RouterLink><span class="font-black text-slate-900">{{ points(leader.points) }} <span class="text-xs font-medium text-slate-400">оч.</span></span></li></ol>
+      <ol v-else class="mt-4 divide-y divide-slate-100">
+        <li v-for="leader in leaders" :key="leader.user_id">
+          <button type="button" aria-haspopup="dialog" class="flex w-full items-center gap-3 rounded-xl px-3 py-4 text-left hover:bg-blue-50 focus-visible:outline-blue-600" :class="leader.user_id === auth.user?.id ? 'bg-blue-50' : ''" @click="selectedLeader = { leader, day: board.selectedWeek, mode, overall, archive }">
+            <span class="w-8 text-lg font-black" :class="leader.rank <= 3 ? 'text-amber-500' : 'text-slate-400'">{{ leader.rank }}</span>
+            <span class="min-w-0 flex-1 truncate text-sm font-bold text-slate-800">{{ [leader.first_name, leader.last_name].filter(Boolean).join(' ') || 'Участник' }}<span v-if="leader.user_id === auth.user?.id" class="ml-1 text-blue-600">· вы</span></span>
+            <span class="font-black text-slate-900">{{ points(leader.points) }} <span class="text-xs font-medium text-slate-400">оч.</span></span>
+            <span aria-hidden="true" class="text-slate-400">›</span>
+          </button>
+        </li>
+      </ol>
+      <FantasyLeaderDialog v-if="selectedLeader" v-bind="selectedLeader" @close="selectedLeader = null" />
       <p v-if="leaders.length" class="mt-3 text-xs text-slate-400">Топ-100 · равные очки — общее место · обновление раз в минуту</p>
     </section>
     <FantasyRules />
@@ -110,12 +120,13 @@ import PublicProfileTeamFilter from '../components/NBA/PublicProfile/PublicProfi
 import { teamsFullNames } from '../constants/TeamFullName'
 import Header from '../components/Headers/Header.vue'
 import FantasyPlayerCard from '../components/Fantasy/FantasyPlayerCard.vue'
+import FantasyLeaderDialog from '../components/Fantasy/FantasyLeaderDialog.vue'
 import FantasyRules from '../components/Fantasy/FantasyRules.vue'
 import FantasyCalendar from '../components/Fantasy/FantasyCalendar.vue'
 import FantasySortSelect from '../components/Fantasy/FantasySortSelect.vue'
 import { lineupBudget } from '../components/Fantasy/lineupBudget'
 import { playerProgress } from '../components/Fantasy/progress'
-import { slots, points, dateTime, weekLabel, type Slot, type Player, type Pick, type Board, type Mode } from '../components/Fantasy/types'
+import { slots, points, dateTime, weekLabel, type Slot, type Player, type Pick, type Board, type Mode, type Leader } from '../components/Fantasy/types'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { authFetch } from '../api/authFetch'
@@ -145,6 +156,7 @@ const closed = computed(() => !!board.value && (!board.value.day?.open || now.va
 const entry = computed(() => board.value?.history.find(e => e.week === board.value?.week.id && (archive.value ? !e.mode || e.mode === 'legacy' : e.mode === mode.value)))
 const currentLineup = computed(() => (entry.value?.lineup || []).map(p => ({ ...players.value.find(player => player.id === p.id), ...p })))
 const progress = computed(() => ({ ...playerProgress(board.value?.history.filter(e=>e.mode===mode.value) || []), totals: board.value?.playerXp || {} }))
+const selectedLeader = ref<{ leader: Leader; day: string; mode: Mode; overall: boolean; archive: boolean } | null>(null)
 const leaders = computed(() => (overall.value ? board.value?.overall : board.value?.leaderboard) || [])
 const pickAt = (slot: Slot) => picks.value.find(p => p.slot === slot)
 const filtered = computed(() => players.value.filter(p => p.positions.includes(activeSlot.value)
@@ -169,7 +181,10 @@ async function loadBoard() {
     params.set('mode', mode.value)
     const data: Board = await authFetch(`/api/fantasy?${params}`)
     if (id !== requestId) return
-    if (board.value && board.value.week.id !== data.week.id) { picks.value = []; reviewing.value = false; }
+    const hadEntry = entry.value
+    if (board.value && (board.value.week.id !== data.week.id || (hadEntry && !data.history.some(e => e.week === hadEntry.week && e.mode === hadEntry.mode)))) {
+      picks.value = []; reviewing.value = false; success.value = false
+    }
     board.value = data
     selectedWeek.value = data.selectedWeek
     players.value = (data as Board & {players: Player[]}).players || []
@@ -225,6 +240,23 @@ function selectDate(value: string) {
   if (saving.value || !value) return
   requestId++; playerRequestId++; selectedWeek.value = value; archive.value = false; board.value = null; players.value = []; picks.value = []; reviewing.value = false; success.value = false; void loadBoard()
 }
+watch(() => [route.query.day, route.query.week, route.query.mode], ([day, week, requestedMode]) => {
+  const nextMode = requestedMode === 'balanced' ? 'balanced' : 'unlimited'
+  const nextArchive = typeof week === 'string'
+  const nextDate = typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : nextArchive ? week : ''
+  if (nextMode === mode.value && nextArchive === archive.value && nextDate === selectedWeek.value) return
+  requestId++; playerRequestId++
+  mode.value = nextMode
+  archive.value = nextArchive
+  selectedWeek.value = nextDate
+  board.value = null
+  players.value = []
+  picks.value = []
+  reviewing.value = false
+  success.value = false
+  selectedLeader.value = null
+  void loadBoard()
+})
 function refresh() { void loadBoard() }
 watch(() => auth.user?.id, () => { picks.value = []; reviewing.value = false; success.value = false; board.value = null; void loadBoard() })
 let poll: ReturnType<typeof setInterval>, clock: ReturnType<typeof setInterval>

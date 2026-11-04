@@ -44,7 +44,10 @@ async function playerDetails(id, week, profile, dailyMode) {
     const result = await require('./seasonStats').seasonPlayerStats(data,id,year)
     const stats = result.stats
     const saved = dailyMode ? await require('./daily').slate(week.id) : null
-    return { id, fantasy, rating:saved?.ratings[id] || null, season:`${year-1}–${String(year).slice(-2)}`, gamesPlayed:stats.gamesPlayed ?? 0, ...result, schedule:games.filter(g => g.teams.some(t => t.abbr === (ALIASES[row?.athlete.teamShortName] || row?.athlete.teamShortName))).map(g=>({...g,matchup:g.teams.map(t=>t.abbr).join(' — ')})) }
+    const rating = saved?.ratings[id]
+    const liveForecast = rating && saved.rating_version === 1 && Date.parse(saved.locks_at) > Date.now()
+        ? await require('./ratings').seasonRatings(year).catch(() => null) : null
+    return { id, fantasy, rating:rating ? {...rating,projectedOvr:rating.projectedOvr ?? liveForecast?.[id]?.projectedOvr} : null, season:`${year-1}–${String(year).slice(-2)}`, gamesPlayed:stats.gamesPlayed ?? 0, ...result, schedule:games.filter(g => g.teams.some(t => t.abbr === (ALIASES[row?.athlete.teamShortName] || row?.athlete.teamShortName))).map(g=>({...g,matchup:g.teams.map(t=>t.abbr).join(' — ')})) }
 }
 module.exports.playerDetails = playerDetails
 
@@ -69,3 +72,5 @@ async function playerFantasy(id, week, profile) {
         games: data.map(g => ({ id: g.game_id.replace('espn:', ''), start: g.starts_at, points: Number(g.points),
             matchup: `${g.stats.awayAbbr} — ${g.stats.homeAbbr}`, breakdown: scoreBreakdown(g.stats, g.stats.won) })) }
 }
+
+module.exports.playerFantasy = playerFantasy

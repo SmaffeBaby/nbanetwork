@@ -37,6 +37,7 @@ async function syncFantasy() {
 function startFantasyMaintenance() {
     const tick = () => {
         void syncFantasy().catch(error => console.warn('Fantasy maintenance:', error.message))
+        void require('./daily').upgradeUpcomingRatings().catch(error => console.warn('Fantasy rating upgrades:', error.message))
         void require('./daily').syncDaily().catch(error => console.warn('Daily fantasy maintenance:', error.message))
     }
     void tick()

@@ -50,7 +50,13 @@ async function getPlayers(req,res) {
 async function details(req,res) {
     let p
     try {p=params(req);if(!/^\d{1,12}$/.test(req.params.id)) throw new Error('Некорректный игрок')} catch(error) {return res.status(400).json({error:error.message})}
-    try {res.set('Cache-Control','no-store').json(await playerDetails(req.params.id,dayPeriod(p.day || await defaultDay()),p.profile,p.mode))} catch(error) {fail(res,error)}
+    try {
+        const period = dayPeriod(p.day || await defaultDay())
+        const data = req.query.view === 'score'
+            ? await require('../services/fantasy/dailyDetails')(req.params.id,period,p.profile,p.mode)
+            : await playerDetails(req.params.id,period,p.profile,p.mode)
+        res.set('Cache-Control','no-store').json(data)
+    } catch(error) {fail(res,error)}
 }
 async function save(req,res) {
     let period

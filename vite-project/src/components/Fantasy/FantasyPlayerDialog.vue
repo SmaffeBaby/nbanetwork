@@ -10,6 +10,7 @@
           </div>
           <div class="mt-4 flex flex-wrap items-center gap-3">
           <FantasyOvrBadge v-if="data?.rating || player.ovr" :rating="data?.rating || player" :name="player.name" />
+          <span v-if="(data?.rating?.projectedOvr ?? player.projectedOvr) != null" class="rounded-lg bg-indigo-50 px-2 py-1 text-xs font-bold text-indigo-700">Прогноз на 30 дней · {{ data?.rating?.projectedOvr ?? player.projectedOvr }} OVR</span>
           <RouterLink :to="`/player/${encodeURIComponent(player.name)}`" class="inline-flex rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-900" @click="$emit('close')">Страница игрока ↗</RouterLink>
           </div>
         </header>
@@ -29,16 +30,7 @@
               <p>Откройте матч ниже, чтобы увидеть начисления за статистику, бонусы и штрафы. Бонусы за дабл-дабл и трипл-дабл не складываются.</p>
             </FantasySectionHeading>
 
-            <details v-for="game in data.fantasy.games" :key="game.id" class="mt-3 rounded-xl border border-blue-100 bg-white p-3">
-              <summary class="cursor-pointer text-sm font-bold text-slate-800">{{ game.matchup }} · {{ points(game.points) }} баллов <span class="block text-xs font-normal text-slate-500">{{ dateTime(game.start) }} МСК</span></summary>
-              <div class="mt-3 divide-y divide-slate-100"><div v-for="item in game.breakdown" :key="item.key" class="flex items-center justify-between gap-3 py-2 text-xs"><span class="text-slate-600">{{ item.label }} <span class="text-slate-400">{{ item.count }} × {{ points(item.weight) }}</span></span><strong :class="item.points < 0 ? 'text-rose-600' : 'text-blue-700'">{{ item.points > 0 ? '+' : '' }}{{ points(item.points) }}</strong></div></div>
-              <RouterLink :to="`/game/${game.id}`" class="mt-3 inline-block text-xs font-bold text-blue-700" @click="$emit('close')">Открыть матч ↗</RouterLink>
-            </details>
-            <div v-if="data.fantasy.profile" class="mt-3 rounded-xl bg-indigo-50 p-3 text-xs text-indigo-800">
-              <p class="flex justify-between gap-3"><span>Базовые баллы</span><strong>{{ points(data.fantasy.basePoints) }}</strong></p>
-              <p class="mt-2 flex justify-between gap-3"><span>Бонус уровня {{ data.fantasy.bonusLevel }} · +{{ points(data.fantasy.bonusRate * 100) }}%</span><strong>+{{ points(data.fantasy.bonusPoints) }}</strong></p>
-            </div>
-            <p v-if="!data.fantasy.games.length" class="mt-3 text-sm text-slate-500">Начислений за этот турнир пока нет. Баллы появятся после обработки завершённых матчей.</p>
+            <FantasyScoreBreakdown :score="data.fantasy" @close="$emit('close')" />
           </section>
           <section v-if="data && playerXp !== undefined">
             <FantasySectionHeading title="Уровень фентези" class="mb-3">
@@ -101,6 +93,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, useId } from 'vue'
 import { authFetch } from '../../api/authFetch'
 import { dateTime, points, type Match, type Player, type Pick, type PlayerDetails } from './types'
+import FantasyScoreBreakdown from './FantasyScoreBreakdown.vue'
 import FantasySectionHeading from './FantasySectionHeading.vue'
 import FantasyPlayerLevel from './FantasyPlayerLevel.vue'
 import FantasyRadar from './FantasyRadar.vue'

@@ -1,7 +1,7 @@
 const {getAdmin}=require('../../lib/supabase')
 const {request}=require('./data')
 const {getEspnGame}=require('../espnGameService')
-const {rateRows}=require('./ratings')
+const {rateRows,rateSeason}=require('./ratings')
 const {seasonAthletes}=require('../gamePreview')
 const states=new Map()
 const mappings={minutes:'avgMinutes',points:'avgPoints',fieldGoalsAttempted:'avgFieldGoalsAttempted',freeThrowsAttempted:'avgFreeThrowsAttempted',assists:'avgAssists',turnovers:'avgTurnovers',reboundsTotal:'avgRebounds',steals:'avgSteals',blocks:'avgBlocks'}
@@ -19,7 +19,7 @@ function snapshotGame(id,year,result){
 }
 // Reconstruct every league participant's cumulative season, never compare past
 // player production against future league totals. Simultaneous starts share a batch.
-function reconstruct(games,id,positions={}){
+function reconstruct(games,id,positions={},previous={}){
  const totals=new Map(),points=[]
  const sorted=[...games].sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at)||a.game_id.localeCompare(b.game_id))
  for(let cursor=0;cursor<sorted.length;){
@@ -33,7 +33,7 @@ function reconstruct(games,id,positions={}){
    totals.set(p.id,row)
    if(p.id===id)own=game
   }
-  if(own){const rating=rateRows([...totals.values()],id)[id];if(rating)points.push({gameId:own.game_id,date:own.starts_at,matchup:own.matchup,game:totals.get(id).stats.gamesPlayed,ovr:rating.ovr})}
+  if(own){const rating=rateRows([...totals.values()],previous,id)[id];if(rating)points.push({gameId:own.game_id,date:own.starts_at,matchup:own.matchup,game:totals.get(id).stats.gamesPlayed,ovr:rating.ovr})}
  }
  return points
 }
@@ -69,7 +69,8 @@ async function sync(year,state){
   }catch(error){errors.push(error);console.warn('Fantasy OVR game:',id,error.message)}
  })
  if(errors.length)throw new Error('Часть матчей ещё не получена. Повторите обновление.')
- const season=await seasonAthletes(year,2)
+ const [season,previous]=await Promise.all([seasonAthletes(year,2),seasonAthletes(year-1,2)])
+ state.previous=rateSeason(previous)
  state.positions=Object.fromEntries(season.athletes.map(p=>[String(p.athlete.id),p.athlete.position?.abbreviation||'']))
  state.games=(await readGames(year)).filter(g=>events.has(g.game_id))
  state.updatedAt=new Date().toISOString();state.ready=true
@@ -82,6 +83,6 @@ function history(year,id){
   state.running=true;state.error=null
   void sync(year,state).catch(error=>{state.error=error.message;state.failedAt=Date.now()}).finally(()=>{state.running=false})
  }
- return {season:year,status:state.ready?'ready':state.running?'loading':'error',updating:state.running,loaded:state.loaded,total:state.total,error:state.error,updatedAt:state.updatedAt||null,method:'reconstructed',points:state.ready?reconstruct(state.games,id,state.positions):[]}
+ return {season:year,status:state.ready?'ready':state.running?'loading':'error',updating:state.running,loaded:state.loaded,total:state.total,error:state.error,updatedAt:state.updatedAt||null,method:'reconstructed',points:state.ready?reconstruct(state.games,id,state.positions,state.previous):[]}
 }
 module.exports={history,reconstruct,snapshotGame}

@@ -2,7 +2,7 @@ const router = require('express').Router()
 const { requireUser } = require('../middleware/auth')
 const { getAdmin } = require('../lib/supabase')
 const { weekAt } = require('../services/fantasy/rules')
-const { playerDetails } = require('../services/fantasy/data')
+const { playerDetails, playerFantasy } = require('../services/fantasy/data')
 const uuid = /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i
 const fail = (res, error) => { console.warn('Fantasy API:', error.message); res.status(503).json({ error: 'Фентези временно недоступно. Попробуйте ещё раз.' }) }
 const daily = require('./fantasyDaily')
@@ -31,7 +31,12 @@ router.get('/fantasy/players/:id', async (req, res) => {
         if (!Number.isFinite(+date) || date.toISOString().slice(0,10) !== req.query.week || date.getUTCDay() !== 1) return res.status(400).json({ error: 'Некорректная неделя' })
         week = weekAt(date)
     }
-    try { res.json(await playerDetails(req.params.id, week, req.query.profile)) } catch (error) { fail(res, error) }
+    try {
+        const data = req.query.view === 'score'
+            ? await playerFantasy(req.params.id,week,req.query.profile)
+            : await playerDetails(req.params.id,week,req.query.profile)
+        res.set('Cache-Control','no-store').json(data)
+    } catch (error) { fail(res, error) }
 })
 router.get('/fantasy/players', daily.getPlayers)
 router.get('/fantasy', async (req, res) => {

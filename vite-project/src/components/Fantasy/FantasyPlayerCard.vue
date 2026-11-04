@@ -13,6 +13,7 @@
       <p class="text-xs font-bold uppercase tracking-wide text-slate-400">{{ player.team }}</p>
       <p v-if="popularity && popularity.total>0" class="text-[11px] font-semibold text-indigo-600">Выборов: {{ popularity.count }} · {{ points(popularity.count*100/popularity.total) }}% составов</p>
       <h3 class="text-base font-extrabold leading-5 text-slate-900"><button type="button" class="text-left hover:text-blue-600" @click.stop="detailsOpen = true">{{ player.name }}</button></h3>
+      <p v-if="player.projectedOvr != null" class="text-xs font-semibold text-indigo-700">Прогноз на 30 дней · {{ player.projectedOvr }} OVR</p>
       <p v-if="'injury' in player && player.injury" class="rounded-lg bg-rose-50 p-2 text-xs font-semibold text-rose-700">Травма / ограничение · {{ player.injury }}</p>
       <template v-if="'schedule' in player">
         <RouterLink v-if="nextMatch" :to="`/game/${nextMatch.id}`" class="block hover:text-blue-700 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
