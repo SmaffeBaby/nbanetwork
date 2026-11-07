@@ -70,6 +70,8 @@
       </div>
     </div>
 
+    <TeamStaff v-if="showSeasonSelector" :team-abbr="teamAbbr" :season="season" />
+
     <div class="min-w-0">
       <TeamUpcomingGames
           v-if="activeTab === 'Будущие игры'"
@@ -122,6 +124,7 @@ import { ref, computed, defineAsyncComponent, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import TeamStats from './TeamStats.vue'
+import TeamStaff from '../../Staff/TeamStaff.vue'
 import TeamGamesTable from './TeamGamesTable.vue'
 import TeamUpcomingGames from './TeamUpcomingGames.vue'
 import TeamStats2 from './TeamStats2.vue'
@@ -202,7 +205,8 @@ watch(activeTab, tab => {
 
   void router.push({
     name: 'TeamDetail',
-    params: { abbr: teamAbbr.value, section }
+    params: { abbr: teamAbbr.value, section },
+    query: route.query
   })
 })
 
@@ -215,4 +219,6 @@ const showSeasonTypeSwitcher = computed(() =>
 )
 
 const { season, seasons } = useCurrentSeason(2000)
+watch(()=>route.query.season,value=>{if(typeof value==='string' && seasons.value.includes(value))season.value=value},{immediate:true})
+watch(season,value=>{if(route.query.season!==value)void router.replace({query:{...route.query,season:value}})})
 </script>

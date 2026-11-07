@@ -76,7 +76,7 @@ export function useHeader() {
   const playersLink = computed<HeaderLink>(() => ({
     label: 'Игроки',
     to: '/player-stats',
-    isActive: route.path.startsWith('/player-stats') || route.path.startsWith('/player/') || route.path === '/draft' || route.path === '/season-awards'
+    isActive: route.path.startsWith('/player-stats') || route.path.startsWith('/player/') || route.path === '/draft' || route.path === '/season-awards' || route.path.startsWith('/coach/') || route.path.startsWith('/executive/')
   }))
 
   const playerLinks = computed<HeaderFeatureLink[]>(() => [

@@ -1,4 +1,4 @@
-export type AwardEntity = { kind: 'player' | 'coach' | 'executive' | 'team'; name: string; photoId?: string; abbr?: string; sourceUrl?: string }
+export type AwardEntity = { kind: 'player' | 'coach' | 'executive' | 'team'; id?: string; name: string; photoId?: string; abbr?: string; sourceUrl?: string }
 export type SeasonAwardRow = { id: string; award: string; recipient: AwardEntity; period: string | null; periodLabel: string | null; conference: 'east' | 'west' | null; selection: number | null; team: AwardEntity | null }
 export type SeasonAwardsData = { season: string; category: string; rows: SeasonAwardRow[]; complete: boolean; sources: {name: string; url: string}[]; updatedAt: string }
 export const awardTabs = [

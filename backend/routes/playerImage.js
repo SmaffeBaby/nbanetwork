@@ -8,6 +8,8 @@ const pending = new Map()
 let bucketReady
 
 function imageSource(playerId) {
+    const staff=/^staff:(coach|executive):([a-z0-9]{3,24})$/.exec(playerId)
+    if (staff) return require('../services/staffProfiles').staffImageSource(staff[1],staff[2])
     if (/^\d{1,12}$/.test(playerId)) {
         return { name: `nba-${playerId}.png`, type: 'image/png', url: `https://cdn.nba.com/headshots/nba/latest/1040x760/${playerId}.png` }
     }
@@ -122,14 +124,16 @@ async function loadImage(path, source) {
 }
 
 async function serveImage(req, res) {
-    const source = imageSource(req.params.playerId)
+    let source
+    try { source = await imageSource(req.params.playerId) }
+    catch (error) { console.warn('Staff image source:',error.message);return res.status(502).set('Cache-Control','no-store').end() }
     const season = req.params.season ?? currentSeason()
     if (!source || !validSeason(season)) return res.status(400).set('Cache-Control', 'no-store').end()
     if (!req.params.season) {
         return res.set('Cache-Control', 'no-store').redirect(`/api/player-image/${req.params.playerId}/${season}`)
     }
 
-    const path = `Players/${season}/${source.name}`
+    const path = `${source.folder || 'Players'}/${season}/${source.name}`
     if (!pending.has(path)) pending.set(path, loadImage(path, source).finally(() => pending.delete(path)))
     try {
         const image = await pending.get(path)

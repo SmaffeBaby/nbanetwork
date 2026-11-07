@@ -1,7 +1,5 @@
-const axios = require('axios')
-const cheerio = require('cheerio')
 const cache = require('../utils/fetchWithCache')
-const ROOT = 'https://www.basketball-reference.com'
+const {ROOT,document,page}=require('./basketballReference')
 const aliases = { BRK:'BKN',CHO:'CHA',CHH:'CHA',NOH:'NOP',NOK:'NOP',NJN:'BKN',SEA:'OKC',VAN:'MEM',PHO:'PHX',GS:'GSW',NY:'NYK',SA:'SAS',NO:'NOP',WSH:'WAS' }
 const categories = {
     week:'Игрок недели', month:'Игрок месяца', 'rookie-month':'Новичок месяца', 'defense-month':'Защитник месяца', 'coach-month':'Тренер месяца',
@@ -19,23 +17,14 @@ const monthNames = {January:'Январь',February:'Февраль',March:'Ма
 const clean = value => value.replace(/\s+/g,' ').trim()
 const abbr = value => aliases[value] || value
 
-function document(html) {
-    return cheerio.load(html.replace(/<!--([\s\S]*?)-->/g, (_,body) => body.includes('<table') || body.includes('data_grid') ? body : ''))
-}
-async function page(path) {
-    return cache({key:`awards-page:${path}`,ttl:3600000,fetcher:async()=>{
-        const {data} = await axios.get(`${ROOT}${path}`,{timeout:15000,maxContentLength:8*1024*1024})
-        if (typeof data!=='string' || !data.includes('<h1')) throw new Error('Неожиданный ответ архива')
-        return data
-    }})
-}
 function entity($, anchor) {
     const a = $(anchor), href = a.attr('href') || '', name = clean(a.text())
     const player = /^\/players\/[a-z]\/([a-z0-9]+)\.html$/.exec(href)
     if (player) return {kind:'player',name,photoId:`bbref:${player[1]}`}
     const team = /^\/teams\/([A-Z]{2,4})\//.exec(href)
     if (team) return {kind:'team',name,abbr:abbr(team[1])}
-    if (/^\/(coaches|executives)\/[a-z0-9]+\.html$/.test(href)) return {kind:href.startsWith('/coaches/')?'coach':'executive',name,sourceUrl:`${ROOT}${href}`}
+    const staff=/^\/(coaches|executives)\/([a-z0-9]+)\.html$/.exec(href)
+    if (staff) return {kind:staff[1]==='coaches'?'coach':'executive',id:staff[2],name,sourceUrl:`${ROOT}${href}`}
     return null
 }
 function teamOf($, row) {

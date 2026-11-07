@@ -12,8 +12,8 @@
       <tbody class="divide-y divide-slate-100"><tr v-for="row in rows" :key="row.id" class="hover:bg-blue-50/40">
         <td class="px-5 py-4 font-bold text-slate-700">{{ periodic ? period(row) : row.selection ? `${row.selection}-я сборная` : row.award }}</td>
         <td v-if="periodic" class="px-4 py-4 text-xs text-slate-500"><span class="inline-block rounded-lg px-2 py-1" :class="row.conference==='east'?'bg-blue-50 text-blue-700':row.conference==='west'?'bg-rose-50 text-rose-700':'bg-slate-50'">{{ row.conference==='east'?'Восток':row.conference==='west'?'Запад':'Вся лига' }}</span></td>
-        <td class="px-5 py-4"><SeasonAwardRecipient :person="row.recipient" /></td>
-        <td v-if="hasTeams" class="px-5 py-4"><SeasonAwardRecipient v-if="row.team && row.recipient.kind!=='team'" :person="row.team" /><span v-else class="text-slate-400">—</span></td>
+        <td class="px-5 py-4"><SeasonAwardRecipient :person="row.recipient" :season="season" /></td>
+        <td v-if="hasTeams" class="px-5 py-4"><SeasonAwardRecipient v-if="row.team && row.recipient.kind!=='team'" :person="row.team" :season="season" /><span v-else class="text-slate-400">—</span></td>
       </tr></tbody>
     </table>
   </div>
