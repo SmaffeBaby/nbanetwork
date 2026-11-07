@@ -20,7 +20,7 @@ import {staffLocation,type TeamStaff} from '../../../types/staff'
 import StaffPhoto from './StaffPhoto.vue'
 const props=defineProps<{teamAbbr:string;season:string}>()
 const query=useQuery({queryKey:computed(()=>['team-staff',props.teamAbbr,props.season]),queryFn:async({signal,queryKey})=>{
-  const response=await fetch(`/api/team-staff/${queryKey[1]}/${queryKey[2]}`,{signal:AbortSignal.any([signal,AbortSignal.timeout(22000)])})
+  const response=await fetch(`/api/team-staff/${queryKey[1]}/${queryKey[2]}`,{signal:AbortSignal.any([signal,AbortSignal.timeout(75000)])})
   const data=await response.json()
   if(!response.ok)throw new Error(data.error || 'Штаб временно недоступен')
   return data as TeamStaff

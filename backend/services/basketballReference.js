@@ -7,7 +7,10 @@ function document(html) {
 }
 async function page(path) {
     return cache({key:`awards-page:${path}`,ttl:3600000,fetcher:async()=>{
-        const {data}=await axios.get(`${ROOT}${path}`,{timeout:15000,maxContentLength:8*1024*1024})
+        const reader=process.env.BASKETBALL_REFERENCE_READER_URL
+        const {data}=await axios.get(reader || `${ROOT}${path}`,{
+            ...(reader?{params:{path}}:{}),timeout:reader?65000:15000,maxContentLength:8*1024*1024
+        })
         if (typeof data!=='string' || !data.includes('<h1')) throw new Error('Неожиданный ответ архива')
         return data
     }})

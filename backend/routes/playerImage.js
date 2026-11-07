@@ -68,7 +68,17 @@ function isImage(buffer, type) {
 }
 
 async function downloadImage(source) {
-    const response = await fetch(source.url, { signal: AbortSignal.timeout(8000), redirect: 'error' })
+    const url = new URL(source.url)
+    const archiveReader = process.env.BASKETBALL_REFERENCE_READER_URL
+    const throughReader = archiveReader && url.hostname === 'www.basketball-reference.com'
+    let target = source.url
+    if (throughReader) {
+        const internal = new URL(archiveReader)
+        internal.pathname = '/internal/basketball-reference-image'
+        internal.search = new URLSearchParams({path:url.pathname}).toString()
+        target = internal.toString()
+    }
+    const response = await fetch(target, { signal: AbortSignal.timeout(throughReader ? 25000 : 8000), redirect: 'error' })
     if (response.status === 404 || response.status === 410) {
         await response.body?.cancel()
         return null

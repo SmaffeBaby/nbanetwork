@@ -1,3 +1,4 @@
 fastapi
 uvicorn
 nba_api
+curl_cffi==0.17.0

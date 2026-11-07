@@ -19,6 +19,7 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       - CONTRACT_IMPORT_DIR=/var/lib/nba-contracts/snapshots
+      - BASKETBALL_REFERENCE_READER_URL=http://python-backend:8000/internal/basketball-reference
       - NODE_ENV=production
       - SITE_URL=${SITE_URL:-https://basketsfera.ru}
       - SUPABASE_URL=http://kong:8000
@@ -53,9 +54,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "127.0.0.1:8000:8000"
+    volumes:
+      - basketball-reference-cache:/var/cache/basketball-reference
 
 volumes:
   contract-imports:
+  basketball-reference-cache:
 
 networks:
   contracts_ingest:

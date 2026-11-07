@@ -23,6 +23,8 @@ from nba_api.stats.endpoints import playbyplayv3
 from nba_api.stats.endpoints import leaguegamelog
 
 app = FastAPI()
+from basketball_reference import router as basketball_reference_router
+app.include_router(basketball_reference_router)
 MSK_TZ = ZoneInfo("Europe/Moscow")
 ET_TZ = ZoneInfo("America/New_York")
 SCHEDULE_URLS = [
