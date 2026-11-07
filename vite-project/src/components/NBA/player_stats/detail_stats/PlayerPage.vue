@@ -27,10 +27,20 @@
           </div>
 
           <div v-if="bio" class="flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold text-white/90">
-            <span v-if="age !== null">{{ age }} лет</span>
+            <span v-if="ageLabel" :title="bio.active === false || bio.deathDate ? 'Возраст на дату последнего матча в НБА, включая плей-офф' : undefined">{{ ageLabel }}</span>
             <span v-if="bio.position">{{ positionNames[bio.position] || bio.position }}</span>
             <span v-if="birthDate">Родился {{ birthDate }}</span>
             <span v-if="country.name"><span v-if="country.flag" aria-hidden="true" class="mr-1">{{ country.flag }}</span>{{ country.name }}</span>
+          </div>
+
+          <div v-if="bio?.draft" class="text-sm font-semibold text-white/90">
+            <template v-if="bio.draft.status === 'drafted'">
+              <RouterLink v-if="bio.draft.year >= 2003" :to="{ name: 'Draft', query: { year: String(bio.draft.year), round: String(bio.draft.round) } }" class="inline-flex flex-wrap items-center gap-x-2 rounded-lg bg-white/10 px-3 py-1.5 transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-white">
+                <span>Драфт {{ bio.draft.year }} · № {{ bio.draft.overall }} · {{ bio.draft.round }}-й раунд</span><span aria-hidden="true">↗</span>
+              </RouterLink>
+              <span v-else>Драфт {{ bio.draft.year }} · № {{ bio.draft.overall }} · {{ bio.draft.round }}-й раунд</span>
+            </template>
+            <span v-else class="inline-block rounded-lg bg-white/10 px-3 py-1.5">Не выбран на драфте</span>
           </div>
 
           <div
@@ -315,6 +325,7 @@ import PlayerComparison from './PlayerComparison.vue'
 import PlayerCareerGames from './PlayerCareerGames.vue'
 import PlayerCareerAwards from './PlayerCareerAwards.vue'
 import { positionNames, resultRows, summaryFromTotals, type ProfileSeason, type ProfileCurrent, type ProfileGames } from './playerProfileData'
+import { playerAgeLabel } from '../../../../utils/playerAge'
 import { TEAM_ID_MAP } from '../../../../constants/nbaTeams'
 import { gameLocation } from '../../../../api/gameNavigation'
 import axios from 'axios'
@@ -385,14 +396,7 @@ const bio = ref<ProfileSeason['bio']>(null)
 const seasonLoading = ref(false)
 const seasonError = ref(false)
 const reloadSeason = ref(0)
-const age = computed(() => {
-  const birth = new Date(bio.value?.birthDate || '')
-  if (!Number.isFinite(+birth)) return null
-  const now = new Date()
-  const beforeBirthday = now.getUTCMonth()<birth.getUTCMonth() ||
-    (now.getUTCMonth()===birth.getUTCMonth() && now.getUTCDate()<birth.getUTCDate())
-  return now.getUTCFullYear()-birth.getUTCFullYear()-Number(beforeBirthday)
-})
+const ageLabel = computed(() => playerAgeLabel(bio.value))
 const country = computed(() => playerCountry(bio.value?.country || ''))
 const birthDate = computed(() => {
   const date = new Date((bio.value?.birthDate || '').slice(0,10))

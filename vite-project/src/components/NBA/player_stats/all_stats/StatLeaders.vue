@@ -10,12 +10,7 @@
         @click="$router.push(`/player/${encodeURIComponent(p.PLAYER_NAME)}`)"
     >
       <div class="group/player flex items-center gap-2">
-        <img
-            :src="getPlayerImage(p)"
-            :data-player-id="p.PLAYER_ID"
-            class="w-10 h-10 rounded-full object-cover"
-            @error="handleImageError"
-        />
+        <PlayerPhoto :player-id="p.PLAYER_ID" />
         <span>{{ p.PLAYER_NAME }}</span>
         <span class="hidden md:inline-flex md:opacity-0 md:group-hover/player:opacity-100">
           <FavoritePlayerButton
@@ -40,7 +35,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { getPlayerImage, handleImageError } from '../../../../utils/playerImage.ts'
+import PlayerPhoto from '../../PlayerPhoto.vue'
 import FavoritePlayerButton from '../../Favorites/FavoritePlayerButton.vue'
 
 type StatKey = 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'TOV'

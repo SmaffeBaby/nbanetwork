@@ -587,6 +587,7 @@ def get_player_career(player_name: str):
                     "PLAYER_ID": player["id"],
                     "PLAYER_NAME": player["full_name"],
                     "TEAM_ABBREVIATION": "",
+                    "IS_ACTIVE": player.get("is_active"),
                 },
                 "seasons": [],
                 "careerTeams": [],
@@ -649,6 +650,7 @@ def get_player_career(player_name: str):
                 "PLAYER_ID": player["id"],
                 "PLAYER_NAME": player["full_name"],
                 "TEAM_ABBREVIATION": last_team,
+                "IS_ACTIVE": player.get("is_active"),
             },
             "seasons": seasons,
             "careerTeams": list(reversed(career_teams)),
@@ -687,7 +689,14 @@ def get_player_bio(player_id: int):
         data = commonplayerinfo.CommonPlayerInfo(player_id=player_id, timeout=10).get_dict()
         result = next(item for item in data["resultSets"] if item["name"] == "CommonPlayerInfo")
         player = dict(zip(result["headers"], result["rowSet"][0]))
-        return {"birthDate": player.get("BIRTHDATE"), "country": player.get("COUNTRY"), "position": player.get("POSITION")}
+        return {
+            "birthDate": player.get("BIRTHDATE"),
+            "country": player.get("COUNTRY"),
+            "position": player.get("POSITION"),
+            "draftYear": player.get("DRAFT_YEAR"),
+            "draftRound": player.get("DRAFT_ROUND"),
+            "draftNumber": player.get("DRAFT_NUMBER"),
+        }
     except Exception:
         raise HTTPException(status_code=503, detail="Player biography unavailable")
 

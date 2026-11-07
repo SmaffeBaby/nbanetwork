@@ -76,8 +76,13 @@ export function useHeader() {
   const playersLink = computed<HeaderLink>(() => ({
     label: 'Игроки',
     to: '/player-stats',
-    isActive: route.path.startsWith('/player-stats') || route.path.startsWith('/player/')
+    isActive: route.path.startsWith('/player-stats') || route.path.startsWith('/player/') || route.path === '/draft'
   }))
+
+  const playerLinks = computed<HeaderFeatureLink[]>(() => [
+    { label: 'Статистика игроков', description: 'Лидеры и показатели игроков НБА', to: '/player-stats', icon: ChartBarIcon, isActive: route.path.startsWith('/player-stats') || route.path.startsWith('/player/') },
+    { label: 'Драфт', description: 'Пики, команды и новые имена НБА', to: '/draft', icon: SparklesIcon, isActive: route.path === '/draft' }
+  ])
 
   const primaryLinks = computed<HeaderLink[]>(() => [
     gamesLink.value
@@ -152,6 +157,7 @@ export function useHeader() {
     moreIsActive,
     newsLink,
     playersLink,
+    playerLinks,
     primaryLinks,
     seasonIsActive,
     seasonLinks,

@@ -102,13 +102,20 @@
 
         <RouterLink to="/fantasy" class="flex h-full items-center border-b-2 border-transparent px-1 transition hover:text-blue-700" :class="$route.path === '/fantasy' ? 'border-blue-600 text-blue-700' : ''">Фентези</RouterLink>
 
-        <RouterLink
-            :to="playersLink.to"
-            class="flex h-full items-center border-b-2 border-transparent px-1 transition hover:text-blue-700"
-            :class="playersLink.isActive ? 'border-blue-600 text-blue-700' : ''"
-        >
-          {{ playersLink.label }}
-        </RouterLink>
+        <div class="group relative flex h-full items-center">
+          <button type="button" class="inline-flex h-full items-center gap-1.5 border-b-2 border-transparent px-1 font-bold transition hover:text-blue-700 focus:outline-none group-hover:text-blue-700 group-focus-within:text-blue-700" :class="playersLink.isActive ? 'border-blue-600 text-blue-700' : ''">
+            Игроки
+            <ChevronDownIcon class="h-4 w-4 transition group-hover:rotate-180 group-focus-within:rotate-180" />
+          </button>
+          <div class="invisible absolute left-1/2 top-full w-[300px] -translate-x-1/2 pt-3 opacity-0 transition duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-left shadow-xl shadow-slate-900/12">
+              <RouterLink v-for="item in playerLinks" :key="item.label" :to="item.to" class="flex items-start gap-3 rounded-lg px-3 py-3 transition hover:bg-slate-50" :class="item.isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-700'">
+                <component :is="item.icon" class="mt-0.5 h-5 w-5 shrink-0" />
+                <span><span class="block text-[15px] font-extrabold leading-5">{{ item.label }}</span><span class="mt-0.5 block text-[13px] font-medium leading-4 text-slate-500">{{ item.description }}</span></span>
+              </RouterLink>
+            </div>
+          </div>
+        </div>
 
         <div class="group relative flex h-full items-center">
           <button
@@ -191,6 +198,7 @@ const {
   moreIsActive,
   newsLink,
   playersLink,
+  playerLinks,
   seasonIsActive,
   seasonLinks,
   teamsIsActive

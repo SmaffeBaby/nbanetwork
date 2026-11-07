@@ -180,15 +180,24 @@
         </li>
 
         <li>
-          <RouterLink
-              :to="playersLink.to"
-              class="group flex items-center rounded-lg px-2 py-2 text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
+          <button
+              type="button"
+              aria-controls="mobile-player-links"
+              :aria-expanded="mobileMenus.players"
+              class="group flex w-full items-center rounded-lg px-2 py-2 text-left text-slate-800 transition hover:bg-white/65 hover:text-blue-700 hover:shadow-sm"
               :class="{ 'bg-white/70 text-blue-700 shadow-sm': playersLink.isActive }"
-              @click="closeDrawer"
+              @click="toggleMobileMenu('players')"
           >
             <BagIcon class="h-5 w-5 shrink-0 transition group-hover:text-blue-700" />
-            <span class="ms-3">{{ playersLink.label }}</span>
-          </RouterLink>
+            <span class="ms-3 flex-1">Игроки</span>
+            <ChevronDownIcon class="h-4 w-4 transition" :class="{ 'rotate-180': mobileMenus.players }" />
+          </button>
+          <div v-if="mobileMenus.players" id="mobile-player-links" class="mt-2 space-y-1 rounded-xl border border-white/60 bg-white/45 p-2 shadow-sm backdrop-blur-xl">
+            <RouterLink v-for="item in playerLinks" :key="item.label" :to="item.to" class="flex items-start gap-3 rounded-lg px-2 py-2 text-slate-700 transition hover:bg-white/70 hover:text-blue-700" :class="{ 'bg-white/70 text-blue-700': item.isActive }" @click="closeDrawer">
+              <component :is="item.icon" class="mt-0.5 h-5 w-5 shrink-0" />
+              <span><span class="block text-sm font-bold leading-5">{{ item.label }}</span><span class="block text-xs font-medium leading-4 text-slate-500">{{ item.description }}</span></span>
+            </RouterLink>
+          </div>
         </li>
 
         <li>
@@ -383,6 +392,7 @@ const {
   openDrawer,
   password,
   playersLink,
+  playerLinks,
   PlayoffsIcon,
   registerFromDrawer,
   sendPasswordReset,

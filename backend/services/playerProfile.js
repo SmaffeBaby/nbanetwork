@@ -5,6 +5,7 @@ const { seasonPlayerStats, normalizeRow } = require('./fantasy/seasonStats')
 const { seasonRatings, seasonYear } = require('./fantasy/ratings')
 const { positions } = require('./fantasy/rules')
 const TEAM_MAP = require('../constants/teamMap')
+const { espnDraft, nbaDraft } = require('./playerDraft')
 
 const PYTHON = process.env.PYTHON_API || 'http://python-backend:8000'
 const ESPN = 'https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes'
@@ -25,14 +26,15 @@ function findAthlete(data, name) {
 function biography(id) {
     return cache({ key:`player-bio:${id}`,ttl:86400000,fetcher:async () => {
         const {data} = await axios.get(`${CORE}/${id}`,{timeout:8000})
-        return {birthDate:data.dateOfBirth || null,country:data.birthPlace?.country || null,position:data.position?.abbreviation || null}
+        return {birthDate:data.dateOfBirth || null,country:data.birthPlace?.country || null,position:data.position?.abbreviation || null,draft:espnDraft(data.draft),active:typeof data.active==='boolean'?data.active:null,deathDate:data.dateOfDeath || null}
     } })
 }
 
 function nbaBiography(id) {
     return cache({key:`nba-player-bio:${id}`,ttl:86400000,fetcher:async()=>{
         const {data} = await axios.get(`${PYTHON}/player-bio/${id}`,{timeout:12000})
-        return data
+        const {draftYear,draftRound,draftNumber,...bio} = data
+        return {...bio,draft:nbaDraft({draftYear,draftRound,draftNumber})}
     }})
 }
 
@@ -47,7 +49,34 @@ async function overview(career, season) {
         player ? cache({key:`profile-season:${year}:${player.id}`,ttl:5*60000,fetcher:()=>seasonPlayerStats(data,String(player.id),year)}).catch(()=>null) : null,
         identity ? biography(identity.id).catch(()=>null) : nbaBiography(career.player.PLAYER_ID).catch(()=>null)
     ])
-    return {season:stats,bio:bio || (identity ? {position:identity.position?.abbreviation || null} : null)}
+    const resolvedBio = bio ? {...bio} : (identity ? {position:identity.position?.abbreviation || null} : null)
+    if (resolvedBio && !resolvedBio.draft && identity) {
+        const nbaBio = await nbaBiography(career.player.PLAYER_ID).catch(()=>null)
+        if (nbaBio?.draft) resolvedBio.draft = nbaBio.draft
+    }
+    if (resolvedBio) {
+        resolvedBio.active = resolvedBio.deathDate ? false : typeof career.player.IS_ACTIVE==='boolean' ? career.player.IS_ACTIVE : resolvedBio.active ?? null
+        if (resolvedBio.active===false) resolvedBio.careerEndDate = await careerEndDate(career,identity?.id).catch(()=>null)
+    }
+    return {season:stats,bio:resolvedBio}
+}
+
+async function careerEndDate(career, espnId) {
+    const season = career.seasons?.[0]
+    if (!season) return null
+    return cache({key:`career-end:${career.player.PLAYER_ID}:${season}`,ttl:86400000,fetcher:async()=>{
+        const regular = totalsBySeason(career,'SeasonTotalsRegularSeason').get(season) || 0
+        const playoffs = totalsBySeason(career,'SeasonTotalsPostSeason').get(season) || 0
+        if (!regular && !playoffs) return null
+        const complete = games => games.filter(g=>g.stage==='regular').length>=regular && games.filter(g=>g.stage==='playoffs').length>=playoffs
+        let games = await gameLog(career,season,espnId).catch(()=>[])
+        if (!complete(games)) games = await nbaGames(career.player.PLAYER_ID,season).catch(()=>[])
+        if (!games.length || !complete(games)) return null
+        const last = [...games].sort((a,b)=>Date.parse(b.date)-Date.parse(a.date))[0]
+        // NBA logs supply the official game date; ESPN supplies a timestamp in UTC.
+        return last.GAME_DATE ? new Date(last.GAME_DATE).toISOString().slice(0,10)
+            : new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(last.date))
+    }})
 }
 
 async function current(career) {

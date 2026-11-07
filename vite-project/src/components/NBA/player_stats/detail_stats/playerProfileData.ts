@@ -1,7 +1,8 @@
 import type { CareerResultSet } from '../../../../composables/NBA/player_stats/usePlayerCareer'
 import type { Pick, PlayerStatData } from '../../../Fantasy/types'
 
-export type ProfileSeason = { season: PlayerStatData | null; bio: { birthDate?: string; country?: string; position?: string } | null }
+export type PlayerDraft = { status: 'drafted'; year: number; round: number; overall: number } | { status: 'undrafted' }
+export type ProfileSeason = { season: PlayerStatData | null; bio: { birthDate?: string; country?: string; position?: string; draft?: PlayerDraft | null; active?: boolean | null; deathDate?: string | null; careerEndDate?: string | null } | null }
 export type ComparePlayer = { id: string; name: string; team: string; position?: string; ovr: number; stats: Record<string,number> }
 export type ProfileCurrent = { player?: PickedStats; position: string | null; fantasy: Pick | null; peers: ComparePlayer[]; candidates?: ComparePlayer[] }
 type PickedStats = { name: string; stats: Record<string,number> }

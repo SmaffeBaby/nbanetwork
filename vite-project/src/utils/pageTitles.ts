@@ -4,6 +4,7 @@ export function routeTitle(route:{path:string;params:Record<string,any>;query?:R
  const {path,params}=route
  if(path==='/')return 'Basketsfera'
  if(path==='/play-in')return siteTitle('Плей-инн НБА')
+ if(path==='/draft')return siteTitle('Драфт НБА')
  const fixed:Record<string,string>={'/fantasy':'Фентези НБА','/profile':'Настройки профиля','/nba-cup':'Emirates NBA Cup','/chart':'Чарт команд НБА','/standings':'Турнирная таблица НБА','/playoffs':'Плей-офф НБА','/teams':'Команды НБА','/news':'Новости баскетбола','/patch-note':'Патч ноут','/player-stats':'Статистика игроков НБА','/player-stats/all':'Статистика игроков НБА','/player-stats/playoffs':'Статистика игроков — Плей-офф'}
  if(fixed[path])return siteTitle(fixed[path]+(path==='/news'&&route.query?.tag?` — #${route.query.tag}`:''))
  if(path.startsWith('/team/')){

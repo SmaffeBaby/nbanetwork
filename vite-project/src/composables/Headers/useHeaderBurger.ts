@@ -5,7 +5,7 @@ import { useAuthPanel } from '../Auth/useAuthPanel'
 import { useAppFooter } from '../Layout/useAppFooter'
 import { useHeader } from './useHeader'
 
-type MobileMenuKey = 'season' | 'teams' | 'more'
+type MobileMenuKey = 'season' | 'teams' | 'players' | 'more'
 
 type NavLink = {
   label: string
@@ -22,6 +22,7 @@ export function useHeaderBurger() {
   const mobileMenus = ref<Record<MobileMenuKey, boolean>>({
     season: false,
     teams: false,
+    players: false,
     more: false
   })
 
@@ -34,6 +35,7 @@ export function useHeaderBurger() {
     moreIsActive,
     newsLink,
     playersLink,
+    playerLinks,
     seasonIsActive,
     seasonLinks,
     teamsIsActive
@@ -114,6 +116,7 @@ export function useHeaderBurger() {
     mobileMenus.value = {
       season: false,
       teams: false,
+      players: false,
       more: false
     }
   }
@@ -189,6 +192,7 @@ export function useHeaderBurger() {
     newsLink,
     password,
     playersLink,
+    playerLinks,
     PlayoffsIcon,
     primaryLinks,
     registerFromDrawer,
