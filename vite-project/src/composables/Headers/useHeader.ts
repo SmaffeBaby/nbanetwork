@@ -6,6 +6,7 @@ import {
   CalendarDaysIcon,
   ChevronDownIcon,
   FireIcon,
+  BoltIcon,
   NewspaperIcon,
   TrophyIcon,
   SparklesIcon
@@ -103,6 +104,7 @@ export function useHeader() {
       icon: FireIcon,
       isActive: route.path.startsWith('/playoffs')
     },
+    {label:'Плей-инн',description:'Матчи за выход в плей-офф',to:'/play-in',icon:BoltIcon,isActive:route.path==='/play-in'},
     {label:'Emirates NBA Cup',description:'Группы и сетка кубка НБА',to:'/nba-cup',icon:TrophyIcon,isActive:route.path==='/nba-cup'}
   ])
 
@@ -138,7 +140,7 @@ export function useHeader() {
   ])
 
   const teamsIsActive = computed(() => route.path.startsWith('/teams') || route.path.startsWith('/team/'))
-  const seasonIsActive = computed(() => route.path === '/nba-cup' || route.path.startsWith('/chart') || route.path === '/standings' || route.path.startsWith('/playoffs'))
+  const seasonIsActive = computed(() => route.path === '/play-in' || route.path === '/nba-cup' || route.path.startsWith('/chart') || route.path === '/standings' || route.path.startsWith('/playoffs'))
   const moreIsActive = computed(() => route.path === '/patch-note' || route.path.startsWith('/profile'))
 
   return {

@@ -19,6 +19,7 @@ const routes = [
     { path: '/chart/:metric?', name:'TeamChart', component:()=>import('../views/TeamChart.vue') },
     { path: '/nba-cup', name:'NbaCup', component:()=>import('../views/NbaCup.vue') },
     { path: '/playoffs', name: 'Playoffs', component: () => import('../views/Playoffs.vue')},
+    { path: '/play-in', name: 'PlayIn', component: () => import('../views/PlayIn.vue') },
     { path: '/teams', component: Teams },
     { path: '/fantasy', name: 'Fantasy', component: () => import('../views/Fantasy.vue') },
     { path: '/games', redirect: () => `/games/${getTodayDateKey()}` },
