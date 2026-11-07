@@ -13,7 +13,7 @@
         <td class="px-5 py-4 font-bold text-slate-700">{{ periodic ? period(row) : row.selection ? `${row.selection}-я сборная` : row.award }}</td>
         <td v-if="periodic" class="px-4 py-4 text-xs text-slate-500"><span class="inline-block rounded-lg px-2 py-1" :class="row.conference==='east'?'bg-blue-50 text-blue-700':row.conference==='west'?'bg-rose-50 text-rose-700':'bg-slate-50'">{{ row.conference==='east'?'Восток':row.conference==='west'?'Запад':'Вся лига' }}</span></td>
         <td class="px-5 py-4"><SeasonAwardRecipient :person="row.recipient" /></td>
-        <td v-if="hasTeams" class="px-5 py-4"><SeasonAwardRecipient v-if="row.team" :person="row.team" /><span v-else class="text-slate-400">—</span></td>
+        <td v-if="hasTeams" class="px-5 py-4"><SeasonAwardRecipient v-if="row.team && row.recipient.kind!=='team'" :person="row.team" /><span v-else class="text-slate-400">—</span></td>
       </tr></tbody>
     </table>
   </div>
@@ -24,6 +24,6 @@ import type {SeasonAwardRow} from '../../../types/seasonAwards'
 import SeasonAwardRecipient from './SeasonAwardRecipient.vue'
 const props=defineProps<{rows:SeasonAwardRow[];category:string;season:string;title:string}>()
 const periodic=computed(()=>['week','month','rookie-month','defense-month','coach-month'].includes(props.category))
-const hasTeams=computed(()=>props.rows.some(row=>row.team))
+const hasTeams=computed(()=>props.rows.some(row=>row.team && row.recipient.kind!=='team'))
 const period=(row:SeasonAwardRow)=>props.category==='week'&&row.period?new Intl.DateTimeFormat('ru-RU',{timeZone:'UTC',day:'numeric',month:'short',year:'numeric'}).format(new Date(`${row.period}T12:00:00Z`)):row.periodLabel || '—'
 </script>

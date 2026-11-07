@@ -12,7 +12,7 @@
       <button v-for="tab in tabs" :id="`awards-${tab.id}`" :key="tab.id" :ref="el=>{if(el)buttons[tab.id]=el as HTMLButtonElement}" role="tab" type="button" :aria-selected="category===tab.id" :tabindex="category===tab.id?0:-1" aria-controls="awards-content" class="rounded-xl border px-4 py-2.5 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-blue-600" :class="category===tab.id?'border-slate-900 bg-slate-900 text-white':'border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:text-blue-600'" @click="category=tab.id" @keydown.right.prevent="moveTab(1)" @keydown.left.prevent="moveTab(-1)" @keydown.home.prevent="selectTab(tabs[0]!.id)" @keydown.end.prevent="selectTab(tabs[tabs.length-1]!.id)">{{ tab.label }}</button>
     </div>
     <section id="awards-content" role="tabpanel" :aria-labelledby="`awards-${category}`" class="space-y-4">
-      <div class="flex items-center justify-between gap-4 px-1"><h2 class="text-xl font-black text-slate-900">{{ selected.label }}</h2><span v-if="data" class="text-xs text-slate-400">{{ data.rows.length }} записей</span></div>
+      <div class="flex items-center justify-between gap-4 px-1"><h2 class="text-xl font-black text-slate-900">{{ selected.label }}</h2><span v-if="data" class="text-xs text-slate-400">{{ data.rows.length }} {{ recordsWord(data.rows.length) }}</span></div>
       <p v-if="query.isPending.value" role="status" class="rounded-3xl bg-white p-10 text-center text-sm text-slate-500">Загружаем награды {{ season }}…</p>
       <p v-if="query.error.value" role="alert" class="rounded-2xl bg-rose-50 p-5 text-sm text-rose-700">{{ query.error.value.message }} <button class="font-bold underline" @click="query.refetch()">Повторить</button></p>
       <template v-if="data">
@@ -34,6 +34,7 @@ import {usePageTitle} from '../composables/usePageTitle'
 const {season,seasons,category,stage,tabs,selected,query,selectStage}=useSeasonAwards()
 const data=query.data,buttons:Record<string,HTMLButtonElement>={}
 const stages=[{id:'regular',label:'Регулярный чемпионат'},{id:'playoffs',label:'Плей-офф'}]
+function recordsWord(count:number){return count%100>=11&&count%100<=14?'записей':count%10===1?'запись':count%10>=2&&count%10<=4?'записи':'записей'}
 function selectTab(id:string){category.value=id;buttons[id]?.focus()}
 function moveTab(delta:number){const index=tabs.value.findIndex(tab=>tab.id===category.value);selectTab(tabs.value[(index+delta+tabs.value.length)%tabs.value.length]!.id)}
 usePageTitle(()=>`Награды сезона НБА ${season.value}`)
