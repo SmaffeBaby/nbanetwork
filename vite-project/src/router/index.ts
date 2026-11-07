@@ -21,6 +21,7 @@ const routes = [
     { path: '/playoffs', name: 'Playoffs', component: () => import('../views/Playoffs.vue')},
     { path: '/play-in', name: 'PlayIn', component: () => import('../views/PlayIn.vue') },
     { path: '/draft', name: 'Draft', component: () => import('../views/Draft.vue') },
+    { path: '/season-awards', name: 'SeasonAwards', component: () => import('../views/SeasonAwards.vue') },
     { path: '/teams', component: Teams },
     { path: '/fantasy', name: 'Fantasy', component: () => import('../views/Fantasy.vue') },
     { path: '/games', redirect: () => `/games/${getTodayDateKey()}` },

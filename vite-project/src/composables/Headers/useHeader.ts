@@ -76,10 +76,11 @@ export function useHeader() {
   const playersLink = computed<HeaderLink>(() => ({
     label: 'Игроки',
     to: '/player-stats',
-    isActive: route.path.startsWith('/player-stats') || route.path.startsWith('/player/') || route.path === '/draft'
+    isActive: route.path.startsWith('/player-stats') || route.path.startsWith('/player/') || route.path === '/draft' || route.path === '/season-awards'
   }))
 
   const playerLinks = computed<HeaderFeatureLink[]>(() => [
+    { label: 'Награды сезона', description: 'Лучшие игроки, тренеры и сборные', to: '/season-awards', icon: TrophyIcon, isActive: route.path === '/season-awards' },
     { label: 'Статистика игроков', description: 'Лидеры и показатели игроков НБА', to: '/player-stats', icon: ChartBarIcon, isActive: route.path.startsWith('/player-stats') || route.path.startsWith('/player/') },
     { label: 'Драфт', description: 'Пики, команды и новые имена НБА', to: '/draft', icon: SparklesIcon, isActive: route.path === '/draft' }
   ])
